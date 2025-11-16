@@ -39,7 +39,7 @@ function CompanyVerificationPage() {
     if (verificationData?.verification_status === 'approved') {
       const timer = setTimeout(() => {
         navigate(`/upload/${companyId}`);
-      }, 2000); // Redirect after 2 seconds
+      }, 5000); // Redirect after 5 seconds (give user time to see success message)
 
       return () => clearTimeout(timer);
     }
@@ -201,13 +201,13 @@ function CompanyVerificationPage() {
             {verificationData.verification_status === 'approved' && (
               <div className="mt-6 text-center">
                 <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-                  Redirecting to CSV upload page...
+                  Your company has been verified successfully! You will be redirected to the CSV upload page in a few seconds...
                 </p>
                 <button
                   onClick={() => navigate(`/upload/${companyId}`)}
                   className="btn btn-primary"
                 >
-                  Continue to CSV Upload
+                  Continue to CSV Upload Now
                 </button>
               </div>
             )}
