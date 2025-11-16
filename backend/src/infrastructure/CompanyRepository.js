@@ -6,6 +6,10 @@ const config = require('../config');
 
 class CompanyRepository {
   constructor() {
+    if (!config.databaseUrl) {
+      throw new Error('DATABASE_URL or database connection parameters are not configured. Please set DATABASE_URL or individual DB_* environment variables.');
+    }
+    
     this.pool = new Pool({
       connectionString: config.databaseUrl,
       ssl: config.databaseSsl ? { rejectUnauthorized: false } : false
