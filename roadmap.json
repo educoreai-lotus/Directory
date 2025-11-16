@@ -1,0 +1,607 @@
+{
+  "project": "EDUCORE DIRECTORY MANAGEMENT SYSTEM",
+  "version": "1.0.0",
+  "created": "2024",
+  "features": [
+    {
+      "id": "F001",
+      "title": "Landing Page",
+      "description": "Entry point page with Register and Login options for companies and employees",
+      "inputs": [],
+      "outputs": ["Landing page UI", "Navigation to registration/login"],
+      "artifact_filenames": [
+        "frontend/src/pages/LandingPage.js",
+        "frontend/src/components/LandingPageHeader.js",
+        "frontend/src/components/LandingPageButtons.js"
+      ],
+      "dependency_feature_ids": [],
+      "file_list": [
+        "frontend/src/pages/LandingPage.js",
+        "frontend/src/components/LandingPageHeader.js",
+        "frontend/src/components/LandingPageButtons.js",
+        "frontend/src/styles/landing.css"
+      ],
+      "milestone": "M1"
+    },
+    {
+      "id": "F002",
+      "title": "Company Registration Form",
+      "description": "Form to collect company basic information (name, industry, domain, HR contact)",
+      "inputs": ["Company name", "Industry", "Domain", "HR contact name", "HR contact email", "HR contact role"],
+      "outputs": ["Company registration data", "Company record in database"],
+      "artifact_filenames": [
+        "frontend/src/pages/CompanyRegistrationForm.js",
+        "frontend/src/components/CompanyRegistrationFormFields.js",
+        "backend/src/presentation/CompanyRegistrationController.js",
+        "backend/src/application/RegisterCompanyUseCase.js"
+      ],
+      "dependency_feature_ids": ["F001"],
+      "file_list": [
+        "frontend/src/pages/CompanyRegistrationForm.js",
+        "frontend/src/components/CompanyRegistrationFormFields.js",
+        "frontend/src/services/companyRegistrationService.js",
+        "backend/src/presentation/CompanyRegistrationController.js",
+        "backend/src/application/RegisterCompanyUseCase.js",
+        "backend/src/infrastructure/CompanyRepository.js"
+      ],
+      "milestone": "M1"
+    },
+    {
+      "id": "F003",
+      "title": "Company Verification System",
+      "description": "Verify company registration with domain validation and status tracking",
+      "inputs": ["Company domain", "Company registration data"],
+      "outputs": ["Verification status", "Verification page UI"],
+      "artifact_filenames": [
+        "frontend/src/pages/CompanyVerificationPage.js",
+        "backend/src/application/VerifyCompanyUseCase.js",
+        "backend/src/infrastructure/DomainValidator.js"
+      ],
+      "dependency_feature_ids": ["F002"],
+      "file_list": [
+        "frontend/src/pages/CompanyVerificationPage.js",
+        "frontend/src/components/VerificationStatus.js",
+        "backend/src/presentation/CompanyVerificationController.js",
+        "backend/src/application/VerifyCompanyUseCase.js",
+        "backend/src/infrastructure/DomainValidator.js"
+      ],
+      "milestone": "M1"
+    },
+    {
+      "id": "F004",
+      "title": "CSV Upload & Parsing",
+      "description": "Upload and parse CSV file containing company hierarchy and employee data",
+      "inputs": ["CSV file", "Company ID"],
+      "outputs": ["Parsed company data", "Employee records", "Department/Team records", "Validation results"],
+      "artifact_filenames": [
+        "frontend/src/pages/CompanyCSVUploadPage.js",
+        "frontend/src/components/CSVUploadForm.js",
+        "backend/src/presentation/CSVUploadController.js",
+        "backend/src/application/ParseCSVUseCase.js",
+        "backend/src/infrastructure/CSVParser.js"
+      ],
+      "dependency_feature_ids": ["F003"],
+      "file_list": [
+        "frontend/src/pages/CompanyCSVUploadPage.js",
+        "frontend/src/components/CSVUploadForm.js",
+        "frontend/src/components/CSVUploadProgress.js",
+        "backend/src/presentation/CSVUploadController.js",
+        "backend/src/application/ParseCSVUseCase.js",
+        "backend/src/infrastructure/CSVParser.js",
+        "backend/src/infrastructure/CSVValidator.js"
+      ],
+      "milestone": "M1"
+    },
+    {
+      "id": "F005",
+      "title": "CSV Error Handling & Correction UI",
+      "description": "Display CSV errors and allow user to correct missing/invalid data via UI form",
+      "inputs": ["CSV validation errors", "Partial parsed data"],
+      "outputs": ["Error display UI", "Correction form", "Corrected data"],
+      "artifact_filenames": [
+        "frontend/src/components/CSVErrorDisplay.js",
+        "frontend/src/components/CSVCorrectionForm.js",
+        "backend/src/application/ValidateCSVDataUseCase.js"
+      ],
+      "dependency_feature_ids": ["F004"],
+      "file_list": [
+        "frontend/src/components/CSVErrorDisplay.js",
+        "frontend/src/components/CSVCorrectionForm.js",
+        "frontend/src/components/CSVErrorRow.js",
+        "backend/src/application/ValidateCSVDataUseCase.js",
+        "backend/src/infrastructure/CSVErrorFormatter.js"
+      ],
+      "milestone": "M1"
+    },
+    {
+      "id": "F006",
+      "title": "Company Profile Page",
+      "description": "Display company overview with hierarchy, employees, dashboard, and management options",
+      "inputs": ["Company ID"],
+      "outputs": ["Company profile page", "Organizational hierarchy", "Employee list", "Dashboard metrics"],
+      "artifact_filenames": [
+        "frontend/src/pages/CompanyProfilePage.js",
+        "frontend/src/components/CompanyHierarchy.js",
+        "frontend/src/components/CompanyDashboard.js",
+        "backend/src/presentation/CompanyProfileController.js"
+      ],
+      "dependency_feature_ids": ["F004", "F005"],
+      "file_list": [
+        "frontend/src/pages/CompanyProfilePage.js",
+        "frontend/src/components/CompanyHierarchy.js",
+        "frontend/src/components/CompanyDashboard.js",
+        "frontend/src/components/EmployeeList.js",
+        "frontend/src/components/CompanyMetrics.js",
+        "backend/src/presentation/CompanyProfileController.js",
+        "backend/src/application/GetCompanyProfileUseCase.js"
+      ],
+      "milestone": "M1"
+    },
+    {
+      "id": "F007",
+      "title": "Employee Login (Dummy Authentication)",
+      "description": "Dummy login system for testing using email/password from CSV",
+      "inputs": ["Email", "Password"],
+      "outputs": ["Authentication token (dummy)", "User session", "Redirect to profile"],
+      "artifact_filenames": [
+        "frontend/src/pages/LoginPage.js",
+        "frontend/src/components/LoginForm.js",
+        "backend/src/presentation/AuthController.js",
+        "backend/src/application/AuthenticateUserUseCase.js"
+      ],
+      "dependency_feature_ids": ["F001"],
+      "file_list": [
+        "frontend/src/pages/LoginPage.js",
+        "frontend/src/components/LoginForm.js",
+        "frontend/src/services/authService.js",
+        "frontend/src/context/AuthContext.js",
+        "backend/src/presentation/AuthController.js",
+        "backend/src/application/AuthenticateUserUseCase.js",
+        "backend/src/infrastructure/AuthService.js",
+        "backend/src/middleware/authMiddleware.js"
+      ],
+      "milestone": "M2"
+    },
+    {
+      "id": "F008",
+      "title": "Employee Profile Enrichment - LinkedIn OAuth",
+      "description": "Connect LinkedIn account via OpenID Connect and fetch profile data",
+      "inputs": ["OAuth authorization code", "Employee ID"],
+      "outputs": ["LinkedIn profile data", "Updated employee profile"],
+      "artifact_filenames": [
+        "frontend/src/pages/EnrichProfilePage.js",
+        "frontend/src/components/LinkedInConnectButton.js",
+        "backend/src/presentation/OAuthController.js",
+        "backend/src/infrastructure/LinkedInOAuthClient.js"
+      ],
+      "dependency_feature_ids": ["F007"],
+      "file_list": [
+        "frontend/src/pages/EnrichProfilePage.js",
+        "frontend/src/components/LinkedInConnectButton.js",
+        "frontend/src/components/OAuthCallback.js",
+        "backend/src/presentation/OAuthController.js",
+        "backend/src/application/ConnectLinkedInUseCase.js",
+        "backend/src/infrastructure/LinkedInOAuthClient.js",
+        "backend/src/infrastructure/LinkedInAPIClient.js"
+      ],
+      "milestone": "M2"
+    },
+    {
+      "id": "F009",
+      "title": "Employee Profile Enrichment - GitHub OAuth",
+      "description": "Connect GitHub account via OAuth2 and fetch profile/repository data",
+      "inputs": ["OAuth authorization code", "Employee ID"],
+      "outputs": ["GitHub profile data", "Repository data", "Updated employee profile"],
+      "artifact_filenames": [
+        "frontend/src/components/GitHubConnectButton.js",
+        "backend/src/infrastructure/GitHubOAuthClient.js"
+      ],
+      "dependency_feature_ids": ["F007", "F008"],
+      "file_list": [
+        "frontend/src/components/GitHubConnectButton.js",
+        "backend/src/application/ConnectGitHubUseCase.js",
+        "backend/src/infrastructure/GitHubOAuthClient.js",
+        "backend/src/infrastructure/GitHubAPIClient.js"
+      ],
+      "milestone": "M2"
+    },
+    {
+      "id": "F009A",
+      "title": "Gemini AI Integration (One-Time Only)",
+      "description": "Integrate Gemini AI API to generate professional bio and project summaries from LinkedIn/GitHub data (ONE-TIME INITIAL SETUP during first login only. No re-enrichment or re-sync allowed after completion.)",
+      "inputs": ["LinkedIn profile data", "GitHub repository data", "Employee ID"],
+      "outputs": ["AI-generated bio", "AI-generated project summaries"],
+      "artifact_filenames": [
+        "backend/src/infrastructure/GeminiAPIClient.js",
+        "backend/src/application/GenerateBioUseCase.js",
+        "backend/src/application/GenerateProjectSummariesUseCase.js"
+      ],
+      "dependency_feature_ids": ["F008", "F009"],
+      "file_list": [
+        "backend/src/infrastructure/GeminiAPIClient.js",
+        "backend/src/application/GenerateBioUseCase.js",
+        "backend/src/application/GenerateProjectSummariesUseCase.js",
+        "backend/src/presentation/GeminiController.js",
+        "mockData/gemini_mock_data.json"
+      ],
+      "milestone": "M2"
+    },
+    {
+      "id": "F010",
+      "title": "Employee Profile Page",
+      "description": "Display comprehensive employee profile with all sections (basic info, bio, skills, courses, projects, external data)",
+      "inputs": ["Employee ID"],
+      "outputs": ["Employee profile page", "Profile data"],
+      "artifact_filenames": [
+        "frontend/src/pages/EmployeeProfilePage.js",
+        "frontend/src/components/ProfileBasicInfo.js",
+        "frontend/src/components/ProfileSkills.js",
+        "frontend/src/components/ProfileCourses.js",
+        "frontend/src/components/ProfileProjects.js"
+      ],
+      "dependency_feature_ids": ["F007", "F008", "F009", "F009A"],
+      "file_list": [
+        "frontend/src/pages/EmployeeProfilePage.js",
+        "frontend/src/components/ProfileBasicInfo.js",
+        "frontend/src/components/ProfileBio.js",
+        "frontend/src/components/ProfileValueProposition.js",
+        "frontend/src/components/ProfileSkills.js",
+        "frontend/src/components/ProfileCourses.js",
+        "frontend/src/components/ProfileProjects.js",
+        "frontend/src/components/ProfileExternalData.js",
+        "frontend/src/components/ProfileDashboard.js",
+        "frontend/src/components/ProfileEditForm.js",
+        "frontend/src/components/ProfileRequests.js",
+        "frontend/src/components/LearningPath.js",
+        "backend/src/presentation/EmployeeProfileController.js",
+        "backend/src/application/GetEmployeeProfileUseCase.js"
+      ],
+      "milestone": "M2"
+    },
+    {
+      "id": "F011",
+      "title": "Trainer Profile Extensions",
+      "description": "Add trainer-specific sections: courses taught, AI enabled toggle, public publish toggle",
+      "inputs": ["Employee ID", "Trainer settings"],
+      "outputs": ["Trainer profile extensions", "Trainer settings UI"],
+      "artifact_filenames": [
+        "frontend/src/components/TrainerCoursesTaught.js",
+        "frontend/src/components/TrainerSettings.js",
+        "backend/src/application/UpdateTrainerSettingsUseCase.js"
+      ],
+      "dependency_feature_ids": ["F010"],
+      "file_list": [
+        "frontend/src/components/TrainerCoursesTaught.js",
+        "frontend/src/components/TrainerSettings.js",
+        "backend/src/presentation/TrainerController.js",
+        "backend/src/application/UpdateTrainerSettingsUseCase.js",
+        "backend/src/infrastructure/TrainerRepository.js"
+      ],
+      "milestone": "M2"
+    },
+    {
+      "id": "F012",
+      "title": "Team Manager Hierarchy View",
+      "description": "Display team hierarchy with employees under team manager's supervision",
+      "inputs": ["Team Manager Employee ID"],
+      "outputs": ["Team hierarchy view", "Employee list in team"],
+      "artifact_filenames": [
+        "frontend/src/components/TeamManagerHierarchy.js",
+        "frontend/src/components/TeamEmployeeList.js",
+        "backend/src/application/GetTeamHierarchyUseCase.js"
+      ],
+      "dependency_feature_ids": ["F010"],
+      "file_list": [
+        "frontend/src/components/TeamManagerHierarchy.js",
+        "frontend/src/components/TeamEmployeeList.js",
+        "backend/src/presentation/TeamManagerController.js",
+        "backend/src/application/GetTeamHierarchyUseCase.js"
+      ],
+      "milestone": "M3"
+    },
+    {
+      "id": "F013",
+      "title": "Department Manager Hierarchy View",
+      "description": "Display department hierarchy with teams and employees under department manager's supervision",
+      "inputs": ["Department Manager Employee ID"],
+      "outputs": ["Department hierarchy view", "Teams and employees in department"],
+      "artifact_filenames": [
+        "frontend/src/components/DepartmentManagerHierarchy.js",
+        "frontend/src/components/DepartmentTeamsList.js",
+        "backend/src/application/GetDepartmentHierarchyUseCase.js"
+      ],
+      "dependency_feature_ids": ["F010", "F012"],
+      "file_list": [
+        "frontend/src/components/DepartmentManagerHierarchy.js",
+        "frontend/src/components/DepartmentTeamsList.js",
+        "backend/src/components/DepartmentEmployeeList.js",
+        "backend/src/presentation/DepartmentManagerController.js",
+        "backend/src/application/GetDepartmentHierarchyUseCase.js"
+      ],
+      "milestone": "M3"
+    },
+    {
+      "id": "F014",
+      "title": "Company HR/Admin Dashboard",
+      "description": "Company-level dashboard with employee management, KPIs, requests overview, and company settings",
+      "inputs": ["Company ID"],
+      "outputs": ["Company admin dashboard", "Management UI", "Company settings"],
+      "artifact_filenames": [
+        "frontend/src/pages/CompanyAdminDashboard.js",
+        "frontend/src/components/CompanyKPIs.js",
+        "frontend/src/components/EmployeeManagement.js",
+        "backend/src/application/GetCompanyAdminDashboardUseCase.js"
+      ],
+      "dependency_feature_ids": ["F006"],
+      "file_list": [
+        "frontend/src/pages/CompanyAdminDashboard.js",
+        "frontend/src/components/CompanyKPIs.js",
+        "frontend/src/components/EmployeeManagement.js",
+        "frontend/src/components/RequestsOverview.js",
+        "frontend/src/components/CompanySettings.js",
+        "backend/src/presentation/CompanyAdminController.js",
+        "backend/src/application/GetCompanyAdminDashboardUseCase.js",
+        "backend/src/application/ManageEmployeesUseCase.js",
+        "backend/src/application/UpdateCompanySettingsUseCase.js"
+      ],
+      "milestone": "M3"
+    },
+    {
+      "id": "F015",
+      "title": "Directory Admin Dashboard",
+      "description": "Platform-level dashboard showing all companies, approval workflow, and analytics",
+      "inputs": [],
+      "outputs": ["Directory admin dashboard", "Company list", "Approval UI", "Analytics"],
+      "artifact_filenames": [
+        "frontend/src/pages/DirectoryAdminDashboard.js",
+        "frontend/src/components/AllCompaniesList.js",
+        "frontend/src/components/CompanyApprovalWorkflow.js",
+        "backend/src/application/GetDirectoryAdminDashboardUseCase.js"
+      ],
+      "dependency_feature_ids": ["F003"],
+      "file_list": [
+        "frontend/src/pages/DirectoryAdminDashboard.js",
+        "frontend/src/components/AllCompaniesList.js",
+        "frontend/src/components/CompanyApprovalWorkflow.js",
+        "frontend/src/components/DirectoryAnalytics.js",
+        "backend/src/presentation/DirectoryAdminController.js",
+        "backend/src/application/GetDirectoryAdminDashboardUseCase.js",
+        "backend/src/application/ApproveCompanyUseCase.js"
+      ],
+      "milestone": "M3"
+    },
+    {
+      "id": "F016",
+      "title": "Database Schema & Migrations",
+      "description": "Create PostgreSQL database schema with all tables, indexes, and relationships",
+      "inputs": [],
+      "outputs": ["Database schema", "Migration files", "Seed data"],
+      "artifact_filenames": [
+        "database/schema.sql",
+        "database/migrations/001_create_companies_table.sql",
+        "database/migrations/002_create_employees_table.sql",
+        "database/seeds/sample_data.sql"
+      ],
+      "dependency_feature_ids": [],
+      "file_list": [
+        "database/schema.sql",
+        "database/migrations/001_create_companies_table.sql",
+        "database/migrations/002_create_departments_table.sql",
+        "database/migrations/003_create_teams_table.sql",
+        "database/migrations/004_create_employees_table.sql",
+        "database/migrations/005_create_employee_roles_table.sql",
+        "database/migrations/006_create_employee_teams_table.sql",
+        "database/migrations/007_create_employee_managers_table.sql",
+        "database/migrations/008_create_trainer_settings_table.sql",
+        "database/migrations/009_create_audit_logs_table.sql",
+        "database/migrations/010_create_company_registration_requests_table.sql",
+        "database/seeds/sample_data.sql",
+        "database/seeds/lotus_tech_hub_seed.sql"
+      ],
+      "milestone": "M0"
+    },
+    {
+      "id": "F017",
+      "title": "Role-Based Access Control (RBAC)",
+      "description": "Implement RBAC system with role-based permissions and hierarchy-based access control",
+      "inputs": ["User role", "Resource", "Action"],
+      "outputs": ["Permission check", "Access granted/denied"],
+      "artifact_filenames": [
+        "backend/src/core/Role.js",
+        "backend/src/core/Permission.js",
+        "backend/src/application/CheckPermissionUseCase.js",
+        "backend/src/middleware/rbacMiddleware.js"
+      ],
+      "dependency_feature_ids": ["F016"],
+      "file_list": [
+        "backend/src/core/Role.js",
+        "backend/src/core/Permission.js",
+        "backend/src/application/CheckPermissionUseCase.js",
+        "backend/src/middleware/rbacMiddleware.js",
+        "backend/src/infrastructure/PermissionRepository.js"
+      ],
+      "milestone": "M2"
+    },
+    {
+      "id": "F018",
+      "title": "Audit Logging System",
+      "description": "Log all critical actions with timestamp, user ID, and action details",
+      "inputs": ["Action type", "User ID", "Resource", "Action details"],
+      "outputs": ["Audit log entry"],
+      "artifact_filenames": [
+        "backend/src/infrastructure/AuditLogger.js",
+        "backend/src/middleware/auditMiddleware.js",
+        "backend/src/application/LogActionUseCase.js"
+      ],
+      "dependency_feature_ids": ["F016"],
+      "file_list": [
+        "backend/src/infrastructure/AuditLogger.js",
+        "backend/src/middleware/auditMiddleware.js",
+        "backend/src/application/LogActionUseCase.js",
+        "backend/src/infrastructure/AuditLogRepository.js"
+      ],
+      "milestone": "M2"
+    },
+    {
+      "id": "F019",
+      "title": "Mock Data Fallback System",
+      "description": "Fallback to mock data when external API calls fail",
+      "inputs": ["API failure", "Request type"],
+      "outputs": ["Mock data response"],
+      "artifact_filenames": [
+        "mockData/index.json",
+        "backend/src/infrastructure/MockDataService.js"
+      ],
+      "dependency_feature_ids": [],
+      "file_list": [
+        "mockData/index.json",
+        "mockData/lotus_tech_hub_sample_company.csv",
+        "backend/src/infrastructure/MockDataService.js",
+        "backend/src/infrastructure/APIFallbackHandler.js"
+      ],
+      "milestone": "M1"
+    },
+    {
+      "id": "F020",
+      "title": "Sample Data Generation",
+      "description": "Generate 10-20 sample employees covering all role combinations for testing",
+      "inputs": [],
+      "outputs": ["Sample employee data", "Sample company data"],
+      "artifact_filenames": [
+        "database/seeds/generate_sample_data.js",
+        "database/seeds/sample_employees.json"
+      ],
+      "dependency_feature_ids": ["F016"],
+      "file_list": [
+        "database/seeds/generate_sample_data.js",
+        "database/seeds/sample_employees.json",
+        "backend/src/infrastructure/SampleDataGenerator.js"
+      ],
+      "milestone": "M1"
+    },
+    {
+      "id": "F021",
+      "title": "Profile Edit Functionality",
+      "description": "Allow employees to edit their profile fields (language, contact info, bio)",
+      "inputs": ["Employee ID", "Updated fields"],
+      "outputs": ["Updated profile"],
+      "artifact_filenames": [
+        "frontend/src/components/ProfileEditForm.js",
+        "backend/src/application/UpdateEmployeeProfileUseCase.js"
+      ],
+      "dependency_feature_ids": ["F010"],
+      "file_list": [
+        "frontend/src/components/ProfileEditForm.js",
+        "backend/src/presentation/EmployeeProfileController.js",
+        "backend/src/application/UpdateEmployeeProfileUseCase.js"
+      ],
+      "milestone": "M2"
+    },
+    {
+      "id": "F022",
+      "title": "Employee Requests System",
+      "description": "Allow employees to submit requests (learn new skills, apply for trainer role, etc.)",
+      "inputs": ["Employee ID", "Request type", "Request details"],
+      "outputs": ["Request submission", "Request status"],
+      "artifact_filenames": [
+        "frontend/src/components/ProfileRequests.js",
+        "frontend/src/components/RequestForm.js",
+        "backend/src/application/SubmitRequestUseCase.js"
+      ],
+      "dependency_feature_ids": ["F010"],
+      "file_list": [
+        "frontend/src/components/ProfileRequests.js",
+        "frontend/src/components/RequestForm.js",
+        "backend/src/presentation/RequestController.js",
+        "backend/src/application/SubmitRequestUseCase.js",
+        "backend/src/infrastructure/RequestRepository.js"
+      ],
+      "milestone": "M3"
+    },
+    {
+      "id": "F023",
+      "title": "CI/CD Pipeline Setup",
+      "description": "GitHub Actions workflow for automated testing, security scans, and deployment",
+      "inputs": ["Code changes", "PR/merge events"],
+      "outputs": ["Automated tests", "Security scans", "Deployments"],
+      "artifact_filenames": [
+        ".github/workflows/deploy.yml"
+      ],
+      "dependency_feature_ids": [],
+      "file_list": [
+        ".github/workflows/deploy.yml",
+        ".github/workflows/test.yml",
+        ".github/workflows/security-scan.yml"
+      ],
+      "milestone": "M0"
+    },
+    {
+      "id": "F024",
+      "title": "Multi-tenant Data Isolation",
+      "description": "Ensure company data isolation at database and application level",
+      "inputs": ["Company ID", "User request"],
+      "outputs": ["Isolated data access"],
+      "artifact_filenames": [
+        "backend/src/middleware/tenantIsolationMiddleware.js",
+        "backend/src/core/TenantContext.js"
+      ],
+      "dependency_feature_ids": ["F016", "F017"],
+      "file_list": [
+        "backend/src/middleware/tenantIsolationMiddleware.js",
+        "backend/src/core/TenantContext.js",
+        "backend/src/infrastructure/TenantRepository.js"
+      ],
+      "milestone": "M2"
+    }
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "title": "Foundation Setup",
+      "description": "Database schema, CI/CD, and infrastructure setup",
+      "feature_ids": ["F016", "F023"]
+    },
+    {
+      "id": "M1",
+      "title": "Company Registration & Onboarding",
+      "description": "Complete company registration flow with CSV upload",
+      "feature_ids": ["F001", "F002", "F003", "F004", "F005", "F006", "F019", "F020"]
+    },
+    {
+      "id": "M2",
+      "title": "Employee Profiles & Authentication",
+      "description": "Employee login, profile enrichment, and basic profile display",
+      "feature_ids": ["F007", "F008", "F009", "F009A", "F010", "F011", "F017", "F018", "F021", "F024"]
+    },
+    {
+      "id": "M3",
+      "title": "Management & Admin Views",
+      "description": "Manager hierarchy views, company admin, and directory admin dashboards",
+      "feature_ids": ["F012", "F013", "F014", "F015", "F022"]
+    }
+  ],
+  "dependencies": {
+    "F002": ["F001"],
+    "F003": ["F002"],
+    "F004": ["F003"],
+    "F005": ["F004"],
+    "F006": ["F004", "F005"],
+    "F007": ["F001"],
+    "F008": ["F007"],
+    "F009": ["F007", "F008"],
+    "F009A": ["F008", "F009"],
+    "F010": ["F007", "F008", "F009", "F009A"],
+    "F011": ["F010"],
+    "F012": ["F010"],
+    "F013": ["F010", "F012"],
+    "F014": ["F006"],
+    "F015": ["F003"],
+    "F017": ["F016"],
+    "F018": ["F016"],
+    "F020": ["F016"],
+    "F021": ["F010"],
+    "F022": ["F010"],
+    "F024": ["F016", "F017"]
+  }
+}
+

@@ -1,0 +1,51 @@
+SYSTEM DESCRIPTION: EDUCORE DIRECTORY MANAGEMENT SYSTEM
+
+Purpose:
+This system is a Company Directory platform that allows companies to manage their employees, roles, teams, and hierarchy efficiently. It must handle different role types, hierarchical relationships, and dynamic role combinations.
+
+Key Requirements:
+1. User Roles:
+   - REGULAR_EMPLOYEE
+   - TRAINER
+   - TEAM_MANAGER
+   - DEPARTMENT_MANAGER
+   - DECISION_MAKER
+   - Users can have multiple roles simultaneously (e.g., REGULAR_EMPLOYEE + TEAM_MANAGER).
+
+2. Hierarchy:
+   - Employees report to a Team Manager.
+   - Team Managers report to Department Managers.
+   - Department Managers may also be Decision Makers.
+   - Employees without management roles are standard users.
+
+3. CSV Upload:
+   - Companies register by uploading a CSV file containing employee data.
+   - Mandatory fields: employee_id, full_name, email, role(s), team, department, manager_id (optional).
+   - If CSV lacks certain data (like manager_id), UI should allow manual input during onboarding.
+
+4. Data Simulation:
+   - During development/testing, the system should generate 10–20 sample employees.
+   - Sample data must cover all role combinations:
+     - REGULAR_EMPLOYEE + TEAM_MANAGER
+     - REGULAR_EMPLOYEE + DEPARTMENT_MANAGER
+     - TRAINER + DEPARTMENT_MANAGER
+     - TRAINER + TEAM_MANAGER
+     - REGULAR_EMPLOYEE + DECISION_MAKER + DEPARTMENT_MANAGER
+     - Standard employees without management roles
+
+5. Display:
+   - Profiles must show role(s) and hierarchical position.
+   - Correct hierarchy must be visible on team/department pages.
+
+6. Error Handling:
+   - Invalid CSV uploads must be rejected with clear messages.
+   - Missing optional fields (like manager_id) should trigger UI prompts.
+   - Duplicate employee IDs must be detected.
+
+7. Future Considerations:
+   - System will be deployed on cloud for real company use.
+   - Roles are dynamic per company but should follow CSV structure.
+   - System should be scalable and secure.
+
+End of system description.
+
