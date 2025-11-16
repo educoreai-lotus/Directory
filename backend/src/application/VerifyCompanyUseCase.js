@@ -56,7 +56,9 @@ class VerifyCompanyUseCase {
     }
 
     // Perform domain validation
+    console.log(`[VerifyCompanyUseCase] Verifying domain for company ${companyId}: ${company.domain}`);
     const validationResult = await this.domainValidator.validate(company.domain);
+    console.log(`[VerifyCompanyUseCase] Validation result:`, JSON.stringify(validationResult, null, 2));
 
     // Update verification status based on validation
     let newStatus = 'pending';
@@ -64,10 +66,12 @@ class VerifyCompanyUseCase {
       // For now, we auto-approve if DNS is valid
       // In production, this might require manual approval by Directory Admin
       newStatus = 'approved';
+      console.log(`[VerifyCompanyUseCase] ✅ Domain ${company.domain} is valid - auto-approving`);
     } else if (validationResult.errors.length > 0 && !validationResult.hasDNS) {
       // Only reject if DNS is completely invalid
       // Otherwise, keep as pending for manual review
       newStatus = 'pending';
+      console.log(`[VerifyCompanyUseCase] ⚠️ Domain ${company.domain} validation failed - keeping as pending for manual review`);
     }
 
     // Update company verification status
