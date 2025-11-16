@@ -15,6 +15,10 @@ class CompanyRegistrationController {
   async register(req, res, next) {
     try {
       const companyData = req.body;
+      
+      // Debug logging (remove in production)
+      console.log('Received company data:', JSON.stringify(companyData, null, 2));
+      
       const result = await this.registerCompanyUseCase.execute(companyData);
       
       res.status(201).json(result);
@@ -23,6 +27,7 @@ class CompanyRegistrationController {
       if (error.message.includes('already exists') || 
           error.message.includes('required') ||
           error.message.includes('Invalid')) {
+        console.error('Validation error:', error.message);
         return res.status(400).json({
           error: error.message
         });
