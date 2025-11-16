@@ -182,12 +182,13 @@ function CompanyVerificationPage() {
               domain={verificationData.domain}
             />
 
+            {/* Seamless transition - single page with dynamic content */}
             {verificationData.verification_status === 'pending' && (
               <div className="mt-6">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="flex-1 h-2 rounded-full" style={{ background: 'var(--bg-tertiary)' }}>
                     <div
-                      className="h-2 rounded-full animate-pulse"
+                      className="h-2 rounded-full animate-pulse transition-all duration-500"
                       style={{
                         width: '60%',
                         background: 'var(--border-warning)'
@@ -205,10 +206,26 @@ function CompanyVerificationPage() {
             )}
 
             {verificationData.verification_status === 'approved' && (
-              <div className="mt-6 text-center">
-                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  Your company has been verified successfully! Redirecting to CSV upload page...
-                </p>
+              <div className="mt-6 animate-fade-in">
+                <div className="text-center mb-4">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <div className="flex-1 h-2 rounded-full" style={{ background: 'var(--bg-tertiary)' }}>
+                      <div
+                        className="h-2 rounded-full transition-all duration-500"
+                        style={{
+                          width: '100%',
+                          background: 'var(--border-success)'
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                    ✓ Verification Complete
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    Redirecting to CSV upload page in a few seconds...
+                  </p>
+                </div>
               </div>
             )}
 

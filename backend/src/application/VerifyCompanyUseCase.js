@@ -80,9 +80,15 @@ class VerifyCompanyUseCase {
       newStatus
     );
 
+    // Verify the update was successful by fetching fresh data
+    const freshCompany = await this.companyRepository.findById(companyId);
+    console.log(`[VerifyCompanyUseCase] Status updated to ${newStatus}, verified in DB: ${freshCompany.verification_status}`);
+
     return {
       company_id: updatedCompany.id,
-      verification_status: updatedCompany.verification_status,
+      verification_status: freshCompany.verification_status, // Use fresh data
+      domain: freshCompany.domain,
+      company_name: freshCompany.company_name,
       domain_validation: {
         isValid: validationResult.isValid,
         hasDNS: validationResult.hasDNS,
