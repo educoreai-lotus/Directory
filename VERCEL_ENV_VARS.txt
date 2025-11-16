@@ -1,0 +1,11 @@
+# Vercel Environment Variables - Copy & Paste Ready
+# Add this in Vercel → Your Project → Settings → Environment Variables
+# 
+# IMPORTANT: Replace YOUR_RAILWAY_URL with your actual Railway deployment URL
+# You'll get this after deploying to Railway (Step 3)
+
+REACT_APP_API_BASE_URL=https://YOUR_RAILWAY_URL/api/v1
+
+# Example (replace with your actual Railway URL):
+# REACT_APP_API_BASE_URL=https://educore-backend-production.up.railway.app/api/v1
+
