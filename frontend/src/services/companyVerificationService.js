@@ -16,3 +16,21 @@ export const getCompanyVerificationStatus = async (companyId) => {
   }
 };
 
+/**
+ * Trigger domain verification manually
+ * @param {string} companyId - Company ID
+ * @returns {Promise<Object>} Verification result
+ */
+export const triggerVerification = async (companyId) => {
+  try {
+    const response = await api.post(`/companies/${companyId}/verify`, {
+      requester_service: 'directory_service',
+      payload: {}
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Trigger verification error:', error);
+    throw error;
+  }
+};

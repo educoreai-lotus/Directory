@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import VerificationStatus from '../components/VerificationStatus';
-import { getCompanyVerificationStatus } from '../services/companyVerificationService';
+import { getCompanyVerificationStatus, triggerVerification } from '../services/companyVerificationService';
 
 function CompanyVerificationPage() {
   const { companyId } = useParams();
@@ -10,6 +10,7 @@ function CompanyVerificationPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [polling, setPolling] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!companyId) {
@@ -65,6 +66,22 @@ function CompanyVerificationPage() {
 
   const handleRetry = () => {
     fetchVerificationStatus();
+  };
+
+  const handleTriggerVerification = async () => {
+    setIsSubmitting(true);
+    try {
+      await triggerVerification(companyId);
+      // Wait a moment then refresh status
+      setTimeout(() => {
+        fetchVerificationStatus();
+      }, 2000);
+    } catch (error) {
+      console.error('Trigger verification error:', error);
+      setError('Failed to trigger verification. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (loading && !verificationData) {
@@ -165,8 +182,18 @@ function CompanyVerificationPage() {
                     Checking...
                   </span>
                 </div>
-                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+                <p className="text-xs mt-2 mb-4" style={{ color: 'var(--text-muted)' }}>
                   This page will automatically update when verification is complete.
+                </p>
+                <button
+                  onClick={handleTriggerVerification}
+                  disabled={isSubmitting}
+                  className="btn btn-primary w-full"
+                >
+                  {isSubmitting ? 'Verifying...' : 'Manually Trigger Verification'}
+                </button>
+                <p className="text-xs mt-2 text-center" style={{ color: 'var(--text-muted)' }}>
+                  If verification is taking too long, click above to retry
                 </p>
               </div>
             )}

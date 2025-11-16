@@ -26,14 +26,30 @@ class DomainValidator {
    */
   async hasValidDNS(domain) {
     try {
-      await dns.resolve4(domain);
+      // Add timeout for DNS lookup (5 seconds)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('DNS lookup timeout')), 5000)
+      ));
+      
+      await Promise.race([
+        dns.resolve4(domain),
+        timeoutPromise
+      ]);
       return true;
     } catch (error) {
       // Try AAAA record (IPv6)
       try {
-        await dns.resolve6(domain);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('DNS lookup timeout')), 5000)
+        );
+        
+        await Promise.race([
+          dns.resolve6(domain),
+          timeoutPromise
+        ]);
         return true;
       } catch (error2) {
+        console.log(`DNS validation failed for ${domain}:`, error2.message);
         return false;
       }
     }
