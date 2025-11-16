@@ -76,11 +76,18 @@ function CompanyVerificationPage() {
 
     // Initial fetch
     fetchVerificationStatus();
-    
+  }, [companyId, navigate, fetchVerificationStatus]);
+
+  // Progress animation - runs independently
+  useEffect(() => {
+    if (!verificationData || verificationData.verification_status !== 'pending') {
+      return;
+    }
+
     // Start progress animation
     const progressInterval = setInterval(() => {
       setProgressStage(prev => {
-        if (prev < 3 && verificationData?.verification_status === 'pending') {
+        if (prev < 3) {
           return prev + 1;
         }
         return prev;
@@ -90,7 +97,7 @@ function CompanyVerificationPage() {
     return () => {
       clearInterval(progressInterval);
     };
-  }, [companyId, navigate]);
+  }, [verificationData]);
 
   // Set up polling and redirect logic
   useEffect(() => {
