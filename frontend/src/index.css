@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  /* Dark Emerald Color Palette - Rich & Elegant */
+  /* Design System Colors - Light Mode */
   --primary-blue: #065f46;
   --primary-purple: #047857;
   --primary-cyan: #0f766e;
@@ -11,55 +11,120 @@
   --accent-green: #047857;
   --accent-orange: #f59e0b;
   
-  /* Neutral Colors - Bright & Modern */
+  /* Background Colors */
   --bg-primary: #f8fafc;
   --bg-secondary: #e2e8f0;
   --bg-tertiary: #cbd5e1;
   --bg-card: #ffffff;
+  --bg-body: #f8fafc;
+  --bg-panel: #ffffff;
+  
+  /* Text Colors */
   --text-primary: #1e293b;
   --text-secondary: #475569;
   --text-muted: #64748b;
   --text-accent: #334155;
+  --text-inverse: #ffffff;
+  --text-disabled: #94a3b8;
+  --text-link: #047857;
+  --text-link-hover: #065f46;
   
-  /* Gradients - Dark Emerald Elegance */
+  /* Border Colors */
+  --border-default: #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --border-strong: #cbd5e1;
+  --border-focus: #047857;
+  --border-error: #ef4444;
+  --border-success: #10b981;
+  --border-warning: #f59e0b;
+  
+  /* Gradients */
   --gradient-primary: linear-gradient(135deg, #065f46, #047857);
   --gradient-secondary: linear-gradient(135deg, #0f766e, #047857);
   --gradient-accent: linear-gradient(135deg, #d97706, #f59e0b);
   --gradient-card: linear-gradient(145deg, #ffffff, #f0fdfa);
+  --gradient-hero: linear-gradient(135deg, #065f46 0%, #047857 50%, #0f766e 100%);
+  --gradient-subtle: linear-gradient(180deg, #ffffff, #f8fafc);
   
-  /* Shadows - Dark Emerald Glow Effects */
+  /* Shadows */
   --shadow-glow: 0 0 30px rgba(6, 95, 70, 0.3);
   --shadow-card: 0 10px 40px rgba(0, 0, 0, 0.1);
   --shadow-hover: 0 20px 60px rgba(6, 95, 70, 0.2);
+  --shadow-brand: 0 10px 40px rgba(6, 95, 70, 0.2);
+  --shadow-brand-hover: 0 20px 60px rgba(6, 95, 70, 0.3);
+  --shadow-brand-glow: 0 0 30px rgba(6, 95, 70, 0.4);
   
-  /* Spacing */
-  --spacing-xs: 0.5rem;
-  --spacing-sm: 1rem;
-  --spacing-md: 1.5rem;
-  --spacing-lg: 2rem;
-  --spacing-xl: 3rem;
-  --spacing-2xl: 4rem;
+  /* Spacing - Design System Scale */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
+  --spacing-4xl: 96px;
+  
+  /* Border Radius */
+  --radius-none: 0;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+  --radius-4xl: 24px;
+  --radius-full: 9999px;
+  --radius-button: 6px;
+  --radius-card: 8px;
+  --radius-input: 6px;
 }
 
-/* Night Mode Theme */
+/* Dark Mode Theme */
+.dark,
 .night-mode {
+  /* Background Colors */
   --bg-primary: #0f172a;
   --bg-secondary: #1e293b;
   --bg-tertiary: #334155;
   --bg-card: #1e293b;
+  --bg-body: #0f172a;
+  --bg-panel: #1e293b;
+  
+  /* Text Colors */
   --text-primary: #f8fafc;
   --text-secondary: #cbd5e1;
   --text-muted: #94a3b8;
   --text-accent: #e2e8f0;
+  --text-inverse: #0f172a;
+  --text-disabled: #475569;
+  --text-link: #2dd4bf;
+  --text-link-hover: #5eead4;
   
+  /* Border Colors */
+  --border-default: #334155;
+  --border-subtle: #1e293b;
+  --border-strong: #475569;
+  --border-focus: #2dd4bf;
+  --border-error: #ef4444;
+  --border-success: #10b981;
+  --border-warning: #f59e0b;
+  
+  /* Gradients */
   --gradient-primary: linear-gradient(135deg, #0d9488, #059669);
   --gradient-secondary: linear-gradient(135deg, #14b8a6, #10b981);
   --gradient-accent: linear-gradient(135deg, #d97706, #f59e0b);
   --gradient-card: linear-gradient(145deg, #1e293b, #334155);
+  --gradient-hero: linear-gradient(135deg, #0d9488 0%, #059669 50%, #14b8a6 100%);
+  --gradient-subtle: linear-gradient(180deg, #1e293b, #0f172a);
   
+  /* Shadows */
   --shadow-glow: 0 0 30px rgba(13, 148, 136, 0.4);
   --shadow-card: 0 10px 40px rgba(0, 0, 0, 0.6);
   --shadow-hover: 0 20px 60px rgba(13, 148, 136, 0.3);
+  --shadow-brand: 0 10px 40px rgba(13, 148, 136, 0.3);
+  --shadow-brand-hover: 0 20px 60px rgba(13, 148, 136, 0.4);
+  --shadow-brand-glow: 0 0 30px rgba(13, 148, 136, 0.5);
 }
 
 /* Day Mode Theme (Default) */
@@ -94,10 +159,12 @@ body {
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--bg-primary);
+  background: var(--bg-body, var(--bg-primary));
   color: var(--text-primary);
   line-height: 1.6;
   overflow-x: hidden;
+  font-size: 16px; /* base font size from design system */
+  line-height: 24px; /* base line height */
 }
 
 code {
@@ -123,57 +190,158 @@ code {
   50% { opacity: 0.7; }
 }
 
-/* Button Styles */
+/* Button Styles - Design System */
 .btn {
-  padding: var(--spacing-sm) var(--spacing-lg);
+  padding: 12px 24px; /* button.md from design system */
   border: none;
-  border-radius: 8px;
+  border-radius: 6px; /* button radius from design system */
   font-weight: 600;
+  font-family: var(--font-primary, 'Inter', sans-serif);
+  font-size: 16px; /* base font size */
+  line-height: 24px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); /* normal transition */
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-xs);
-  font-size: 1rem;
+  gap: 8px;
 }
 
 .btn-primary {
-  background: var(--gradient-primary);
-  color: white;
-  box-shadow: var(--shadow-glow);
+  background: #047857; /* modes.light.button.primary.background */
+  color: #ffffff;
+  box-shadow: 0 4px 6px -1px rgba(6, 95, 70, 0.2); /* modes.light.button.primary.shadow */
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(6, 95, 70, 0.4);
+  background: #065f46; /* modes.light.button.primary.backgroundHover */
+  box-shadow: 0 10px 15px -3px rgba(6, 95, 70, 0.3); /* modes.light.button.primary.shadowHover */
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  background: #064e3b; /* modes.light.button.primary.backgroundPressed */
+}
+
+.btn-primary:disabled {
+  background: #cbd5e1; /* modes.light.button.primary.backgroundDisabled */
+  color: #94a3b8; /* modes.light.button.primary.textDisabled */
+  cursor: not-allowed;
 }
 
 .btn-secondary {
-  background: var(--bg-card);
-  color: var(--text-primary);
-  border: 2px solid var(--primary-cyan);
+  background: #f1f5f9; /* modes.light.button.secondary.background */
+  color: #1e293b; /* modes.light.button.secondary.text */
+  border: 1px solid #cbd5e1; /* modes.light.button.secondary.border */
 }
 
 .btn-secondary:hover {
-  background: rgba(15, 118, 110, 0.1);
-  border-color: var(--primary-cyan);
-  transform: translateY(-2px);
+  background: #e2e8f0; /* modes.light.button.secondary.backgroundHover */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* modes.light.button.secondary.shadowHover */
+  transform: translateY(-1px);
+}
+
+.btn-secondary:active {
+  background: #cbd5e1; /* modes.light.button.secondary.backgroundPressed */
+}
+
+.btn-secondary:disabled {
+  background: #f8fafc; /* modes.light.button.secondary.backgroundDisabled */
+  color: #94a3b8; /* modes.light.button.secondary.textDisabled */
+  cursor: not-allowed;
+}
+
+/* Dark mode button styles */
+.dark .btn-primary,
+.night-mode .btn-primary {
+  background: linear-gradient(135deg, #0d9488, #059669); /* modes.dark.button.primary.background */
+  box-shadow: 0 4px 6px -1px rgba(13, 148, 136, 0.3), 0 0 15px rgba(13, 148, 136, 0.2);
+}
+
+.dark .btn-primary:hover,
+.night-mode .btn-primary:hover {
+  background: linear-gradient(135deg, #059669, #047857); /* modes.dark.button.primary.backgroundHover */
+  box-shadow: 0 10px 15px -3px rgba(13, 148, 136, 0.4), 0 0 20px rgba(13, 148, 136, 0.3);
+}
+
+.dark .btn-secondary,
+.night-mode .btn-secondary {
+  background: transparent; /* modes.dark.button.secondary.background */
+  color: #f8fafc; /* modes.dark.button.secondary.text */
+  border: 2px solid rgba(255, 255, 255, 0.2); /* modes.dark.button.secondary.border */
+}
+
+.dark .btn-secondary:hover,
+.night-mode .btn-secondary:hover {
+  background: linear-gradient(135deg, #0d9488, #059669); /* modes.dark.button.secondary.backgroundHover */
+  border-color: transparent;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Focus Indicators */
 .btn:focus {
-  outline: 3px solid var(--primary-cyan);
+  outline: 2px solid #047857; /* border.focus */
   outline-offset: 2px;
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.3);
+  box-shadow: 0 0 0 3px rgba(6, 95, 70, 0.1);
+}
+
+.dark .btn:focus,
+.night-mode .btn:focus {
+  outline-color: #2dd4bf; /* modes.dark.border.focus */
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2);
+}
+
+/* Utility Classes for Design System */
+.bg-body {
+  background-color: var(--bg-body, var(--bg-primary));
+}
+
+.bg-card {
+  background-color: var(--bg-card);
+}
+
+.bg-gradient-card {
+  background: var(--gradient-card);
+}
+
+.bg-gradient-primary {
+  background: var(--gradient-primary);
+}
+
+.text-text-primary {
+  color: var(--text-primary);
+}
+
+.text-text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-text-muted {
+  color: var(--text-muted);
+}
+
+.border-border-default {
+  border-color: var(--border-default);
+}
+
+.rounded-card {
+  border-radius: var(--radius-card, 8px);
+}
+
+.shadow-card {
+  box-shadow: var(--shadow-card);
+}
+
+.font-display {
+  font-family: "'Space Grotesk', sans-serif";
 }
 
 /* Responsive adjustments */
 @media (max-width: 575px) {
   .btn {
     width: 100%;
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: 12px 16px; /* button.sm padding */
   }
 }
 
