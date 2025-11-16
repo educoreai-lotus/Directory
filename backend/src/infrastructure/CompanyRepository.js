@@ -10,9 +10,20 @@ class CompanyRepository {
       throw new Error('DATABASE_URL or database connection parameters are not configured. Please set DATABASE_URL or individual DB_* environment variables.');
     }
     
+    console.log('Connecting to database:', config.databaseUrl.replace(/:[^:@]+@/, ':****@')); // Log connection string (hide password)
+    
     this.pool = new Pool({
       connectionString: config.databaseUrl,
-      ssl: config.databaseSsl ? { rejectUnauthorized: false } : false
+      ssl: config.databaseSsl ? { rejectUnauthorized: false } : false,
+      // Force IPv4 to avoid IPv6 connectivity issues
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+      max: 10
+    });
+    
+    // Test connection on initialization
+    this.pool.on('error', (err) => {
+      console.error('Unexpected database pool error:', err);
     });
   }
 

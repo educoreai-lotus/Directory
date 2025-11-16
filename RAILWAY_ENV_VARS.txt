@@ -21,6 +21,12 @@ SUPABASE_DB_NAME=postgres
 SUPABASE_USER=postgres
 SUPABASE_PASSWORD=fullstack2025
 SUPABASE_SSL=true
+SUPABASE_PROJECT_REF=lkxqkytxijlxlxsuystm
+
+# Connection Pooler (Recommended - avoids IPv6 issues)
+# The config will use the pooler by default if DB_USE_POOLER is not set to 'false'
+DB_USE_POOLER=true
+DB_POOLER_HOST=aws-1-ap-south-1.pooler.supabase.com
 
 # OAuth (Optional - Add later when implementing)
 # LINKEDIN_CLIENT_ID=your_linkedin_client_id
