@@ -23,12 +23,15 @@ function CompanyVerificationPage() {
   useEffect(() => {
     // Poll for status updates if status is pending
     if (verificationData?.verification_status === 'pending' && !polling) {
+      console.log('[VerificationPage] Starting polling for status updates');
       setPolling(true);
       const interval = setInterval(() => {
+        console.log('[VerificationPage] Polling for status update...');
         fetchVerificationStatus();
-      }, 5000); // Poll every 5 seconds
+      }, 3000); // Poll every 3 seconds (more frequent)
 
       return () => {
+        console.log('[VerificationPage] Stopping polling');
         clearInterval(interval);
         setPolling(false);
       };
@@ -36,7 +39,9 @@ function CompanyVerificationPage() {
 
     // Auto-redirect when approved
     if (verificationData?.verification_status === 'approved') {
+      console.log('[VerificationPage] Status is approved, scheduling redirect');
       const timer = setTimeout(() => {
+        console.log('[VerificationPage] Redirecting to CSV upload page');
         navigate(`/upload/${companyId}`);
       }, 5000); // Redirect after 5 seconds (give user time to see success message)
 
@@ -49,14 +54,31 @@ function CompanyVerificationPage() {
       setLoading(true);
       const response = await getCompanyVerificationStatus(companyId);
       
+      console.log('[VerificationPage] Received status response:', response);
+      
       if (response && response.response) {
-        setVerificationData(response.response);
+        const statusData = response.response;
+        console.log('[VerificationPage] Status data:', statusData);
+        console.log('[VerificationPage] Verification status:', statusData.verification_status);
+        
+        setVerificationData(statusData);
+        setError(null);
+        
+        // If status changed to approved, stop polling immediately
+        if (statusData.verification_status === 'approved') {
+          setPolling(false);
+        }
+      } else if (response && response.verification_status) {
+        // Handle case where response is not wrapped (shouldn't happen but just in case)
+        console.log('[VerificationPage] Direct status response:', response);
+        setVerificationData(response);
         setError(null);
       } else {
+        console.error('[VerificationPage] Invalid response format:', response);
         setError('Failed to fetch verification status');
       }
     } catch (err) {
-      console.error('Verification status error:', err);
+      console.error('[VerificationPage] Verification status error:', err);
       setError(err.response?.data?.response?.error || 'An error occurred while checking verification status');
     } finally {
       setLoading(false);

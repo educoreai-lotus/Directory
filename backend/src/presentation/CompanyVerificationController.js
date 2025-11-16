@@ -17,6 +17,8 @@ class CompanyVerificationController {
       const { id } = req.params;
       const result = await this.verifyCompanyUseCase.getStatus(id);
       
+      console.log(`[CompanyVerificationController] Returning status for company ${id}:`, result.verification_status);
+      
       res.status(200).json(result);
     } catch (error) {
       if (error.message === 'Company not found') {
