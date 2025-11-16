@@ -12,15 +12,41 @@ function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative bg-body" style={{
-      backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(6, 95, 70, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(4, 120, 87, 0.05) 0%, transparent 50%), radial-gradient(circle at 40% 80%, rgba(15, 118, 110, 0.05) 0%, transparent 50%)'
-    }}>
-      <div className="max-w-md w-full mx-4 bg-gradient-card rounded-card shadow-card border border-border-default p-8">
+    <div 
+      className="min-h-screen flex items-center justify-center relative" 
+      style={{
+        background: 'var(--bg-body, var(--bg-primary))',
+        backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(6, 95, 70, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(4, 120, 87, 0.05) 0%, transparent 50%), radial-gradient(circle at 40% 80%, rgba(15, 118, 110, 0.05) 0%, transparent 50%)'
+      }}
+    >
+      <div 
+        className="max-w-md w-full mx-4 rounded-lg shadow-lg border p-8"
+        style={{
+          background: 'var(--gradient-card)',
+          borderRadius: 'var(--radius-card, 8px)',
+          boxShadow: 'var(--shadow-card)',
+          borderColor: 'var(--border-default)'
+        }}
+      >
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2 font-display bg-gradient-primary bg-clip-text text-transparent">
+          <h1 
+            className="text-4xl font-bold mb-2"
+            style={{
+              fontFamily: "'Space Grotesk', sans-serif",
+              background: 'var(--gradient-primary)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}
+          >
             EDUCORE
           </h1>
-          <p className="text-sm text-text-secondary">Directory Management System</p>
+          <p 
+            className="text-sm"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            Directory Management System
+          </p>
         </div>
         
         <div className="flex flex-col gap-4">
@@ -33,10 +59,19 @@ function LandingPage() {
           
           <div className="relative my-2">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border-default"></div>
+              <div 
+                className="w-full border-t"
+                style={{ borderColor: 'var(--border-default)' }}
+              ></div>
             </div>
             <div className="relative flex justify-center">
-              <span className="px-2 bg-bg-card text-text-muted text-sm">
+              <span 
+                className="px-2 text-sm"
+                style={{
+                  background: 'var(--bg-card)',
+                  color: 'var(--text-muted)'
+                }}
+              >
                 OR
               </span>
             </div>
