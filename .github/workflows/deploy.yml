@@ -48,30 +48,16 @@ jobs:
     if: github.ref == 'refs/heads/main'
     
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      
-      - name: Install Dependencies
+      - name: Vercel Auto-Deploy
         run: |
-          cd frontend
-          npm install
-      
-      - name: Build
-        run: |
-          cd frontend
-          CI=false npm run build
-      
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./frontend
+          echo "Vercel automatically deploys from GitHub when connected."
+          echo "No manual deployment needed via GitHub Actions."
+          echo "Check Vercel dashboard for deployment status."
+          echo ""
+          echo "To verify Vercel is connected:"
+          echo "1. Go to Vercel dashboard"
+          echo "2. Check Settings → Git"
+          echo "3. Ensure GitHub repository is connected"
   
   deploy-backend:
     needs: test
