@@ -117,11 +117,11 @@ function CompanyVerificationPage() {
         pollingIntervalRef.current = null;
       }
       
-      // Set up redirect timer
+      // Set up redirect timer - longer delay to let users see the success state
       redirectTimerRef.current = setTimeout(() => {
         console.log('[VerificationPage] Redirecting to CSV upload page');
         navigate(`/upload/${companyId}`);
-      }, 5000);
+      }, 8000); // Increased to 8 seconds to give users time to see the success message
 
       return () => {
         if (redirectTimerRef.current) {
@@ -331,12 +331,12 @@ function CompanyVerificationPage() {
                   </div>
                 </div>
                 
-                <div className="text-center p-4 rounded-lg" style={{ background: 'rgba(16, 185, 129, 0.1)' }}>
+                <div className="text-center p-4 rounded-lg animate-fade-in" style={{ background: 'rgba(16, 185, 129, 0.1)' }}>
                   <p className="text-sm font-medium mb-2" style={{ color: 'var(--border-success)' }}>
                     ✓ Company Verified Successfully!
                   </p>
                   <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                    Redirecting to CSV upload page in a few seconds...
+                    You will be redirected to the CSV upload page shortly...
                   </p>
                 </div>
               </div>
