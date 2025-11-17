@@ -14,6 +14,11 @@ const api = axios.create({
 // Request interceptor: Stringify request body
 api.interceptors.request.use(
   (config) => {
+    // Skip stringification for FormData (file uploads)
+    if (config.data instanceof FormData) {
+      return config;
+    }
+    
     if (config.data && typeof config.data === 'object') {
       // Ensure request body follows the required format
       const requestBody = {

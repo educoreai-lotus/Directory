@@ -19,6 +19,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+// Note: parseRequest must come before express.json for stringified JSON
+// But multer (file uploads) needs to be handled separately in the route
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(parseRequest);

@@ -3,6 +3,11 @@
 // Handles both string (before express.json) and object (after express.json) formats
 
 const parseRequest = (req, res, next) => {
+  // Skip parsing for multipart/form-data (file uploads handled by multer)
+  if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
+    return next();
+  }
+
   // If body is a string, parse it first
   if (req.body && typeof req.body === 'string') {
     try {
