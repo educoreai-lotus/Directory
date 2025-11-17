@@ -120,15 +120,18 @@ class CSVParser {
       return null;
     }
     const normalized = String(value).trim().toLowerCase();
-    // Only return if it's a valid value, otherwise return null
-    if (normalized === 'manual' || normalized === 'automatic') {
-      return normalized;
-    }
-    // If it's close (like "Manual"), normalize it
-    if (normalized === 'manual' || normalized.startsWith('manual')) {
+    // Check for exact matches first
+    if (normalized === 'manual') {
       return 'manual';
     }
-    if (normalized === 'automatic' || normalized.startsWith('automatic')) {
+    if (normalized === 'automatic') {
+      return 'automatic';
+    }
+    // Check for partial matches (e.g., "Manual", "AUTOMATIC")
+    if (normalized.startsWith('manual')) {
+      return 'manual';
+    }
+    if (normalized.startsWith('automatic')) {
       return 'automatic';
     }
     return null; // Invalid value, will default to 'manual' in the parser
