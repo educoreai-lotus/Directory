@@ -68,10 +68,13 @@ class VerifyCompanyUseCase {
       newStatus = 'approved';
       console.log(`[VerifyCompanyUseCase] ✅ Domain ${company.domain} is valid - auto-approving`);
     } else if (validationResult.errors.length > 0 && !validationResult.hasDNS) {
-      // Only reject if DNS is completely invalid
-      // Otherwise, keep as pending for manual review
+      // Reject if DNS is completely invalid (domain doesn't exist or can't be resolved)
+      newStatus = 'rejected';
+      console.log(`[VerifyCompanyUseCase] ❌ Domain ${company.domain} validation failed - rejecting: ${validationResult.errors.join(', ')}`);
+    } else if (validationResult.errors.length > 0) {
+      // If there are errors but DNS exists, keep as pending for manual review
       newStatus = 'pending';
-      console.log(`[VerifyCompanyUseCase] ⚠️ Domain ${company.domain} validation failed - keeping as pending for manual review`);
+      console.log(`[VerifyCompanyUseCase] ⚠️ Domain ${company.domain} has issues but DNS exists - keeping as pending for manual review: ${validationResult.errors.join(', ')}`);
     }
 
     // Update company verification status
