@@ -5,6 +5,8 @@ const formatResponse = require('./shared/responseFormatter');
 
 // Controllers
 const CompanyRegistrationController = require('./presentation/CompanyRegistrationController');
+const CompanyVerificationController = require('./presentation/CompanyVerificationController');
+const CSVUploadController = require('./presentation/CSVUploadController');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -33,8 +35,8 @@ app.get('/health', (req, res) => {
 
 // Initialize controllers
 const companyRegistrationController = new CompanyRegistrationController();
-const CompanyVerificationController = require('./presentation/CompanyVerificationController');
 const companyVerificationController = new CompanyVerificationController();
+const csvUploadController = new CSVUploadController();
 
 // API Routes
 const apiRouter = express.Router();
