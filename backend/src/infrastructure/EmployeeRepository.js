@@ -435,6 +435,32 @@ class EmployeeRepository {
   }
 
   /**
+   * Update GitHub data for an employee
+   * @param {string} employeeId - Employee UUID
+   * @param {string} githubUrl - GitHub profile URL
+   * @param {Object} githubData - GitHub profile data (JSON)
+   * @param {Object} client - Optional database client
+   * @returns {Promise<Object>} Updated employee
+   */
+  async updateGitHubData(employeeId, githubUrl, githubData, client = null) {
+    const query = `
+      UPDATE employees
+      SET github_url = $1,
+          github_data = $2,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3
+      RETURNING *
+    `;
+    const queryRunner = client || this.pool;
+    const result = await queryRunner.query(query, [
+      githubUrl,
+      JSON.stringify(githubData),
+      employeeId
+    ]);
+    return result.rows[0];
+  }
+
+  /**
    * Find all employees for a company with their roles and teams
    * @param {string} companyId - Company ID
    * @returns {Promise<Array>} Array of employees with roles and teams

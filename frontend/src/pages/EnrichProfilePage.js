@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import LinkedInConnectButton from '../components/LinkedInConnectButton';
+import GitHubConnectButton from '../components/GitHubConnectButton';
 
 function EnrichProfilePage() {
   const { user } = useAuth();
@@ -17,6 +18,7 @@ function EnrichProfilePage() {
   // Check URL params for OAuth callback results
   useEffect(() => {
     const linkedinParam = searchParams.get('linkedin');
+    const githubParam = searchParams.get('github');
     const errorParam = searchParams.get('error');
 
     if (errorParam) {
@@ -25,7 +27,14 @@ function EnrichProfilePage() {
 
     if (linkedinParam === 'connected') {
       setLinkedinConnected(true);
-      // Clear URL params
+    }
+
+    if (githubParam === 'connected') {
+      setGithubConnected(true);
+    }
+
+    // Clear URL params after processing
+    if (linkedinParam || githubParam || errorParam) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [searchParams]);
@@ -140,7 +149,7 @@ function EnrichProfilePage() {
           />
         </div>
 
-        {/* GitHub Connection - Placeholder for F009 */}
+        {/* GitHub Connection */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h3 
@@ -167,20 +176,14 @@ function EnrichProfilePage() {
           >
             Connect your GitHub account to showcase your projects and code contributions.
           </p>
-          <button
-            disabled
-            className="btn btn-secondary w-full"
-            style={{
-              opacity: 0.5,
-              cursor: 'not-allowed'
-            }}
-          >
-            Coming Soon (F009)
-          </button>
+          <GitHubConnectButton 
+            disabled={githubConnected}
+            onConnected={() => setGithubConnected(true)}
+          />
         </div>
 
         {/* Continue Button */}
-        {linkedinConnected && (
+        {linkedinConnected && githubConnected && (
           <div className="mt-8">
             <button
               onClick={handleContinue}
@@ -192,7 +195,18 @@ function EnrichProfilePage() {
               className="text-xs text-center mt-4"
               style={{ color: 'var(--text-muted)' }}
             >
-              Note: GitHub connection will be available in the next update. You can continue with LinkedIn for now.
+              Both LinkedIn and GitHub are connected. Your profile will be enriched with AI-generated content.
+            </p>
+          </div>
+        )}
+        
+        {linkedinConnected && !githubConnected && (
+          <div className="mt-8">
+            <p 
+              className="text-sm text-center"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              Please connect your GitHub account to complete profile enrichment.
             </p>
           </div>
         )}

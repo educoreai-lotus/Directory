@@ -76,6 +76,15 @@ apiRouter.get('/oauth/linkedin/callback', (req, res, next) => {
   oauthController.handleLinkedInCallback(req, res, next);
 });
 
+// GitHub OAuth
+apiRouter.get('/oauth/github/authorize', authMiddleware, (req, res, next) => {
+  oauthController.getGitHubAuthUrl(req, res, next);
+});
+
+apiRouter.get('/oauth/github/callback', (req, res, next) => {
+  oauthController.handleGitHubCallback(req, res, next);
+});
+
 // Company Registration
 apiRouter.post('/companies/register', (req, res, next) => {
   companyRegistrationController.register(req, res, next);
