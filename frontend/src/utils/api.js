@@ -11,9 +11,17 @@ const api = axios.create({
   }
 });
 
-// Request interceptor: Stringify request body
+// Request interceptor: Add auth token and stringify request body
 api.interceptors.request.use(
   (config) => {
+    // Add Authorization header if token exists
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      // For dummy tokens, we'll send it as Bearer token
+      // The backend authMiddleware will handle it
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
     // Skip stringification for FormData (file uploads)
     if (config.data instanceof FormData) {
       return config;
