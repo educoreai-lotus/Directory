@@ -75,8 +75,8 @@ export const AuthProvider = ({ children }) => {
         } else {
           // Regular employee
           if (result.user.isFirstLogin || result.user.profileStatus === 'basic') {
-            // First login - redirect to enrichment page (will be implemented in F008)
-            navigate(`/enrich/${result.user.id}`);
+            // First login - redirect to enrichment page
+            navigate(`/enrich`);
           } else if (result.user.profileStatus === 'enriched' && !result.user.isProfileApproved) {
             // Enriched but not approved - show waiting message
             navigate(`/employee/${result.user.id}?status=waiting-approval`);

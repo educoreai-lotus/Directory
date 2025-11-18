@@ -7,6 +7,7 @@ import CompanyVerificationPage from './pages/CompanyVerificationPage';
 import CompanyCSVUploadPage from './pages/CompanyCSVUploadPage';
 import CompanyProfilePage from './pages/CompanyProfilePage';
 import LoginPage from './pages/LoginPage';
+import EnrichProfilePage from './pages/EnrichProfilePage';
 import './App.css';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/enrich" element={<EnrichProfilePage />} />
             <Route path="/register" element={<CompanyRegistrationForm />} />
             <Route path="/verify/:companyId" element={<CompanyVerificationPage />} />
             <Route path="/upload/:companyId" element={<CompanyCSVUploadPage />} />

@@ -10,6 +10,7 @@ const CSVUploadController = require('./presentation/CSVUploadController');
 const CompanyProfileController = require('./presentation/CompanyProfileController');
 const EmployeeController = require('./presentation/EmployeeController');
 const AuthController = require('./presentation/AuthController');
+const OAuthController = require('./presentation/OAuthController');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -45,6 +46,7 @@ const csvUploadController = new CSVUploadController();
 const companyProfileController = new CompanyProfileController();
 const employeeController = new EmployeeController();
 const authController = new AuthController();
+const oauthController = new OAuthController();
 
 // API Routes
 const apiRouter = express.Router();
@@ -62,6 +64,16 @@ apiRouter.post('/auth/logout', (req, res, next) => {
 const { authMiddleware } = require('./shared/authMiddleware');
 apiRouter.get('/auth/me', authMiddleware, (req, res, next) => {
   authController.getCurrentUser(req, res, next);
+});
+
+// OAuth Routes
+// LinkedIn OAuth
+apiRouter.get('/oauth/linkedin/authorize', authMiddleware, (req, res, next) => {
+  oauthController.getLinkedInAuthUrl(req, res, next);
+});
+
+apiRouter.get('/oauth/linkedin/callback', (req, res, next) => {
+  oauthController.handleLinkedInCallback(req, res, next);
 });
 
 // Company Registration

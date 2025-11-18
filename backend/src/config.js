@@ -123,6 +123,24 @@ const config = {
   directory: {
     baseUrl: process.env.DIRECTORY_URL || 'https://directory3-production.up.railway.app',
     endpoint: '/api/fill-content-metrics'
+  },
+  
+  // OAuth Configuration
+  linkedin: {
+    clientId: process.env.LINKEDIN_CLIENT_ID,
+    clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
+    redirectUri: process.env.LINKEDIN_REDIRECT_URI || `${process.env.DIRECTORY_URL || 'https://directory3-production.up.railway.app'}/api/v1/oauth/linkedin/callback`
+  },
+  
+  github: {
+    clientId: process.env.GITHUB_CLIENT_ID,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    redirectUri: process.env.GITHUB_REDIRECT_URI || `${process.env.DIRECTORY_URL || 'https://directory3-production.up.railway.app'}/api/v1/oauth/github/callback`
+  },
+  
+  // Gemini AI Configuration
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY
   }
 };
 

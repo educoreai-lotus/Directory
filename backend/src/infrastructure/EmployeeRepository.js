@@ -409,6 +409,32 @@ class EmployeeRepository {
   }
 
   /**
+   * Update LinkedIn data for an employee
+   * @param {string} employeeId - Employee UUID
+   * @param {string} linkedinUrl - LinkedIn profile URL
+   * @param {Object} linkedinData - LinkedIn profile data (JSON)
+   * @param {Object} client - Optional database client
+   * @returns {Promise<Object>} Updated employee
+   */
+  async updateLinkedInData(employeeId, linkedinUrl, linkedinData, client = null) {
+    const query = `
+      UPDATE employees
+      SET linkedin_url = $1,
+          linkedin_data = $2,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3
+      RETURNING *
+    `;
+    const queryRunner = client || this.pool;
+    const result = await queryRunner.query(query, [
+      linkedinUrl,
+      JSON.stringify(linkedinData),
+      employeeId
+    ]);
+    return result.rows[0];
+  }
+
+  /**
    * Find all employees for a company with their roles and teams
    * @param {string} companyId - Company ID
    * @returns {Promise<Array>} Array of employees with roles and teams
