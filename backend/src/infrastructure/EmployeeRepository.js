@@ -100,6 +100,225 @@ class EmployeeRepository {
   }
 
   /**
+   * Find employee by email and company
+   * @param {string} email - Email address
+   * @param {string} companyId - Company ID
+   * @returns {Promise<Object|null>} Employee or null
+   */
+  async findByEmailAndCompany(email, companyId) {
+    const query = 'SELECT * FROM employees WHERE email = $1 AND company_id = $2';
+    const result = await this.pool.query(query, [email, companyId]);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Check if email exists in any company
+   * @param {string} email - Email address
+   * @returns {Promise<Object|null>} Employee with company_id or null
+   */
+  async findEmailOwner(email) {
+    const query = 'SELECT id, email, company_id, full_name FROM employees WHERE email = $1';
+    const result = await this.pool.query(query, [email]);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Create or update employee (handles email uniqueness)
+   * If email exists for same company → UPDATE
+   * If email exists for different company → THROW error
+   * If email doesn't exist → INSERT
+   * @param {Object} employeeData - Employee data
+   * @param {Object} client - Optional database client for transaction
+   * @returns {Promise<Object>} Created or updated employee
+   */
+  async createOrUpdate(employeeData, client = null) {
+    const {
+      company_id,
+      employee_id,
+      full_name,
+      email,
+      password,
+      current_role_in_company,
+      target_role_in_company,
+      preferred_language,
+      status
+    } = employeeData;
+
+    const queryRunner = client || this.pool;
+
+    // Check if email already exists
+    const existingEmailOwner = await this.findEmailOwner(email);
+    
+    if (existingEmailOwner) {
+      // Email exists - check if it's for the same company
+      if (existingEmailOwner.company_id === company_id) {
+        // Same company - UPDATE the employee
+        return await this.updateByEmail(email, company_id, {
+          employee_id,
+          full_name,
+          password,
+          current_role_in_company,
+          target_role_in_company,
+          preferred_language,
+          status
+        }, client);
+      } else {
+        // Different company - REJECT
+        throw new Error(`Email address "${email}" is already registered to another company. Each email must be unique across all companies.`);
+      }
+    }
+
+    // Email doesn't exist - check if employee_id exists for this company
+    const existingEmployee = await this.findByCompanyAndEmployeeId(company_id, employee_id);
+    
+    if (existingEmployee) {
+      // Employee ID exists - UPDATE
+      return await this.updateByEmployeeId(company_id, employee_id, {
+        full_name,
+        email,
+        password,
+        current_role_in_company,
+        target_role_in_company,
+        preferred_language,
+        status
+      }, client);
+    }
+
+    // Neither email nor employee_id exists - INSERT
+    return await this.create(employeeData, client);
+  }
+
+  /**
+   * Update employee by email
+   * @param {string} email - Email address
+   * @param {string} companyId - Company ID
+   * @param {Object} updateData - Data to update
+   * @param {Object} client - Optional database client
+   * @returns {Promise<Object>} Updated employee
+   */
+  async updateByEmail(email, companyId, updateData, client = null) {
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (updateData.full_name !== undefined) {
+      updates.push(`full_name = $${paramIndex++}`);
+      values.push(updateData.full_name);
+    }
+    if (updateData.employee_id !== undefined) {
+      updates.push(`employee_id = $${paramIndex++}`);
+      values.push(updateData.employee_id);
+    }
+    if (updateData.password !== undefined) {
+      const password_hash = await bcrypt.hash(updateData.password || 'default123', 10);
+      updates.push(`password_hash = $${paramIndex++}`);
+      values.push(password_hash);
+    }
+    if (updateData.current_role_in_company !== undefined) {
+      updates.push(`current_role_in_company = $${paramIndex++}`);
+      values.push(updateData.current_role_in_company);
+    }
+    if (updateData.target_role_in_company !== undefined) {
+      updates.push(`target_role_in_company = $${paramIndex++}`);
+      values.push(updateData.target_role_in_company);
+    }
+    if (updateData.preferred_language !== undefined) {
+      updates.push(`preferred_language = $${paramIndex++}`);
+      values.push(updateData.preferred_language);
+    }
+    if (updateData.status !== undefined) {
+      updates.push(`status = $${paramIndex++}`);
+      values.push(updateData.status);
+    }
+
+    if (updates.length === 0) {
+      // No updates - just return existing employee
+      return await this.findByEmailAndCompany(email, companyId);
+    }
+
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(email, companyId);
+
+    const query = `
+      UPDATE employees
+      SET ${updates.join(', ')}
+      WHERE email = $${paramIndex++} AND company_id = $${paramIndex}
+      RETURNING *
+    `;
+
+    const queryRunner = client || this.pool;
+    const result = await queryRunner.query(query, values);
+    return result.rows[0];
+  }
+
+  /**
+   * Update employee by employee_id
+   * @param {string} companyId - Company ID
+   * @param {string} employeeId - Employee ID
+   * @param {Object} updateData - Data to update
+   * @param {Object} client - Optional database client
+   * @returns {Promise<Object>} Updated employee
+   */
+  async updateByEmployeeId(companyId, employeeId, updateData, client = null) {
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (updateData.full_name !== undefined) {
+      updates.push(`full_name = $${paramIndex++}`);
+      values.push(updateData.full_name);
+    }
+    if (updateData.email !== undefined) {
+      // Check if new email already exists
+      const emailOwner = await this.findEmailOwner(updateData.email);
+      if (emailOwner && emailOwner.company_id !== companyId) {
+        throw new Error(`Email address "${updateData.email}" is already registered to another company.`);
+      }
+      updates.push(`email = $${paramIndex++}`);
+      values.push(updateData.email);
+    }
+    if (updateData.password !== undefined) {
+      const password_hash = await bcrypt.hash(updateData.password || 'default123', 10);
+      updates.push(`password_hash = $${paramIndex++}`);
+      values.push(password_hash);
+    }
+    if (updateData.current_role_in_company !== undefined) {
+      updates.push(`current_role_in_company = $${paramIndex++}`);
+      values.push(updateData.current_role_in_company);
+    }
+    if (updateData.target_role_in_company !== undefined) {
+      updates.push(`target_role_in_company = $${paramIndex++}`);
+      values.push(updateData.target_role_in_company);
+    }
+    if (updateData.preferred_language !== undefined) {
+      updates.push(`preferred_language = $${paramIndex++}`);
+      values.push(updateData.preferred_language);
+    }
+    if (updateData.status !== undefined) {
+      updates.push(`status = $${paramIndex++}`);
+      values.push(updateData.status);
+    }
+
+    if (updates.length === 0) {
+      return await this.findByCompanyAndEmployeeId(companyId, employeeId);
+    }
+
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(companyId, employeeId);
+
+    const query = `
+      UPDATE employees
+      SET ${updates.join(', ')}
+      WHERE company_id = $${paramIndex++} AND employee_id = $${paramIndex}
+      RETURNING *
+    `;
+
+    const queryRunner = client || this.pool;
+    const result = await queryRunner.query(query, values);
+    return result.rows[0];
+  }
+
+  /**
    * Create employee role
    * @param {string} employeeId - Employee UUID
    * @param {string} roleType - Role type

@@ -12,6 +12,7 @@ class ParseCSVUseCase {
   constructor() {
     this.csvParser = new CSVParser();
     this.csvValidator = new CSVValidator();
+    this.dbConstraintValidator = new DatabaseConstraintValidator();
     this.companyRepository = new CompanyRepository();
     this.departmentRepository = new DepartmentRepository();
     this.teamRepository = new TeamRepository();
@@ -83,7 +84,7 @@ class ParseCSVUseCase {
     const client = await this.companyRepository.beginTransaction();
 
     try {
-      // Update company settings from first row
+      // Update company settings from first row (with validation)
       const firstRow = validRows[0];
       if (firstRow.learning_path_approval || firstRow.primary_kpis) {
         await this.updateCompanySettings(companyId, firstRow, client);
@@ -95,49 +96,72 @@ class ParseCSVUseCase {
       const createdEmployees = new Map(); // employee_id -> employee UUID
       const employeeIdToUuid = new Map(); // CSV employee_id -> employee UUID
 
+      // Pre-validate all emails against database to catch conflicts early
+      const emailConflicts = [];
+      for (const row of validRows) {
+        const emailOwner = await this.employeeRepository.findEmailOwner(row.email);
+        if (emailOwner && emailOwner.company_id !== companyId) {
+          emailConflicts.push({
+            email: row.email,
+            row: row.rowNumber,
+            existingCompany: emailOwner.company_id
+          });
+        }
+      }
+
+      if (emailConflicts.length > 0) {
+        const conflictMessages = emailConflicts.map(c => 
+          `Row ${c.row}: Email "${c.email}" is already registered to another company.`
+        );
+        throw new Error(`Email conflicts detected:\n${conflictMessages.join('\n')}`);
+      }
+
       // Process rows in order
       for (const row of validRows) {
+        // Validate and normalize row data against database constraints
+        const validatedRow = this.dbConstraintValidator.validateEmployeeRow(row);
+
         // Create or get department
         const department = await this.departmentRepository.createOrGet(
           companyId,
-          row.department_id,
-          row.department_name,
+          validatedRow.department_id,
+          validatedRow.department_name,
           client
         );
-        if (!createdDepartments.has(row.department_id)) {
-          createdDepartments.set(row.department_id, department.id);
+        if (!createdDepartments.has(validatedRow.department_id)) {
+          createdDepartments.set(validatedRow.department_id, department.id);
         }
 
         // Create or get team
         const team = await this.teamRepository.createOrGet(
           companyId,
-          row.team_id,
-          row.team_name,
+          validatedRow.team_id,
+          validatedRow.team_name,
           department.id,
           client
         );
-        if (!createdTeams.has(row.team_id)) {
-          createdTeams.set(row.team_id, team.id);
+        if (!createdTeams.has(validatedRow.team_id)) {
+          createdTeams.set(validatedRow.team_id, team.id);
         }
 
-        // Create employee
-        const employee = await this.employeeRepository.create({
+        // Create or update employee (handles email uniqueness)
+        const employee = await this.employeeRepository.createOrUpdate({
           company_id: companyId,
-          employee_id: row.employee_id,
-          full_name: row.full_name,
-          email: row.email,
-          password: row.password,
-          current_role_in_company: row.current_role_in_company,
-          target_role_in_company: row.target_role_in_company,
-          preferred_language: row.preferred_language,
-          status: row.status
+          employee_id: validatedRow.employee_id,
+          full_name: validatedRow.full_name,
+          email: validatedRow.email,
+          password: validatedRow.password,
+          current_role_in_company: validatedRow.current_role_in_company,
+          target_role_in_company: validatedRow.target_role_in_company,
+          preferred_language: validatedRow.preferred_language,
+          status: validatedRow.status
         }, client);
 
-        createdEmployees.set(row.employee_id, employee.id);
-        employeeIdToUuid.set(row.employee_id, employee.id);
+        createdEmployees.set(validatedRow.employee_id, employee.id);
+        employeeIdToUuid.set(validatedRow.employee_id, employee.id);
 
-        // Parse and create roles
-        const roles = this.parseRoles(row.role_type);
+        // Parse and create roles (using validated roles from validator)
+        const roles = validatedRow.validatedRoles || this.dbConstraintValidator.validateRoleType(validatedRow.role_type);
         for (const role of roles) {
           await this.employeeRepository.createRole(employee.id, role, client);
         }
@@ -149,8 +173,8 @@ class ParseCSVUseCase {
         if (roles.includes('TRAINER')) {
           await this.employeeRepository.createTrainerSettings(
             employee.id,
-            row.ai_enabled || false,
-            row.public_publish_enable || false,
+            validatedRow.ai_enabled || false,
+            validatedRow.public_publish_enable || false,
             client
           );
         }
@@ -166,22 +190,17 @@ class ParseCSVUseCase {
             // Determine relationship type based on manager's roles
             const managerRow = validRows.find(r => r.employee_id === row.manager_id);
             if (managerRow) {
-              const managerRoles = this.parseRoles(managerRow.role_type);
-              if (managerRoles.includes('DEPARTMENT_MANAGER')) {
-                await this.employeeRepository.assignManager(
-                  employeeUuid,
-                  managerUuid,
-                  'department_manager',
-                  client
-                );
-              } else if (managerRoles.includes('TEAM_MANAGER')) {
-                await this.employeeRepository.assignManager(
-                  employeeUuid,
-                  managerUuid,
-                  'team_manager',
-                  client
-                );
-              }
+              const managerRoles = this.dbConstraintValidator.validateRoleType(managerRow.role_type);
+              const relationshipType = managerRoles.includes('DEPARTMENT_MANAGER') 
+                ? 'department_manager' 
+                : 'team_manager';
+              
+              await this.employeeRepository.assignManager(
+                employeeUuid,
+                managerUuid,
+                relationshipType,
+                client
+              );
             }
           }
         }
@@ -199,7 +218,8 @@ class ParseCSVUseCase {
       // Rollback transaction on error
       await this.companyRepository.rollbackTransaction(client);
       console.error('[ParseCSVUseCase] Error processing CSV:', error);
-      throw new Error(`Failed to process CSV: ${error.message}`);
+      // Re-throw with original message (will be translated by controller)
+      throw error;
     }
   }
 
@@ -210,18 +230,21 @@ class ParseCSVUseCase {
    * @param {Object} client - Database client
    */
   async updateCompanySettings(companyId, row, client) {
+    // Validate company settings against database constraints
+    const validatedSettings = this.dbConstraintValidator.validateCompanySettings(row);
+
     const updates = [];
     const values = [];
     let paramIndex = 1;
 
-    if (row.learning_path_approval) {
+    if (validatedSettings.learning_path_approval !== undefined) {
       updates.push(`learning_path_approval = $${paramIndex++}`);
-      values.push(row.learning_path_approval);
+      values.push(validatedSettings.learning_path_approval);
     }
 
-    if (row.primary_kpis) {
+    if (validatedSettings.primary_kpis !== undefined) {
       updates.push(`primary_kpis = $${paramIndex++}`);
-      values.push(row.primary_kpis);
+      values.push(validatedSettings.primary_kpis);
     }
 
     if (updates.length > 0) {
@@ -235,24 +258,6 @@ class ParseCSVUseCase {
     }
   }
 
-  /**
-   * Parse role type string into array of roles
-   * @param {string} roleType - Role type string (e.g., "REGULAR_EMPLOYEE + TEAM_MANAGER")
-   * @returns {Array<string>} Array of role types
-   */
-  parseRoles(roleType) {
-    if (!roleType) {
-      return ['REGULAR_EMPLOYEE']; // Default role
-    }
-
-    const roles = roleType
-      .split('+')
-      .map(r => r.trim())
-      .filter(r => r.length > 0);
-
-    // If no valid roles found, default to REGULAR_EMPLOYEE
-    return roles.length > 0 ? roles : ['REGULAR_EMPLOYEE'];
-  }
 }
 
 module.exports = ParseCSVUseCase;

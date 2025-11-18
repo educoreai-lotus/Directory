@@ -3,6 +3,7 @@
 
 const multer = require('multer');
 const ParseCSVUseCase = require('../application/ParseCSVUseCase');
+const ErrorTranslator = require('../shared/ErrorTranslator');
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
@@ -73,8 +74,25 @@ class CSVUploadController {
         }
       } catch (error) {
         console.error('[CSVUploadController] CSV processing error:', error);
-        res.status(500).json({
-          error: error.message || 'An error occurred while processing the CSV file'
+        
+        // Translate technical errors to human-friendly messages
+        const userFriendlyMessage = ErrorTranslator.translateError(error);
+        
+        // Determine appropriate status code
+        let statusCode = 500;
+        if (error.code === '23505' || error.code === '23514' || error.code === '23502') {
+          statusCode = 400; // Bad request for constraint violations
+        } else if (error.message && (
+          error.message.includes('Email') ||
+          error.message.includes('email') ||
+          error.message.includes('conflict') ||
+          error.message.includes('already exists')
+        )) {
+          statusCode = 400;
+        }
+        
+        res.status(statusCode).json({
+          error: userFriendlyMessage
         });
       }
     });
