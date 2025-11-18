@@ -18,10 +18,7 @@ class AuthController {
 
       if (!email || !password) {
         return res.status(400).json({
-          requester_service: 'directory_service',
-          response: {
-            error: 'Email and password are required'
-          }
+          error: 'Email and password are required'
         });
       }
 
@@ -29,29 +26,20 @@ class AuthController {
 
       if (result.success) {
         return res.status(200).json({
-          requester_service: 'directory_service',
-          response: {
-            success: true,
-            token: result.token,
-            user: result.user
-          }
+          success: true,
+          token: result.token,
+          user: result.user
         });
       } else {
         return res.status(401).json({
-          requester_service: 'directory_service',
-          response: {
-            success: false,
-            error: result.error
-          }
+          success: false,
+          error: result.error
         });
       }
     } catch (error) {
       console.error('[AuthController] Login error:', error);
       return res.status(500).json({
-        requester_service: 'directory_service',
-        response: {
-          error: 'An error occurred during login. Please try again.'
-        }
+        error: 'An error occurred during login. Please try again.'
       });
     }
   }
@@ -65,19 +53,13 @@ class AuthController {
       // In dummy mode, logout is just clearing the token on client side
       // In real auth mode, we might invalidate the token on server
       return res.status(200).json({
-        requester_service: 'directory_service',
-        response: {
-          success: true,
-          message: 'Logged out successfully'
-        }
+        success: true,
+        message: 'Logged out successfully'
       });
     } catch (error) {
       console.error('[AuthController] Logout error:', error);
       return res.status(500).json({
-        requester_service: 'directory_service',
-        response: {
-          error: 'An error occurred during logout. Please try again.'
-        }
+        error: 'An error occurred during logout. Please try again.'
       });
     }
   }
@@ -92,26 +74,17 @@ class AuthController {
       // req.user should be set by authMiddleware
       if (!req.user) {
         return res.status(401).json({
-          requester_service: 'directory_service',
-          response: {
-            error: 'Authentication required'
-          }
+          error: 'Authentication required'
         });
       }
 
       return res.status(200).json({
-        requester_service: 'directory_service',
-        response: {
-          user: req.user
-        }
+        user: req.user
       });
     } catch (error) {
       console.error('[AuthController] Get current user error:', error);
       return res.status(500).json({
-        requester_service: 'directory_service',
-        response: {
-          error: 'An error occurred. Please try again.'
-        }
+        error: 'An error occurred. Please try again.'
       });
     }
   }
