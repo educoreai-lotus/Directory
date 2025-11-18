@@ -7,6 +7,11 @@ import { useAuth } from '../context/AuthContext';
 import { getEmployee } from '../services/employeeService';
 import TrainerSettings from '../components/TrainerSettings';
 import TrainerCoursesTaught from '../components/TrainerCoursesTaught';
+import ProfileSkills from '../components/ProfileSkills';
+import ProfileCourses from '../components/ProfileCourses';
+import ProfileDashboard from '../components/ProfileDashboard';
+import ProfileRequests from '../components/ProfileRequests';
+import LearningPath from '../components/LearningPath';
 
 function EmployeeProfilePage() {
   const { employeeId } = useParams();
@@ -370,7 +375,42 @@ function EmployeeProfilePage() {
           )}
         </div>
 
-        {/* Trainer Sections */}
+        {/* Approved Employee Features - Only visible when profile is approved */}
+        {profileStatus === 'approved' && (
+          <div 
+            className="rounded-lg shadow-lg border p-8 mb-6"
+            style={{
+              background: 'var(--gradient-card)',
+              borderRadius: 'var(--radius-card, 8px)',
+              boxShadow: 'var(--shadow-card)',
+              borderColor: 'var(--border-default)'
+            }}
+          >
+            <h2 
+              className="text-2xl font-semibold mb-6"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              Learning & Development
+            </h2>
+
+            {/* Skills Section */}
+            <ProfileSkills employeeId={employeeId} />
+
+            {/* Courses Section */}
+            <ProfileCourses employeeId={employeeId} />
+
+            {/* Learning Path Section */}
+            <LearningPath employeeId={employeeId} />
+
+            {/* Dashboard Section */}
+            <ProfileDashboard employeeId={employeeId} />
+
+            {/* Requests Section */}
+            <ProfileRequests employeeId={employeeId} />
+          </div>
+        )}
+
+        {/* Trainer Sections - Only visible for trainers */}
         {employee.is_trainer && (
           <div 
             className="rounded-lg shadow-lg border p-8 mb-6"
