@@ -1,0 +1,60 @@
+{
+  "gemini": {
+    "bio": "{{name}} is a {{role}} with expertise in software development and technology. They bring valuable experience and skills to their team, contributing to innovative projects and solutions.",
+    "project_summaries": [
+      {
+        "repository_name": "example-project",
+        "repository_url": "https://github.com/user/example-project",
+        "summary": "A software project demonstrating technical skills and development experience."
+      }
+    ]
+  },
+  "skills-engine": {
+    "normalize-skills": {
+      "normalized_skills": [],
+      "competencies": [],
+      "unverified_skills": []
+    },
+    "verify-skills": {
+      "verified_skills": [],
+      "relevance_score": 75
+    }
+  },
+  "course-builder": {
+    "language-sync": {
+      "status": "success"
+    },
+    "completion-feedback": {
+      "course_id": "",
+      "feedback": ""
+    }
+  },
+  "content-studio": {
+    "create-course": {
+      "course_id": "",
+      "status": "created"
+    },
+    "trainer-status": {
+      "status": "active"
+    }
+  },
+  "learner-ai": {
+    "learning-path": {
+      "path_id": "",
+      "courses": []
+    }
+  },
+  "assessment": {
+    "assessment-result": {
+      "score": 85,
+      "passed": true
+    }
+  },
+  "management-reporting": {
+    "analytics": {
+      "total_employees": 100,
+      "active_courses": 50
+    }
+  }
+}
+

@@ -461,6 +461,76 @@ class EmployeeRepository {
   }
 
   /**
+   * Update employee profile with enrichment data (bio and project summaries)
+   * @param {string} employeeId - Employee UUID
+   * @param {string} bio - AI-generated bio
+   * @param {Array} projectSummaries - Array of project summaries
+   * @param {Object} client - Optional database client
+   * @returns {Promise<Object>} Updated employee
+   */
+  async updateEnrichment(employeeId, bio, projectSummaries, client = null) {
+    const queryRunner = client || this.pool;
+    
+    // Start transaction if using client
+    const needsTransaction = !client;
+    if (needsTransaction) {
+      await queryRunner.query('BEGIN');
+    }
+
+    try {
+      // Update employee bio and enrichment flags
+      const updateQuery = `
+        UPDATE employees
+        SET bio = $1,
+            enrichment_completed = TRUE,
+            enrichment_completed_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        RETURNING *
+      `;
+      const updateResult = await queryRunner.query(updateQuery, [bio, employeeId]);
+      const updatedEmployee = updateResult.rows[0];
+
+      // Delete existing project summaries
+      await queryRunner.query(
+        'DELETE FROM employee_project_summaries WHERE employee_id = $1',
+        [employeeId]
+      );
+
+      // Insert new project summaries
+      if (projectSummaries && projectSummaries.length > 0) {
+        // Use parameterized query to prevent SQL injection
+        for (const ps of projectSummaries) {
+          await queryRunner.query(
+            `INSERT INTO employee_project_summaries (employee_id, repository_name, repository_url, summary)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (employee_id, repository_name) DO UPDATE SET
+               repository_url = EXCLUDED.repository_url,
+               summary = EXCLUDED.summary`,
+            [
+              employeeId,
+              ps.repository_name,
+              ps.repository_url || null,
+              ps.summary
+            ]
+          );
+        }
+      }
+
+      if (needsTransaction) {
+        await queryRunner.query('COMMIT');
+      }
+
+      return updatedEmployee;
+    } catch (error) {
+      if (needsTransaction) {
+        await queryRunner.query('ROLLBACK');
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Find all employees for a company with their roles and teams
    * @param {string} companyId - Company ID
    * @returns {Promise<Array>} Array of employees with roles and teams

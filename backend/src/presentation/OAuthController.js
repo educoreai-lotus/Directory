@@ -3,12 +3,14 @@
 
 const ConnectLinkedInUseCase = require('../application/ConnectLinkedInUseCase');
 const ConnectGitHubUseCase = require('../application/ConnectGitHubUseCase');
+const EnrichProfileUseCase = require('../application/EnrichProfileUseCase');
 const { authMiddleware } = require('../shared/authMiddleware');
 
 class OAuthController {
   constructor() {
     this.connectLinkedInUseCase = new ConnectLinkedInUseCase();
     this.connectGitHubUseCase = new ConnectGitHubUseCase();
+    this.enrichProfileUseCase = new EnrichProfileUseCase();
   }
 
   /**
@@ -71,9 +73,20 @@ class OAuthController {
       // Handle callback
       const result = await this.connectLinkedInUseCase.handleCallback(code, state);
 
+      // Check if both OAuth connections are complete and trigger enrichment
+      const employeeId = result.employee.id;
+      const isReady = await this.enrichProfileUseCase.isReadyForEnrichment(employeeId);
+      
+      if (isReady) {
+        // Trigger enrichment in background (don't wait for it)
+        this.enrichProfileUseCase.enrichProfile(employeeId).catch(error => {
+          console.error('[OAuthController] Background enrichment failed:', error);
+        });
+      }
+
       // Redirect to frontend success page
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      return res.redirect(`${frontendUrl}/enrich?linkedin=connected&employeeId=${result.employee.id}`);
+      return res.redirect(`${frontendUrl}/enrich?linkedin=connected&employeeId=${employeeId}`);
     } catch (error) {
       console.error('[OAuthController] LinkedIn callback error:', error);
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -142,9 +155,20 @@ class OAuthController {
       // Handle callback
       const result = await this.connectGitHubUseCase.handleCallback(code, state);
 
+      // Check if both OAuth connections are complete and trigger enrichment
+      const employeeId = result.employee.id;
+      const isReady = await this.enrichProfileUseCase.isReadyForEnrichment(employeeId);
+      
+      if (isReady) {
+        // Trigger enrichment in background (don't wait for it)
+        this.enrichProfileUseCase.enrichProfile(employeeId).catch(error => {
+          console.error('[OAuthController] Background enrichment failed:', error);
+        });
+      }
+
       // Redirect to frontend success page
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      return res.redirect(`${frontendUrl}/enrich?github=connected&employeeId=${result.employee.id}`);
+      return res.redirect(`${frontendUrl}/enrich?github=connected&employeeId=${employeeId}`);
     } catch (error) {
       console.error('[OAuthController] GitHub callback error:', error);
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';

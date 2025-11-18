@@ -11,6 +11,7 @@ const CompanyProfileController = require('./presentation/CompanyProfileControlle
 const EmployeeController = require('./presentation/EmployeeController');
 const AuthController = require('./presentation/AuthController');
 const OAuthController = require('./presentation/OAuthController');
+const EnrichmentController = require('./presentation/EnrichmentController');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -47,6 +48,7 @@ const companyProfileController = new CompanyProfileController();
 const employeeController = new EmployeeController();
 const authController = new AuthController();
 const oauthController = new OAuthController();
+const enrichmentController = new EnrichmentController();
 
 // API Routes
 const apiRouter = express.Router();
@@ -124,6 +126,15 @@ apiRouter.delete('/companies/:id/employees/:employeeId', (req, res, next) => {
 
 apiRouter.get('/companies/:id/employees/:employeeId', (req, res, next) => {
   employeeController.getEmployee(req, res, next);
+});
+
+// Profile Enrichment
+apiRouter.post('/employees/:employeeId/enrich', authMiddleware, (req, res, next) => {
+  enrichmentController.enrichProfile(req, res, next);
+});
+
+apiRouter.get('/employees/:employeeId/enrichment-status', authMiddleware, (req, res, next) => {
+  enrichmentController.getEnrichmentStatus(req, res, next);
 });
 
 app.use('/api/v1', apiRouter);
