@@ -20,7 +20,9 @@ This document summarizes the system logic, high-level architecture, and integrat
 - **Directory DB**: Stores company structure, departments, teams, employees
 
 ### Key Rules
-- HR = Company representative who registered and can access Company Profile
+- **HR = Company representative who registered and can access Company Profile**
+- **When HR employee logs in with their email, they see the Company Profile (not a typical employee profile)**
+- HR employees are responsible for managing the Company Profile
 - Domain verification required before CSV upload
 - CSV includes: company details, departments, teams, employees with career paths
 - Learning Path Approval policy: Manual or Auto-Approval (stored in Directory)

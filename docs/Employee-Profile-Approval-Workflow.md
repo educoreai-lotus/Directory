@@ -38,8 +38,9 @@ After an employee enriches their profile with external data (LinkedIn, GitHub), 
 
 ### 3. HR Reviews Pending Approvals
 
-1. **HR accesses Company Profile**
-2. **HR sees "Pending Profile Approvals" section** with:
+1. **HR employee logs in with their email**
+2. **HR sees Company Profile** (not a typical employee profile - this is the default view for HR)
+3. **HR sees "Pending Profile Approvals" section** in Company Profile with:
    - List of all employees with enriched but not yet approved profiles
    - Employee name, email, department, team
    - Date of enrichment
@@ -341,23 +342,29 @@ GET /api/v1/employees/:employeeId/approval-status
 
 ### Employee Actions
 
-**Employee can only perform these actions if `profile_status = 'approved'`**:
+**Regular employees can only perform these actions if `profile_status = 'approved'`**:
 - Start learning (enroll in courses)
 - Send requests (training requests, etc.)
 - Access learning paths
 - View full profile features
 
-**Employee can perform these actions even if not approved**:
+**Regular employees can perform these actions even if not approved**:
 - View own profile (basic or enriched)
 - Update profile information
 - Connect LinkedIn/GitHub (if not done yet)
 
-### HR Actions
+### HR Employee Actions
 
-**HR can always**:
-- View all employee profiles (basic, enriched, approved, rejected)
-- Approve/reject enriched profiles
-- View pending approvals
+**HR employees have special access**:
+- **When HR logs in with their email, they see Company Profile (not employee profile)**
+- HR can always:
+  - View all employee profiles (basic, enriched, approved, rejected)
+  - Approve/reject enriched profiles
+  - View pending approvals
+  - Manage company settings
+  - Access all company management features
+
+**Note**: HR employees are identified by their email/role and automatically see Company Profile upon login
 
 ---
 
