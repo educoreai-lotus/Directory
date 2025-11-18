@@ -42,6 +42,49 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Debug endpoint to find HR email (for development/testing only)
+app.get('/debug/find-hr-email', async (req, res) => {
+  try {
+    const { companyName, employeeEmail } = req.query;
+    const CompanyRepository = require('./infrastructure/CompanyRepository');
+    const EmployeeRepository = require('./infrastructure/EmployeeRepository');
+    
+    const companyRepo = new CompanyRepository();
+    const employeeRepo = new EmployeeRepository();
+    
+    let result = {};
+    
+    // Find company
+    if (companyName) {
+      const companies = await companyRepo.pool.query(
+        `SELECT company_name, domain, hr_contact_name, hr_contact_email, hr_contact_role 
+         FROM companies 
+         WHERE LOWER(company_name) LIKE LOWER($1) OR LOWER(domain) LIKE LOWER($1)
+         LIMIT 5`,
+        [`%${companyName}%`]
+      );
+      result.companies = companies.rows;
+    }
+    
+    // Find employee and their company HR
+    if (employeeEmail) {
+      const employees = await employeeRepo.pool.query(
+        `SELECT e.id, e.full_name, e.email, e.employee_id, c.company_name, c.hr_contact_email, c.hr_contact_name
+         FROM employees e
+         LEFT JOIN companies c ON e.company_id = c.id
+         WHERE LOWER(e.email) = LOWER($1)`,
+        [employeeEmail]
+      );
+      result.employee = employees.rows[0] || null;
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error in debug endpoint:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Initialize controllers
 const companyRegistrationController = new CompanyRegistrationController();
 const companyVerificationController = new CompanyVerificationController();
