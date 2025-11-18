@@ -25,10 +25,7 @@ class OAuthController {
       
       if (!employeeId) {
         return res.status(401).json({
-          requester_service: 'directory_service',
-          response: {
-            error: 'Authentication required'
-          }
+          error: 'Authentication required'
         });
       }
 
@@ -40,24 +37,15 @@ class OAuthController {
       if (!result || !result.authorizationUrl) {
         console.error('[OAuthController] Failed to generate authorization URL');
         return res.status(500).json({
-          requester_service: 'directory_service',
-          response: {
-            error: 'Failed to generate LinkedIn authorization URL'
-          }
+          error: 'Failed to generate LinkedIn authorization URL'
         });
       }
 
-      return res.status(200).json({
-        requester_service: 'directory_service',
-        response: result
-      });
+      return res.status(200).json(result);
     } catch (error) {
       console.error('[OAuthController] Error getting LinkedIn auth URL:', error);
       return res.status(500).json({
-        requester_service: 'directory_service',
-        response: {
-          error: 'Failed to generate LinkedIn authorization URL'
-        }
+        error: 'Failed to generate LinkedIn authorization URL'
       });
     }
   }
@@ -120,26 +108,17 @@ class OAuthController {
       
       if (!employeeId) {
         return res.status(401).json({
-          requester_service: 'directory_service',
-          response: {
-            error: 'Authentication required'
-          }
+          error: 'Authentication required'
         });
       }
 
       const result = await this.connectGitHubUseCase.getAuthorizationUrl(employeeId);
 
-      return res.status(200).json({
-        requester_service: 'directory_service',
-        response: result
-      });
+      return res.status(200).json(result);
     } catch (error) {
       console.error('[OAuthController] Error getting GitHub auth URL:', error);
       return res.status(500).json({
-        requester_service: 'directory_service',
-        response: {
-          error: 'Failed to generate GitHub authorization URL'
-        }
+        error: 'Failed to generate GitHub authorization URL'
       });
     }
   }
