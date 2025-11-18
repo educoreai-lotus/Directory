@@ -210,6 +210,10 @@ class ParseCSVUseCase {
       // Commit transaction
       await this.companyRepository.commitTransaction(client);
 
+      // After CSV processing, ensure HR contact exists as an employee
+      // This runs outside the transaction so it doesn't affect CSV processing if it fails
+      await this.ensureHREmployeeExists(companyId);
+
       return {
         departments: createdDepartments.size,
         teams: createdTeams.size,
@@ -221,6 +225,70 @@ class ParseCSVUseCase {
       console.error('[ParseCSVUseCase] Error processing CSV:', error);
       // Re-throw with original message (will be translated by controller)
       throw error;
+    }
+  }
+
+  /**
+   * Ensure HR contact from company registration exists as an employee
+   * If HR email is not in employees table, create an HR employee record
+   * @param {string} companyId - Company ID
+   */
+  async ensureHREmployeeExists(companyId) {
+    try {
+      // Get company info including HR contact
+      const company = await this.companyRepository.findById(companyId);
+      if (!company || !company.hr_contact_email) {
+        console.log('[ParseCSVUseCase] No HR contact email found for company, skipping HR employee creation');
+        return;
+      }
+
+      const hrEmail = company.hr_contact_email.toLowerCase().trim();
+      const hrName = company.hr_contact_name || 'HR Contact';
+      const hrRole = company.hr_contact_role || 'HR Manager';
+
+      // Check if HR email already exists as an employee in this company
+      const existingEmployee = await this.employeeRepository.findByEmail(hrEmail);
+      if (existingEmployee && existingEmployee.company_id === companyId) {
+        console.log(`[ParseCSVUseCase] HR contact ${hrEmail} already exists as employee, skipping creation`);
+        return;
+      }
+
+      // HR doesn't exist - create HR employee record
+      console.log(`[ParseCSVUseCase] Creating HR employee record for ${hrEmail}`);
+      
+      // Generate a unique employee_id for HR (HR001, HR002, etc.)
+      const hrEmployeeIdResult = await this.employeeRepository.pool.query(
+        `SELECT employee_id FROM employees 
+         WHERE company_id = $1 AND employee_id LIKE 'HR%' 
+         ORDER BY employee_id DESC LIMIT 1`,
+        [companyId]
+      );
+      
+      let hrEmployeeId = 'HR001';
+      if (hrEmployeeIdResult.rows.length > 0) {
+        const lastHRId = hrEmployeeIdResult.rows[0].employee_id;
+        const number = parseInt(lastHRId.replace('HR', '')) || 0;
+        hrEmployeeId = `HR${String(number + 1).padStart(3, '0')}`;
+      }
+
+      // Create HR employee (outside transaction - separate operation)
+      const hrEmployee = await this.employeeRepository.createOrUpdate({
+        company_id: companyId,
+        employee_id: hrEmployeeId,
+        full_name: hrName,
+        email: hrEmail,
+        password: 'SecurePass123', // Default password - HR should change this on first login
+        current_role_in_company: hrRole,
+        target_role_in_company: null,
+        preferred_language: 'en',
+        status: 'active'
+      });
+
+      console.log(`[ParseCSVUseCase] ✅ Created HR employee: ${hrEmployeeId} (${hrEmail})`);
+    } catch (error) {
+      // Log error but don't fail the CSV upload if HR creation fails
+      console.error('[ParseCSVUseCase] Error ensuring HR employee exists:', error.message);
+      console.error('[ParseCSVUseCase] HR employee creation failed, but CSV upload was successful');
     }
   }
 
