@@ -87,20 +87,29 @@ class DummyAuthProvider extends AuthProvider {
     // New format: dummy-token-{uuid}-{email}-{timestamp}
     // Old format: dummy-token-{email}-{timestamp}
     
-    // Try to parse as new format first (has UUID)
-    // UUIDs have format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 chars with dashes)
-    // Or we can check if parts[2] looks like a UUID (contains multiple dashes when joined)
+    // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 chars with dashes)
+    // When split by '-', UUID becomes 5 parts: [xxxxxxxx, xxxx, xxxx, xxxx, xxxxxxxxxxxx]
+    // So in token: dummy-token-{uuid-part1}-{uuid-part2}-{uuid-part3}-{uuid-part4}-{uuid-part5}-{email}-{timestamp}
+    // parts[0] = "dummy", parts[1] = "token", parts[2-6] = UUID parts, parts[7] = email, parts[8] = timestamp
     
-    // For now, we'll use a simpler approach:
-    // If token has more than 4 parts (dummy-token-{id}-{email}-{timestamp}), it's new format
-    // Otherwise, it's old format (dummy-token-{email}-{timestamp})
+    // Find the email part (contains '@')
+    let emailIndex = -1;
+    for (let i = 2; i < parts.length; i++) {
+      if (parts[i].includes('@')) {
+        emailIndex = i;
+        break;
+      }
+    }
     
-    if (parts.length >= 5) {
-      // New format: dummy-token-{employeeId}-{email}-{timestamp}
-      // Extract email (everything between employeeId and timestamp)
-      // Last part is timestamp, so email is parts[3] to parts[length-2]
-      const emailParts = parts.slice(3, -1);
-      const email = emailParts.join('-');
+    if (emailIndex > 2) {
+      // New format: dummy-token-{uuid}-{email}-{timestamp}
+      // UUID is parts[2] to parts[emailIndex-1] (joined with '-')
+      // Email is parts[emailIndex]
+      // Timestamp is parts[emailIndex+1] (last part)
+      
+      const uuidParts = parts.slice(2, emailIndex);
+      const employeeId = uuidParts.join('-');
+      const email = parts[emailIndex];
       
       // Check test users first
       const testUser = this.testUsers[email.toLowerCase()];
@@ -118,15 +127,16 @@ class DummyAuthProvider extends AuthProvider {
       }
       
       // If not in test users, extract employee ID from token and look up from database
-      // Token format: dummy-token-{employeeId}-{email}-{timestamp}
-      // parts[2] should be the employee ID (UUID)
-      const employeeId = parts[2];
       
       try {
+        console.log('[DummyAuthProvider] Extracted employeeId:', employeeId);
+        console.log('[DummyAuthProvider] Extracted email:', email);
+        
         // Look up employee from database
         const employee = await this.employeeRepository.findById(employeeId);
         
         if (!employee) {
+          console.log('[DummyAuthProvider] Employee not found by ID, trying email...');
           // Fallback: try to find by email
           const employeeByEmail = await this.employeeRepository.findByEmail(email.toLowerCase());
           if (employeeByEmail) {
