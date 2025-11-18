@@ -5,6 +5,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getEmployee } from '../services/employeeService';
+import TrainerSettings from '../components/TrainerSettings';
+import TrainerCoursesTaught from '../components/TrainerCoursesTaught';
 
 function EmployeeProfilePage() {
   const { employeeId } = useParams();
@@ -99,6 +101,7 @@ function EmployeeProfilePage() {
 
   const projectSummaries = parseProjectSummaries(employee.project_summaries);
   const enrichmentComplete = employee.enrichment_completed || false;
+  const profileStatus = employee.profile_status || 'basic';
   const enrichmentStatus = searchParams.get('enrichment');
 
   return (
@@ -115,6 +118,55 @@ function EmployeeProfilePage() {
             }}
           >
             <p className="text-sm">✓ Profile enrichment completed successfully!</p>
+          </div>
+        )}
+
+        {/* Profile Status Messages */}
+        {profileStatus === 'enriched' && (
+          <div 
+            className="mb-6 p-4 rounded-lg"
+            style={{
+              background: 'rgba(251, 191, 36, 0.1)',
+              border: '1px solid rgb(251, 191, 36)',
+              color: 'rgb(251, 191, 36)'
+            }}
+          >
+            <p className="text-sm font-medium mb-1">⏳ Waiting for HR Approval</p>
+            <p className="text-sm">
+              Your profile has been enriched and is pending HR review. You will be able to use the system once your profile is approved.
+            </p>
+          </div>
+        )}
+
+        {profileStatus === 'rejected' && (
+          <div 
+            className="mb-6 p-4 rounded-lg"
+            style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid var(--border-error)',
+              color: 'var(--text-error)'
+            }}
+          >
+            <p className="text-sm font-medium mb-1">❌ Profile Rejected</p>
+            <p className="text-sm">
+              Your enriched profile has been rejected by HR. Please contact HR for more information.
+            </p>
+          </div>
+        )}
+
+        {profileStatus === 'approved' && (
+          <div 
+            className="mb-6 p-4 rounded-lg"
+            style={{
+              background: 'rgba(34, 197, 94, 0.1)',
+              border: '1px solid rgb(34, 197, 94)',
+              color: 'rgb(34, 197, 94)'
+            }}
+          >
+            <p className="text-sm font-medium">✓ Profile Approved</p>
+            <p className="text-sm">
+              Your profile has been approved by HR. You can now use all system features.
+            </p>
           </div>
         )}
 
@@ -317,6 +369,54 @@ function EmployeeProfilePage() {
             </div>
           )}
         </div>
+
+        {/* Trainer Sections */}
+        {employee.is_trainer && (
+          <div 
+            className="rounded-lg shadow-lg border p-8 mb-6"
+            style={{
+              background: 'var(--gradient-card)',
+              borderRadius: 'var(--radius-card, 8px)',
+              boxShadow: 'var(--shadow-card)',
+              borderColor: 'var(--border-default)'
+            }}
+          >
+            <h2 
+              className="text-2xl font-semibold mb-6"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              Trainer Profile
+            </h2>
+
+            {/* Trainer Settings */}
+            <div className="mb-8">
+              <h3 
+                className="text-xl font-semibold mb-4"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                Trainer Settings
+              </h3>
+              <TrainerSettings 
+                employeeId={employeeId}
+                onUpdate={(settings) => {
+                  // Update local state if needed
+                  setEmployee({ ...employee, trainer_settings: settings });
+                }}
+              />
+            </div>
+
+            {/* Courses Taught */}
+            <div>
+              <h3 
+                className="text-xl font-semibold mb-4"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                Courses Taught
+              </h3>
+              <TrainerCoursesTaught employeeId={employeeId} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
