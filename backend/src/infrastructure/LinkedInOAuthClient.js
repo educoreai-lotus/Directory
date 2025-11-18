@@ -22,7 +22,13 @@ class LinkedInOAuthClient {
     this.scopes = ['openid', 'profile', 'email'];
     
     if (!this.clientId || !this.clientSecret) {
-      console.warn('[LinkedInOAuthClient] LinkedIn OAuth credentials not configured. OAuth will not work.');
+      console.warn('[LinkedInOAuthClient] ⚠️  LinkedIn OAuth credentials not configured.');
+      console.warn('[LinkedInOAuthClient] To enable LinkedIn OAuth, set the following environment variables in Railway:');
+      console.warn('[LinkedInOAuthClient]   - LINKEDIN_CLIENT_ID');
+      console.warn('[LinkedInOAuthClient]   - LINKEDIN_CLIENT_SECRET');
+      console.warn('[LinkedInOAuthClient] See /docs/LinkedIn-OAuth-Setup.md for setup instructions.');
+    } else {
+      console.log('[LinkedInOAuthClient] ✅ LinkedIn OAuth credentials configured');
     }
   }
 
