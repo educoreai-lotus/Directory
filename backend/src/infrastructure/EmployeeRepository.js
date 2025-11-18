@@ -409,6 +409,22 @@ class EmployeeRepository {
   }
 
   /**
+   * Get project summaries for an employee
+   * @param {string} employeeId - Employee UUID
+   * @returns {Promise<Array>} Array of project summaries
+   */
+  async getProjectSummaries(employeeId) {
+    const query = `
+      SELECT repository_name, repository_url, summary
+      FROM employee_project_summaries
+      WHERE employee_id = $1
+      ORDER BY repository_name
+    `;
+    const result = await this.pool.query(query, [employeeId]);
+    return result.rows;
+  }
+
+  /**
    * Update LinkedIn data for an employee
    * @param {string} employeeId - Employee UUID
    * @param {string} linkedinUrl - LinkedIn profile URL

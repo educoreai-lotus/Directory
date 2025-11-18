@@ -127,8 +127,24 @@ class EmployeeController {
         });
       }
 
+      // Fetch project summaries if enrichment is completed
+      let projectSummaries = [];
+      if (employee.enrichment_completed) {
+        try {
+          projectSummaries = await this.employeeRepository.getProjectSummaries(employeeId);
+        } catch (error) {
+          console.warn('[EmployeeController] Could not fetch project summaries:', error.message);
+        }
+      }
+
+      // Combine employee data with project summaries
+      const employeeData = {
+        ...employee,
+        project_summaries: projectSummaries
+      };
+
       res.status(200).json({
-        employee
+        employee: employeeData
       });
     } catch (error) {
       console.error('[EmployeeController] Error fetching employee:', error);
