@@ -5,9 +5,12 @@ import React, { useState } from 'react';
 import CompanyMetrics from './CompanyMetrics';
 import CompanyHierarchy from './CompanyHierarchy';
 import EmployeeList from './EmployeeList';
+import CompanyAnalyticsDashboard from './CompanyAnalyticsDashboard';
+import PendingRequestsSection from './PendingRequestsSection';
+import EnrollmentSection from './EnrollmentSection';
 
-function CompanyDashboard({ company, departments, teams, employees, hierarchy, metrics, onEmployeeClick }) {
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'hierarchy', 'employees'
+function CompanyDashboard({ company, departments, teams, employees, hierarchy, metrics, onEmployeeClick, companyId }) {
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'dashboard', 'hierarchy', 'employees', 'enrollment', 'requests'
 
   return (
     <div className="w-full space-y-6">
@@ -42,6 +45,20 @@ function CompanyDashboard({ company, departments, teams, employees, hierarchy, m
           Hierarchy
         </button>
         <button
+          onClick={() => setActiveTab('dashboard')}
+          className={`px-4 py-2 font-medium transition-colors ${
+            activeTab === 'dashboard'
+              ? 'border-b-2 border-teal-600 text-teal-600'
+              : 'text-gray-600 hover:text-gray-800'
+          }`}
+          style={{
+            color: activeTab === 'dashboard' ? 'var(--border-focus)' : 'var(--text-secondary)',
+            borderBottomColor: activeTab === 'dashboard' ? 'var(--border-focus)' : 'transparent'
+          }}
+        >
+          Dashboard
+        </button>
+        <button
           onClick={() => setActiveTab('employees')}
           className={`px-4 py-2 font-medium transition-colors ${
             activeTab === 'employees'
@@ -54,6 +71,34 @@ function CompanyDashboard({ company, departments, teams, employees, hierarchy, m
           }}
         >
           Employees
+        </button>
+        <button
+          onClick={() => setActiveTab('enrollment')}
+          className={`px-4 py-2 font-medium transition-colors ${
+            activeTab === 'enrollment'
+              ? 'border-b-2 border-teal-600 text-teal-600'
+              : 'text-gray-600 hover:text-gray-800'
+          }`}
+          style={{
+            color: activeTab === 'enrollment' ? 'var(--border-focus)' : 'var(--text-secondary)',
+            borderBottomColor: activeTab === 'enrollment' ? 'var(--border-focus)' : 'transparent'
+          }}
+        >
+          Enroll to Courses
+        </button>
+        <button
+          onClick={() => setActiveTab('requests')}
+          className={`px-4 py-2 font-medium transition-colors ${
+            activeTab === 'requests'
+              ? 'border-b-2 border-teal-600 text-teal-600'
+              : 'text-gray-600 hover:text-gray-800'
+          }`}
+          style={{
+            color: activeTab === 'requests' ? 'var(--border-focus)' : 'var(--text-secondary)',
+            borderBottomColor: activeTab === 'requests' ? 'var(--border-focus)' : 'transparent'
+          }}
+        >
+          Pending Requests
         </button>
       </div>
 
@@ -92,12 +137,6 @@ function CompanyDashboard({ company, departments, teams, employees, hierarchy, m
                       {company?.domain || '-'}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Verification Status</p>
-                    <p className="font-medium mt-1" style={{ color: 'var(--text-primary)' }}>
-                      {company?.verification_status || '-'}
-                    </p>
-                  </div>
                 </div>
               </div>
             </div>
@@ -113,12 +152,33 @@ function CompanyDashboard({ company, departments, teams, employees, hierarchy, m
           </div>
         )}
 
+        {activeTab === 'dashboard' && (
+          <div>
+            <CompanyAnalyticsDashboard companyId={companyId} />
+          </div>
+        )}
+
         {activeTab === 'employees' && (
           <div>
-            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-              All Employees ({employees?.length || 0})
-            </h3>
-            <EmployeeList employees={employees} onEmployeeClick={onEmployeeClick} />
+            <EmployeeList 
+              employees={employees} 
+              onEmployeeClick={onEmployeeClick}
+              companyId={companyId}
+              departments={departments}
+              teams={teams}
+            />
+          </div>
+        )}
+
+        {activeTab === 'enrollment' && (
+          <div>
+            <EnrollmentSection employees={employees} companyId={companyId} />
+          </div>
+        )}
+
+        {activeTab === 'requests' && (
+          <div>
+            <PendingRequestsSection companyId={companyId} />
           </div>
         )}
       </div>

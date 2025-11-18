@@ -398,6 +398,17 @@ class EmployeeRepository {
   }
 
   /**
+   * Find employee by UUID
+   * @param {string} employeeId - Employee UUID
+   * @returns {Promise<Object|null>} Employee or null
+   */
+  async findById(employeeId) {
+    const query = 'SELECT * FROM employees WHERE id = $1';
+    const result = await this.pool.query(query, [employeeId]);
+    return result.rows[0] || null;
+  }
+
+  /**
    * Find all employees for a company with their roles and teams
    * @param {string} companyId - Company ID
    * @returns {Promise<Array>} Array of employees with roles and teams

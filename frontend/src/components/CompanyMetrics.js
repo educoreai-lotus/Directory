@@ -34,12 +34,6 @@ function CompanyMetrics({ metrics }) {
         </p>
       </div>
 
-      <div className="p-4 rounded-lg" style={{ background: 'var(--bg-card)' }}>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Inactive</p>
-        <p className="text-2xl font-bold mt-1 text-red-600">
-          {metrics.inactiveEmployees || 0}
-        </p>
-      </div>
     </div>
   );
 }

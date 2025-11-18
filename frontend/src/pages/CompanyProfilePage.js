@@ -42,8 +42,9 @@ function CompanyProfilePage() {
   }, [companyId]);
 
   const handleEmployeeClick = (employee) => {
-    // TODO: Navigate to employee profile page (F010 - to be implemented)
+    // Navigate to employee profile page (F010 - will be fully implemented after profile enrichment)
     console.log('Navigate to employee profile:', employee.id);
+    // For now, just log - will navigate when employee profile page is ready
     // navigate(`/employee/${employee.id}`);
   };
 
@@ -103,6 +104,7 @@ function CompanyProfilePage() {
           hierarchy={profileData.hierarchy}
           metrics={profileData.metrics}
           onEmployeeClick={handleEmployeeClick}
+          companyId={companyId}
         />
       </div>
     </div>
