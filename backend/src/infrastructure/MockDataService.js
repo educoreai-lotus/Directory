@@ -1,11 +1,32 @@
 // Infrastructure Layer - Mock Data Service
 // Provides fallback mock data when external APIs fail
 
+const path = require('path');
+const fs = require('fs');
+
 class MockDataService {
   constructor() {
     // Load mock data (will be created if it doesn't exist)
     try {
-      this.mockData = require('../../mockData/index.json');
+      // Try multiple possible paths
+      const possiblePaths = [
+        path.join(__dirname, '../../mockData/index.json'),
+        path.join(process.cwd(), 'mockData/index.json'),
+        path.join(process.cwd(), '../mockData/index.json')
+      ];
+      
+      let mockDataLoaded = false;
+      for (const mockPath of possiblePaths) {
+        if (fs.existsSync(mockPath)) {
+          this.mockData = require(mockPath);
+          mockDataLoaded = true;
+          break;
+        }
+      }
+      
+      if (!mockDataLoaded) {
+        throw new Error('Mock data file not found in any expected location');
+      }
     } catch (error) {
       console.warn('[MockDataService] Mock data file not found, using default mocks');
       this.mockData = {};
