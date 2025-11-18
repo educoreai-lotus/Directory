@@ -166,11 +166,14 @@ class EmployeeProfileApprovalRepository {
         e.employee_id,
         e.full_name,
         e.email,
-        e.department,
-        e.team,
+        d.department_name as department,
+        t.team_name as team,
         e.current_role_in_company
       FROM employee_profile_approvals apa
       INNER JOIN employees e ON apa.employee_id = e.id
+      LEFT JOIN employee_teams et ON e.id = et.employee_id
+      LEFT JOIN teams t ON et.team_id = t.id
+      LEFT JOIN departments d ON t.department_id = d.id
       WHERE apa.id = $1
     `;
 
