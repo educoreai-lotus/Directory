@@ -172,6 +172,32 @@ After setting up LinkedIn OAuth:
 
 ---
 
+## Privacy Policy Setup
+
+### Using the Provided Privacy Policy
+
+A privacy policy page is included in the project at `frontend/public/privacy-policy.html`.
+
+**To use it:**
+
+1. **Deploy your frontend to Vercel** (if not already deployed)
+2. **The privacy policy will be automatically available at:**
+   ```
+   https://your-frontend-url.vercel.app/privacy-policy.html
+   ```
+3. **Use this URL** when creating your LinkedIn OAuth app
+
+**To customize the privacy policy:**
+
+1. Edit `frontend/public/privacy-policy.html`
+2. Update contact information, company details, etc.
+3. Redeploy to Vercel
+4. The updated policy will be live at the same URL
+
+**Note:** The privacy policy page is a static HTML file and will be served automatically by Vercel when you deploy the frontend.
+
+---
+
 ## Support
 
 If you encounter issues:
@@ -179,4 +205,5 @@ If you encounter issues:
 2. Verify all environment variables are set correctly
 3. Test the redirect URI in LinkedIn app settings
 4. Check that the LinkedIn app is approved and active
+5. Ensure the privacy policy URL is accessible (returns 200 OK)
 
