@@ -214,6 +214,7 @@ function EnrichProfilePage() {
           <LinkedInConnectButton 
             disabled={linkedinConnected}
             onConnected={() => setLinkedinConnected(true)}
+            alreadyConnected={linkedinConnected}
           />
         </div>
 
@@ -247,6 +248,7 @@ function EnrichProfilePage() {
           <GitHubConnectButton 
             disabled={githubConnected}
             onConnected={() => setGithubConnected(true)}
+            alreadyConnected={githubConnected}
           />
         </div>
 
