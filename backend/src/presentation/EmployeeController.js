@@ -137,10 +137,23 @@ class EmployeeController {
         }
       }
 
-      // Combine employee data with project summaries
+      // Check if employee is a trainer and fetch trainer settings
+      let trainerSettings = null;
+      const isTrainer = await this.employeeRepository.isTrainer(employeeId);
+      if (isTrainer) {
+        try {
+          trainerSettings = await this.employeeRepository.getTrainerSettings(employeeId);
+        } catch (error) {
+          console.warn('[EmployeeController] Could not fetch trainer settings:', error.message);
+        }
+      }
+
+      // Combine employee data with project summaries and trainer settings
       const employeeData = {
         ...employee,
-        project_summaries: projectSummaries
+        project_summaries: projectSummaries,
+        is_trainer: isTrainer,
+        trainer_settings: trainerSettings
       };
 
       res.status(200).json({
