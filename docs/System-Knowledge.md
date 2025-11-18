@@ -43,13 +43,19 @@ This document summarizes the system logic, high-level architecture, and integrat
 4. **Employee connects LinkedIn + GitHub** (OAuth on first login)
 5. **Directory fetches raw data** from LinkedIn and GitHub APIs
 6. **Directory enriches profile** using Gemini AI + Skills Engine
-7. **Employee profile updated** with full data (bio, skills, projects, etc.)
-8. **Employee can now use the system**
+7. **Directory updates profile status to "enriched"** (but not yet approved)
+8. **Directory sends profile approval request to Company Profile**
+9. **HR sees approval requests** in Company Profile (pending enriched profiles)
+10. **HR reviews and approves/rejects** the enriched profile
+11. **If approved**: Employee profile status changes to "approved" → Employee can now use the system (learning, requests, etc.)
+12. **If rejected**: Employee profile remains "enriched" but not approved → Employee cannot use the system until approved
 
 ### Key Points:
 - Enrichment is **mandatory** - employee cannot use system until profile is enriched
+- **HR approval is required** - enriched profile must be approved by company before employee can use system
 - Employee must connect LinkedIn and GitHub themselves (OAuth)
 - This is a **one-time only** process (cannot reconnect later)
+- Approval ensures enriched profile (with external data) is suitable/appropriate for the company
 
 ### External Integrations Required
 
@@ -74,6 +80,8 @@ Employee → OAuth (LinkedIn + GitHub) → Directory → Gemini AI → Directory
 - Employee Profile needs "Bio" section (AI-generated)
 - "Enrich Your Profile" page on first login
 - OAuth connection buttons for LinkedIn and GitHub
+- Profile status indicator: "Basic" → "Enriched" → "Approved"
+- Employee sees "Waiting for HR approval" message after enrichment
 
 #### 2.2 External APIs (LinkedIn + GitHub)
 **Purpose**: Enrich employee profiles with external data
