@@ -14,7 +14,15 @@ function GitHubConnectButton({ onConnected, disabled = false }) {
       setError(null);
 
       // Get authorization URL from backend
-      const { authorizationUrl } = await getGitHubAuthUrl();
+      const result = await getGitHubAuthUrl();
+      console.log('[GitHubConnectButton] Received result:', result);
+      
+      const { authorizationUrl } = result;
+      console.log('[GitHubConnectButton] authorizationUrl:', authorizationUrl);
+      
+      if (!authorizationUrl) {
+        throw new Error('Authorization URL is missing');
+      }
 
       // Redirect to GitHub OAuth
       window.location.href = authorizationUrl;

@@ -32,7 +32,20 @@ class OAuthController {
         });
       }
 
+      console.log('[OAuthController] Getting LinkedIn auth URL for employee:', employeeId);
       const result = await this.connectLinkedInUseCase.getAuthorizationUrl(employeeId);
+      console.log('[OAuthController] LinkedIn auth URL result:', result);
+      console.log('[OAuthController] LinkedIn authorizationUrl:', result?.authorizationUrl);
+
+      if (!result || !result.authorizationUrl) {
+        console.error('[OAuthController] Failed to generate authorization URL');
+        return res.status(500).json({
+          requester_service: 'directory_service',
+          response: {
+            error: 'Failed to generate LinkedIn authorization URL'
+          }
+        });
+      }
 
       return res.status(200).json({
         requester_service: 'directory_service',

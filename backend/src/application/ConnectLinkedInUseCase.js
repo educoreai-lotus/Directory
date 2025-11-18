@@ -18,13 +18,22 @@ class ConnectLinkedInUseCase {
    * @returns {Promise<{authorizationUrl: string, state: string}>}
    */
   async getAuthorizationUrl(employeeId) {
+    console.log('[ConnectLinkedInUseCase] Generating authorization URL for employee:', employeeId);
+    
     // Generate state parameter with employee ID for CSRF protection
     const state = Buffer.from(JSON.stringify({
       employeeId,
       timestamp: Date.now()
     })).toString('base64');
 
+    console.log('[ConnectLinkedInUseCase] Generated state:', state);
+    
     const authorizationUrl = this.oauthClient.getAuthorizationUrl(state);
+    console.log('[ConnectLinkedInUseCase] Generated authorizationUrl:', authorizationUrl);
+
+    if (!authorizationUrl) {
+      throw new Error('Failed to generate LinkedIn authorization URL');
+    }
 
     return {
       authorizationUrl,

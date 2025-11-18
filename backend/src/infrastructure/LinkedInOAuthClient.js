@@ -42,6 +42,17 @@ class LinkedInOAuthClient {
       throw new Error('LinkedIn Client ID not configured');
     }
 
+    if (!this.redirectUri) {
+      throw new Error('LinkedIn Redirect URI not configured');
+    }
+
+    console.log('[LinkedInOAuthClient] Generating URL with:', {
+      clientId: this.clientId ? 'present' : 'missing',
+      redirectUri: this.redirectUri,
+      state: state ? 'present' : 'missing',
+      scopes: this.scopes
+    });
+
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.clientId,
@@ -50,7 +61,10 @@ class LinkedInOAuthClient {
       scope: this.scopes.join(' ')
     });
 
-    return `${this.authorizationUrl}?${params.toString()}`;
+    const url = `${this.authorizationUrl}?${params.toString()}`;
+    console.log('[LinkedInOAuthClient] Generated URL:', url);
+    
+    return url;
   }
 
   /**

@@ -14,7 +14,15 @@ function LinkedInConnectButton({ onConnected, disabled = false }) {
       setError(null);
 
       // Get authorization URL from backend
-      const { authorizationUrl } = await getLinkedInAuthUrl();
+      const result = await getLinkedInAuthUrl();
+      console.log('[LinkedInConnectButton] Received result:', result);
+      
+      const { authorizationUrl } = result;
+      console.log('[LinkedInConnectButton] authorizationUrl:', authorizationUrl);
+      
+      if (!authorizationUrl) {
+        throw new Error('Authorization URL is missing');
+      }
 
       // Redirect to LinkedIn OAuth
       window.location.href = authorizationUrl;
