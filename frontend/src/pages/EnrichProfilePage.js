@@ -8,12 +8,14 @@ import LinkedInConnectButton from '../components/LinkedInConnectButton';
 import GitHubConnectButton from '../components/GitHubConnectButton';
 
 function EnrichProfilePage() {
-  const { user } = useAuth();
+  const { user, refreshUser, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [linkedinConnected, setLinkedinConnected] = useState(false);
   const [githubConnected, setGithubConnected] = useState(false);
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   // Initialize connection status from user object
   useEffect(() => {
@@ -23,7 +25,7 @@ function EnrichProfilePage() {
     }
   }, [user]);
 
-  // Check URL params for OAuth callback results
+  // Check URL params for OAuth callback results and refresh user data
   useEffect(() => {
     const linkedinParam = searchParams.get('linkedin');
     const githubParam = searchParams.get('github');
@@ -31,41 +33,64 @@ function EnrichProfilePage() {
 
     if (errorParam) {
       setError(decodeURIComponent(errorParam));
+      setSuccessMessage(null);
     }
 
-    if (linkedinParam === 'connected') {
-      setLinkedinConnected(true);
-      // Show success message briefly
-      setTimeout(() => {
-        setError(null);
-      }, 3000);
+    // If OAuth callback detected, refresh user data to get updated connection status
+    if (linkedinParam === 'connected' || githubParam === 'connected') {
+      setRefreshing(true);
+      refreshUser()
+        .then((refreshedUser) => {
+          if (refreshedUser) {
+            // Update connection status from refreshed user
+            setLinkedinConnected(refreshedUser.hasLinkedIn || false);
+            setGithubConnected(refreshedUser.hasGitHub || false);
+            
+            // Show success message
+            if (linkedinParam === 'connected') {
+              setSuccessMessage('LinkedIn connected successfully! Please connect GitHub to continue.');
+            } else if (githubParam === 'connected') {
+              setSuccessMessage('GitHub connected successfully! Please connect LinkedIn to continue.');
+            }
+            
+            // Clear success message after 5 seconds
+            setTimeout(() => {
+              setSuccessMessage(null);
+            }, 5000);
+          }
+        })
+        .catch((err) => {
+          console.error('Error refreshing user after OAuth:', err);
+          // Still set the connection status based on URL param as fallback
+          if (linkedinParam === 'connected') {
+            setLinkedinConnected(true);
+            setSuccessMessage('LinkedIn connected successfully! Please connect GitHub to continue.');
+          }
+          if (githubParam === 'connected') {
+            setGithubConnected(true);
+            setSuccessMessage('GitHub connected successfully! Please connect LinkedIn to continue.');
+          }
+        })
+        .finally(() => {
+          setRefreshing(false);
+          // Clear URL params after processing
+          window.history.replaceState({}, document.title, window.location.pathname);
+        });
     }
-
-    if (githubParam === 'connected') {
-      setGithubConnected(true);
-      // Show success message briefly
-      setTimeout(() => {
-        setError(null);
-      }, 3000);
-    }
-
-    // Clear URL params after processing
-    if (linkedinParam || githubParam || errorParam) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, [searchParams]);
+  }, [searchParams, refreshUser]);
 
   // Auto-redirect to profile when both are connected
   useEffect(() => {
-    if (linkedinConnected && githubConnected && user) {
+    if (linkedinConnected && githubConnected && user && !refreshing) {
       // Both connected - wait a moment to show success, then redirect
+      setSuccessMessage('Both LinkedIn and GitHub connected! Redirecting to your profile...');
       const timer = setTimeout(() => {
         navigate(`/employee/${user.id}`);
       }, 2000); // 2 second delay to show success message
 
       return () => clearTimeout(timer);
     }
-  }, [linkedinConnected, githubConnected, user, navigate]);
+  }, [linkedinConnected, githubConnected, user, navigate, refreshing]);
 
   // Check if user already has both LinkedIn and GitHub connected - redirect to profile
   useEffect(() => {
@@ -76,10 +101,16 @@ function EnrichProfilePage() {
     }
   }, [user, navigate]);
 
-  if (!user) {
+  // Show loading state while checking auth or refreshing user data
+  if (authLoading || refreshing || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p>Please log in to enrich your profile.</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+          <p style={{ color: 'var(--text-secondary)' }}>
+            {refreshing ? 'Refreshing your profile...' : !user ? 'Please log in to enrich your profile.' : 'Loading...'}
+          </p>
+        </div>
       </div>
     );
   }

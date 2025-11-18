@@ -86,13 +86,20 @@ class EnrichProfileUseCase {
       );
 
       // Create approval request for HR review
+      console.log('[EnrichProfileUseCase] Creating approval request for employee:', employeeId, 'company:', employee.company_id);
       const approvalRequest = await this.approvalRepository.createApprovalRequest({
         employee_id: employeeId,
         company_id: employee.company_id,
         enriched_at: new Date()
       });
 
-      console.log('[EnrichProfileUseCase] ✅ Approval request created:', approvalRequest.id);
+      console.log('[EnrichProfileUseCase] ✅ Approval request created:', {
+        id: approvalRequest.id,
+        employee_id: approvalRequest.employee_id,
+        company_id: approvalRequest.company_id,
+        status: approvalRequest.status,
+        requested_at: approvalRequest.requested_at
+      });
 
       return {
         success: true,

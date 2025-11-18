@@ -26,7 +26,8 @@ class CompanyProfileController {
         teams: profile.teams,
         employees: profile.employees,
         hierarchy: profile.hierarchy,
-        metrics: profile.metrics
+        metrics: profile.metrics,
+        pending_approvals: profile.pending_approvals || []
       });
     } catch (error) {
       console.error('[CompanyProfileController] Error fetching company profile:', error);

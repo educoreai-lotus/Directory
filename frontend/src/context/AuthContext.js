@@ -57,6 +57,29 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   /**
+   * Refresh user data from server
+   */
+  const refreshUser = async () => {
+    try {
+      const validation = await authService.validateToken();
+      if (validation.valid && validation.user) {
+        setUser(validation.user);
+        setIsAuthenticated(true);
+        return validation.user;
+      } else {
+        // Token invalid, clear storage
+        authService.logout();
+        setUser(null);
+        setIsAuthenticated(false);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+      return null;
+    }
+  };
+
+  /**
    * Login user
    */
   const login = async (email, password) => {
@@ -125,7 +148,8 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticated,
     login,
-    logout
+    logout,
+    refreshUser
   };
 
   return (
