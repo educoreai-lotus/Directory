@@ -27,10 +27,18 @@ function EnrichProfilePage() {
 
     if (linkedinParam === 'connected') {
       setLinkedinConnected(true);
+      // Show success message briefly
+      setTimeout(() => {
+        setError(null);
+      }, 3000);
     }
 
     if (githubParam === 'connected') {
       setGithubConnected(true);
+      // Show success message briefly
+      setTimeout(() => {
+        setError(null);
+      }, 3000);
     }
 
     // Clear URL params after processing
@@ -38,6 +46,18 @@ function EnrichProfilePage() {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [searchParams]);
+
+  // Auto-redirect to profile when both are connected
+  useEffect(() => {
+    if (linkedinConnected && githubConnected && user) {
+      // Both connected - wait a moment to show success, then redirect
+      const timer = setTimeout(() => {
+        navigate(`/employee/${user.id}`);
+      }, 2000); // 2 second delay to show success message
+
+      return () => clearTimeout(timer);
+    }
+  }, [linkedinConnected, githubConnected, user, navigate]);
 
   // Check if user already has LinkedIn connected
   useEffect(() => {
@@ -113,6 +133,46 @@ function EnrichProfilePage() {
             }}
           >
             <p className="text-sm">{error}</p>
+          </div>
+        )}
+
+        {/* Success Messages */}
+        {linkedinConnected && !githubConnected && (
+          <div 
+            className="mb-6 p-4 rounded-lg"
+            style={{
+              background: 'rgba(34, 197, 94, 0.1)',
+              border: '1px solid rgb(34, 197, 94)',
+              color: 'rgb(34, 197, 94)'
+            }}
+          >
+            <p className="text-sm">✓ LinkedIn connected successfully! Please connect GitHub to continue.</p>
+          </div>
+        )}
+
+        {githubConnected && !linkedinConnected && (
+          <div 
+            className="mb-6 p-4 rounded-lg"
+            style={{
+              background: 'rgba(34, 197, 94, 0.1)',
+              border: '1px solid rgb(34, 197, 94)',
+              color: 'rgb(34, 197, 94)'
+            }}
+          >
+            <p className="text-sm">✓ GitHub connected successfully! Please connect LinkedIn to continue.</p>
+          </div>
+        )}
+
+        {linkedinConnected && githubConnected && (
+          <div 
+            className="mb-6 p-4 rounded-lg"
+            style={{
+              background: 'rgba(34, 197, 94, 0.1)',
+              border: '1px solid rgb(34, 197, 94)',
+              color: 'rgb(34, 197, 94)'
+            }}
+          >
+            <p className="text-sm">✓ Both LinkedIn and GitHub connected! Redirecting to your profile...</p>
           </div>
         )}
 
@@ -203,10 +263,21 @@ function EnrichProfilePage() {
         {linkedinConnected && !githubConnected && (
           <div className="mt-8">
             <p 
-              className="text-sm text-center"
+              className="text-sm text-center mb-4"
               style={{ color: 'var(--text-secondary)' }}
             >
               Please connect your GitHub account to complete profile enrichment.
+            </p>
+          </div>
+        )}
+
+        {githubConnected && !linkedinConnected && (
+          <div className="mt-8">
+            <p 
+              className="text-sm text-center mb-4"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              Please connect your LinkedIn account to complete profile enrichment.
             </p>
           </div>
         )}

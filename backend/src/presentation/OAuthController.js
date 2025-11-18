@@ -85,9 +85,19 @@ class OAuthController {
         });
       }
 
-      // Redirect to frontend success page
+      // Check if both OAuth connections are complete
+      const isReady = await this.enrichProfileUseCase.isReadyForEnrichment(employeeId);
+      
+      // Redirect back to enrich page
+      // If both are connected, the frontend will auto-redirect to profile
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      return res.redirect(`${frontendUrl}/enrich?linkedin=connected&employeeId=${employeeId}`);
+      if (isReady) {
+        // Both connected - redirect to profile page
+        return res.redirect(`${frontendUrl}/employee/${employeeId}?enrichment=complete`);
+      } else {
+        // Only LinkedIn connected - go back to enrich page to connect GitHub
+        return res.redirect(`${frontendUrl}/enrich?linkedin=connected`);
+      }
     } catch (error) {
       console.error('[OAuthController] LinkedIn callback error:', error);
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -158,9 +168,16 @@ class OAuthController {
         });
       }
 
-      // Redirect to frontend success page
+      // Redirect back to enrich page
+      // If both are connected, the frontend will auto-redirect to profile
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      return res.redirect(`${frontendUrl}/enrich?github=connected&employeeId=${employeeId}`);
+      if (isReady) {
+        // Both connected - redirect to profile page
+        return res.redirect(`${frontendUrl}/employee/${employeeId}?enrichment=complete`);
+      } else {
+        // Only GitHub connected - go back to enrich page to connect LinkedIn
+        return res.redirect(`${frontendUrl}/enrich?github=connected`);
+      }
     } catch (error) {
       console.error('[OAuthController] GitHub callback error:', error);
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
