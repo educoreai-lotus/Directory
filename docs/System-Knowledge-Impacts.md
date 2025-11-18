@@ -310,7 +310,7 @@ This document identifies the impacts of the System Logic & High-Level Architectu
 
 ## Unclear or Contradictory Points
 
-### 1. Employee Profile Enrichment Timing
+### 1. Employee Profile Enrichment Timing ⚠️ STILL UNCLEAR
 **Question**: When does enrichment happen?
 - Description says "Before sending raw data to Skills Engine, Directory processes through Gemini AI"
 - But also says "For each employee listed in registration form: Create base profile... Query external APIs... Send to Skills Engine"
@@ -320,7 +320,7 @@ This document identifies the impacts of the System Logic & High-Level Architectu
   - After HR approval?
   - On first employee login?
 
-### 2. LinkedIn/GitHub OAuth Flow
+### 2. LinkedIn/GitHub OAuth Flow ⚠️ STILL UNCLEAR
 **Question**: How does OAuth work?
 - Description mentions "Query external APIs for enrichment: LinkedIn + GITHUB"
 - But requirements.md says "First-Time Employee Login (ONE TIME ONLY) - Enrich Your Profile Page"
@@ -329,33 +329,30 @@ This document identifies the impacts of the System Logic & High-Level Architectu
   - On first employee login (employee does it)?
   - Both?
 
-### 3. Decision Maker Designation
-**Question**: How is Decision Maker designated?
-- Description says "Single Decision Maker authorized to approve Learning Paths (optional if company uses auto-approval)"
-- But doesn't specify:
-  - Is it in CSV upload?
-  - Is it set in Company Profile after registration?
-  - Can it be changed later?
-- **Clarification needed**: When and how is Decision Maker set?
+### 3. Decision Maker Designation ✅ ANSWERED
+**Answer**: 
+- Set in CSV during company registration
+- Field: `decision_maker_id` (employee_id)
+- Required if `learning_path_approval` is "manual"
+- Can be updated later (needs confirmation on UI location)
 
-### 4. Trainer Status Lifecycle
-**Question**: Who controls trainer status?
-- Description says "Content Studio updates trainer status to archived when uploading content for a course is completed"
-- But also says "Active → Archived (after Content Studio update or HR disapproval)"
-- **Clarification needed**: 
-  - Can HR change trainer status directly?
-  - Or only Content Studio?
-  - What triggers "Invited → Active"?
+### 4. Trainer Status Lifecycle ✅ ANSWERED
+**Answer**:
+- Status managed by Content Studio
+- Directory receives status updates from Content Studio
+- Status values: Invited → Active → Archived
+- "Invited → Active" happens after Content Studio assignment
+- "Active → Archived" happens after Content Studio update or HR disapproval
 
-### 5. Course Completion Display
-**Question**: What exactly is displayed?
-- Description says "Only courses in which the employee successfully passed the post-course exam are displayed"
-- But also says "even if an employee fails a course, Assessment may identify new verified skills"
-- **Clarification needed**: 
-  - If employee fails course but gains verified skills, do we show the course as "failed" or not show it at all?
-  - What about courses in-progress?
+### 5. Course Completion Display ✅ ANSWERED
+**Answer**:
+- Only passed courses are displayed as completed
+- Failed courses don't appear even if skills were verified
+- Course completion feedback comes from Course Builder
+- Exam results (pass/fail) come from Assessment
+- If employee fails course but gains verified skills, course is NOT shown, but skills are updated
 
-### 6. Skill Verification Button
+### 6. Skill Verification Button ⚠️ STILL UNCLEAR
 **Question**: When does button appear/disappear?
 - Description says "Verify Your Skills button is hidden" after verification
 - But also says "When the employee completes new courses, Skills Engine automatically checks for new verified skills"
@@ -363,13 +360,12 @@ This document identifies the impacts of the System Logic & High-Level Architectu
   - Does button reappear if new skills can be verified?
   - Or is it truly one-time only (initial verification)?
 
-### 7. Learning Path Approval Policy Update
-**Question**: How are policy updates handled?
-- Description says "When a company registers or updates its Learning Path approval policy, Directory sends to Learner AI"
-- **Clarification needed**: 
-  - Can company change approval policy after registration?
-  - If yes, where in UI?
-  - What happens to existing learning paths when policy changes?
+### 7. Learning Path Approval Policy Update ✅ ANSWERED
+**Answer**:
+- Set in CSV: `learning_path_approval` ("manual" or "automatic")
+- Sent to Learner AI during registration/update
+- Can be updated after registration (needs confirmation on UI location)
+- Updates trigger re-sync to Learner AI
 
 ### 8. Redirect URLs ✅ ANSWERED
 **Answer**: 
