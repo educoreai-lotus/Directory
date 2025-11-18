@@ -30,14 +30,18 @@ class AuthenticateUserUseCase {
       }
 
       // Find employee by email
-      const employee = await this.employeeRepository.findByEmail(email.toLowerCase());
+      const normalizedEmail = email.toLowerCase().trim();
+      const employee = await this.employeeRepository.findByEmail(normalizedEmail);
       
       if (!employee) {
+        console.log(`[AuthenticateUserUseCase] Employee not found for email: ${normalizedEmail}`);
         return {
           success: false,
           error: 'Invalid email or password'
         };
       }
+      
+      console.log(`[AuthenticateUserUseCase] Found employee: ${employee.email} (ID: ${employee.id})`);
 
       // Check password
       // In dummy mode, we check against stored password_hash
@@ -55,11 +59,13 @@ class AuthenticateUserUseCase {
           // Verify password hash
           const passwordMatch = await bcrypt.compare(password, employee.password_hash);
           if (!passwordMatch) {
+            console.log(`[AuthenticateUserUseCase] Password mismatch for email: ${normalizedEmail}`);
             return {
               success: false,
               error: 'Invalid email or password'
             };
           }
+          console.log(`[AuthenticateUserUseCase] Password verified successfully for: ${normalizedEmail}`);
         }
       } else {
         // In auth-service mode, use AuthProvider to authenticate
