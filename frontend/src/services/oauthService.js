@@ -9,6 +9,10 @@ import api from '../utils/api';
  */
 export const getLinkedInAuthUrl = async () => {
   try {
+    // Check if token exists before making request
+    const token = localStorage.getItem('auth_token');
+    console.log('[oauthService] Getting LinkedIn auth URL, token:', token ? 'present' : 'missing');
+    
     const response = await api.get('/oauth/linkedin/authorize');
     
     if (response.data && response.data.response) {
@@ -17,7 +21,8 @@ export const getLinkedInAuthUrl = async () => {
     
     throw new Error('Unexpected response format');
   } catch (error) {
-    console.error('Get LinkedIn auth URL error:', error);
+    console.error('[oauthService] Get LinkedIn auth URL error:', error);
+    console.error('[oauthService] Error response:', error.response?.data);
     throw error;
   }
 };
@@ -28,6 +33,10 @@ export const getLinkedInAuthUrl = async () => {
  */
 export const getGitHubAuthUrl = async () => {
   try {
+    // Check if token exists before making request
+    const token = localStorage.getItem('auth_token');
+    console.log('[oauthService] Getting GitHub auth URL, token:', token ? 'present' : 'missing');
+    
     const response = await api.get('/oauth/github/authorize');
     
     if (response.data && response.data.response) {
@@ -36,7 +45,8 @@ export const getGitHubAuthUrl = async () => {
     
     throw new Error('Unexpected response format');
   } catch (error) {
-    console.error('Get GitHub auth URL error:', error);
+    console.error('[oauthService] Get GitHub auth URL error:', error);
+    console.error('[oauthService] Error response:', error.response?.data);
     throw error;
   }
 };

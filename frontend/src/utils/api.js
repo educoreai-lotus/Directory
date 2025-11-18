@@ -16,10 +16,16 @@ api.interceptors.request.use(
   (config) => {
     // Add Authorization header if token exists
     const token = localStorage.getItem('auth_token');
+    console.log('[api] Request interceptor - URL:', config.url);
+    console.log('[api] Request interceptor - Token in localStorage:', token ? `${token.substring(0, 30)}...` : 'null');
+    
     if (token) {
       // For dummy tokens, we'll send it as Bearer token
       // The backend authMiddleware will handle it
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('[api] Request interceptor - Authorization header added');
+    } else {
+      console.warn('[api] Request interceptor - No token found in localStorage');
     }
     
     // Skip stringification for FormData (file uploads)
