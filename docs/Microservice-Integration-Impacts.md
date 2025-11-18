@@ -27,7 +27,7 @@ This document identifies the impacts of the Microservice Integration Specificati
 3. `exercises_limited` (boolean) - **REQUIRED**
 4. `num_of_exercises` (number, e.g., 4) - **REQUIRED**
 5. `decision_maker_id` (employee_id) - **REQUIRED if manual approval**
-6. `website_url` (string) - Optional, for Management & Reporting
+6. `website_url` (NOT needed - use existing `domain` field instead)
 
 #### Employee-Level Fields:
 - ✅ `ai_enabled` - Already exists
@@ -322,7 +322,7 @@ This document identifies the impacts of the Microservice Integration Specificati
 1. **Decision Maker Designation** - ✅ ANSWERED
    - Set in CSV during company registration
    - Field: `decision_maker_id` (employee_id)
-   - Can be updated later (needs confirmation)
+   - **Cannot be changed after registration** (nice to have for future)
 
 2. **Course Completion Display** - ✅ ANSWERED
    - Only passed courses are displayed
@@ -338,53 +338,51 @@ This document identifies the impacts of the Microservice Integration Specificati
 4. **Learning Path Approval Policy** - ✅ ANSWERED
    - Set in CSV: `learning_path_approval` ("manual" or "automatic")
    - If manual, must specify `decision_maker_id`
-   - Sent to Learner AI during registration/update
+   - Sent to Learner AI during registration only (not on update)
 
 5. **Redirect URLs** - ✅ ANSWERED (from previous description)
    - URLs stored in config
-   - All use `/api/fill-content-metrics` endpoint
+   - All use `/api/fill-content-metrics` endpoint (except Learner AI uses `/api/fill-learner-ai-fields`)
 
-### ⚠️ Still Unclear (Need Clarification):
+6. **Employee Profile Enrichment Timing** - ✅ ANSWERED
+   - Enrichment happens on **first employee login**, not during CSV upload
+   - Flow: CSV upload → Basic profiles created → Employee logs in → Sees basic profile → Connects LinkedIn/GitHub (mandatory) → Profile enriched
+   - Employee cannot use system until profile is enriched
 
-1. **Employee Profile Enrichment Timing**
-   - When does enrichment happen?
-   - During CSV upload?
-   - After CSV upload, before HR approval?
-   - After HR approval?
-   - On first employee login?
+7. **LinkedIn/GitHub OAuth Flow** - ✅ ANSWERED
+   - **Employee initiates OAuth on first login only**
+   - Employee sees basic profile with message to connect LinkedIn and GitHub
+   - Employee clicks "Connect LinkedIn" and "Connect GitHub" buttons
+   - OAuth flow completes, Directory fetches raw data
+   - This is a one-time only process (cannot reconnect later)
 
-2. **LinkedIn/GitHub OAuth Flow**
-   - Who initiates OAuth?
-   - HR during company registration?
-   - Employee on first login?
-   - Both?
+8. **Skill Verification Button** - ✅ ANSWERED
+   - Button is **one-time only** for initial skill verification
+   - **NOT** for skill verification after course completion (that's automatic)
+   - Button is **permanently hidden** after first use
+   - Future skill updates happen automatically (Skills Engine calls Directory)
 
-3. **Skill Verification Button**
-   - Description says "Verify Your Skills button is hidden" after verification
-   - But also says "When employee completes new courses, Skills Engine automatically checks for new verified skills"
-   - Question: Does button reappear if new skills can be verified?
-   - Or is it truly one-time only (initial verification)?
+9. **Daily Jobs Timing** - ✅ ANSWERED
+   - For now, just implement endpoints
+   - Use mock data (other microservices not done yet)
+   - Timing doesn't matter - they will call Directory when ready
+   - No need for cron jobs or scheduled tasks yet
 
-4. **Daily Jobs Timing**
-   - When exactly do daily jobs run?
-   - What time of day?
-   - How are they triggered? (cron job, scheduled task, etc.)
+10. **Skills Engine Push Updates** - ✅ ANSWERED
+    - Skills Engine calls Directory's `/api/fill-content-metrics` with updated skills
+    - Directory receives envelope with updated competencies and relevance_score
+    - No polling or webhooks needed
 
-5. **Skills Engine Push Updates**
-   - How does Skills Engine "push" updates to Directory?
-   - Does Skills Engine call Directory's `/api/fill-content-metrics`?
-   - Or does Directory poll Skills Engine?
-   - Or is there a webhook?
+11. **CSV Field Updates** - ✅ ANSWERED
+    - Company **CAN** update `passing_grade`, `max_attempts`, etc. in Company Profile edit
+    - Updates do **NOT** trigger re-sync to Assessment
+    - Assessment will ask for these fields when needed (via universal endpoint)
+    - Assessment initiates the request, Directory responds with current values
 
-6. **CSV Field Updates**
-   - Can company update `passing_grade`, `max_attempts`, etc. after registration?
-   - If yes, where in UI?
-   - Do updates trigger re-sync to Assessment?
-
-7. **Decision Maker Updates**
-   - Can company change Decision Maker after registration?
-   - If yes, where in UI?
-   - Do updates trigger re-sync to Learner AI?
+12. **Decision Maker Updates** - ✅ ANSWERED
+    - Decision Maker **CANNOT** be changed after registration (for now)
+    - This is a "nice to have" feature for future
+    - Saved in `/docs/NICE_TO_HAVE.md`
 
 ---
 
