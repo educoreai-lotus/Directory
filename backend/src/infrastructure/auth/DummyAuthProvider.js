@@ -132,8 +132,49 @@ class DummyAuthProvider extends AuthProvider {
         console.log('[DummyAuthProvider] Extracted employeeId:', employeeId);
         console.log('[DummyAuthProvider] Extracted email:', email);
         
-        // Look up employee from database
-        const employee = await this.employeeRepository.findById(employeeId);
+        // Validate UUID format
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(employeeId)) {
+          console.log('[DummyAuthProvider] Invalid UUID format, trying email lookup...');
+          // If UUID is invalid, try email lookup
+          const employeeByEmail = await this.employeeRepository.findByEmail(email.toLowerCase());
+          if (employeeByEmail) {
+            const company = await this.companyRepository.findById(employeeByEmail.company_id);
+            const isHR = company && company.hr_contact_email && 
+                         company.hr_contact_email.toLowerCase() === email.toLowerCase();
+            
+            return {
+              valid: true,
+              user: {
+                id: employeeByEmail.id,
+                email: employeeByEmail.email,
+                employeeId: employeeByEmail.employee_id,
+                companyId: employeeByEmail.company_id,
+                fullName: employeeByEmail.full_name,
+                isHR: isHR
+              }
+            };
+          }
+          
+          return {
+            valid: false,
+            error: 'Invalid token format or employee not found'
+          };
+        }
+        
+        // Look up employee from database by ID
+        let employee = null;
+        try {
+          employee = await this.employeeRepository.findById(employeeId);
+        } catch (dbError) {
+          console.error('[DummyAuthProvider] Database error looking up by ID:', dbError.message);
+          // If database error, try email lookup as fallback
+          console.log('[DummyAuthProvider] Trying email lookup as fallback...');
+          const employeeByEmail = await this.employeeRepository.findByEmail(email.toLowerCase());
+          if (employeeByEmail) {
+            employee = employeeByEmail;
+          }
+        }
         
         if (!employee) {
           console.log('[DummyAuthProvider] Employee not found by ID, trying email...');
@@ -158,6 +199,7 @@ class DummyAuthProvider extends AuthProvider {
             };
           }
           
+          console.error('[DummyAuthProvider] Employee not found by ID or email');
           return {
             valid: false,
             error: 'Employee not found'
@@ -165,9 +207,25 @@ class DummyAuthProvider extends AuthProvider {
         }
         
         // Get company to check HR status
-        const company = await this.companyRepository.findById(employee.company_id);
+        let company = null;
+        try {
+          company = await this.companyRepository.findById(employee.company_id);
+        } catch (dbError) {
+          console.error('[DummyAuthProvider] Error looking up company:', dbError.message);
+          // Continue without company info - isHR will be false
+        }
+        
         const isHR = company && company.hr_contact_email && 
                      company.hr_contact_email.toLowerCase() === email.toLowerCase();
+        
+        // Ensure we have all required fields
+        if (!employee.id) {
+          console.error('[DummyAuthProvider] Employee record missing ID field');
+          return {
+            valid: false,
+            error: 'Invalid employee record'
+          };
+        }
         
         return {
           valid: true,
@@ -182,12 +240,11 @@ class DummyAuthProvider extends AuthProvider {
         };
       } catch (error) {
         console.error('[DummyAuthProvider] Error looking up employee:', error);
-        // Still return valid with email only as fallback
+        // Don't return valid token if we can't get full user info
+        // OAuth endpoints require req.user.id
         return {
-          valid: true,
-          user: {
-            email: email.toLowerCase()
-          }
+          valid: false,
+          error: 'Failed to validate token: ' + (error.message || 'Unknown error')
         };
       }
     } else {
