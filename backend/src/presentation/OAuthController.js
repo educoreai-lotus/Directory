@@ -97,11 +97,13 @@ class OAuthController {
       // If both are connected, the frontend will auto-redirect to profile
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
       if (isReady) {
-        // Both connected - redirect to profile page
+        // Both connected - redirect to profile page (enrichment triggered in background)
+        console.log('[OAuthController] Both OAuth connections complete, redirecting to profile');
         return res.redirect(`${frontendUrl}/employee/${employeeId}?enrichment=complete`);
       } else {
-        // Only LinkedIn connected - go back to enrich page to connect GitHub
-        return res.redirect(`${frontendUrl}/enrich?linkedin=connected`);
+        // Only GitHub connected - go back to enrich page to connect LinkedIn
+        console.log('[OAuthController] GitHub connected, redirecting back to enrich page');
+        return res.redirect(`${frontendUrl}/enrich?github=connected`);
       }
     } catch (error) {
       console.error('[OAuthController] LinkedIn callback error:', error);

@@ -102,14 +102,29 @@ function EnrichProfilePage() {
   }, [user, navigate]);
 
   // Show loading state while checking auth or refreshing user data
-  if (authLoading || refreshing || !user) {
+  if (authLoading || refreshing) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
           <p style={{ color: 'var(--text-secondary)' }}>
-            {refreshing ? 'Refreshing your profile...' : !user ? 'Please log in to enrich your profile.' : 'Loading...'}
+            {refreshing ? 'Refreshing your profile...' : 'Loading...'}
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  // If no user after loading, redirect to login
+  if (!user) {
+    // Use useEffect to avoid calling navigate during render
+    React.useEffect(() => {
+      navigate('/login');
+    }, [navigate]);
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p style={{ color: 'var(--text-secondary)' }}>Redirecting to login...</p>
         </div>
       </div>
     );
@@ -259,15 +274,18 @@ function EnrichProfilePage() {
               GitHub
             </h3>
             {githubConnected && (
-              <span 
-                className="text-sm px-3 py-1 rounded-full"
-                style={{
-                  background: 'rgba(34, 197, 94, 0.1)',
-                  color: 'rgb(34, 197, 94)'
-                }}
-              >
-                ✓ Connected
-              </span>
+              <div className="flex items-center gap-2">
+                <span 
+                  className="text-sm px-3 py-1 rounded-full flex items-center gap-2"
+                  style={{
+                    background: 'rgba(34, 197, 94, 0.1)',
+                    color: 'rgb(34, 197, 94)'
+                  }}
+                >
+                  <span className="text-green-600 font-bold">✓</span>
+                  GitHub enrichment completed
+                </span>
+              </div>
             )}
           </div>
           <p 
@@ -278,7 +296,10 @@ function EnrichProfilePage() {
           </p>
           <GitHubConnectButton 
             disabled={githubConnected}
-            onConnected={() => setGithubConnected(true)}
+            onConnected={() => {
+              setGithubConnected(true);
+              setSuccessMessage('GitHub connected successfully! Please connect LinkedIn to continue.');
+            }}
             alreadyConnected={githubConnected}
           />
         </div>

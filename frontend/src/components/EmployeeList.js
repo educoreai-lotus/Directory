@@ -18,6 +18,7 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
   const [sortField, setSortField] = useState('full_name');
   const [sortDirection, setSortDirection] = useState('asc');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [roleFilters, setRoleFilters] = useState([]); // Multi-select role filters
 
   // Filter and sort employees - Must be called before any conditional returns (React Hooks rule)
   const filteredAndSortedEmployees = useMemo(() => {
@@ -37,6 +38,15 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
     // Apply status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(emp => emp.status === statusFilter);
+    }
+
+    // Apply role filters (multi-select)
+    if (roleFilters.length > 0) {
+      filtered = filtered.filter(emp => {
+        if (!emp.roles || !Array.isArray(emp.roles)) return false;
+        // Check if employee has at least one of the selected roles
+        return roleFilters.some(role => emp.roles.includes(role));
+      });
     }
 
     // Apply sorting
@@ -63,7 +73,7 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
     });
 
     return filtered;
-  }, [employees, searchQuery, sortField, sortDirection, statusFilter]);
+  }, [employees, searchQuery, sortField, sortDirection, statusFilter, roleFilters]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -324,6 +334,47 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
         </select>
+
+        {/* Role Filter - Multi-select */}
+        <div className="relative">
+          <select
+            multiple
+            value={roleFilters}
+            onChange={(e) => {
+              const selected = Array.from(e.target.selectedOptions, option => option.value);
+              setRoleFilters(selected);
+            }}
+            className="px-3 py-2 border rounded min-w-[180px]"
+            style={{
+              borderColor: 'var(--border-default)',
+              background: 'var(--bg-primary)',
+              color: 'var(--text-primary)',
+              minHeight: '42px'
+            }}
+            size={roleFilters.length > 0 ? roleFilters.length + 1 : 1}
+          >
+            <option value="REGULAR_EMPLOYEE">Regular Employees</option>
+            <option value="TRAINER">Trainers</option>
+            <option value="TEAM_MANAGER">Team Managers</option>
+            <option value="DEPARTMENT_MANAGER">Department Managers</option>
+            <option value="DECISION_MAKER">Decision Maker</option>
+          </select>
+          {roleFilters.length > 0 && (
+            <button
+              onClick={() => setRoleFilters([])}
+              className="absolute top-0 right-0 px-2 py-1 text-xs"
+              style={{ color: 'var(--text-secondary)' }}
+              title="Clear role filters"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+        {roleFilters.length > 0 && (
+          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+            {roleFilters.length} role{roleFilters.length > 1 ? 's' : ''} selected
+          </div>
+        )}
 
         {/* Sort Field */}
         <select

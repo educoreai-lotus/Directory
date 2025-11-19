@@ -66,6 +66,7 @@ function AddEmployeeForm({ departments, teams, employees, onSave, onCancel, comp
   const validate = () => {
     const newErrors = {};
 
+    // Required fields
     if (!formData.employee_id.trim()) {
       newErrors.employee_id = 'Employee ID is required';
     }
@@ -85,6 +86,26 @@ function AddEmployeeForm({ departments, teams, employees, onSave, onCancel, comp
     }
     if (!formData.team_id) {
       newErrors.team_id = 'Team is required';
+    }
+    
+    // Additional required fields
+    if (formData.manager_id === null || formData.manager_id === undefined) {
+      newErrors.manager_id = 'Manager ID is required (use empty string "" if no manager)';
+    }
+    if (!formData.password.trim()) {
+      newErrors.password = 'Password is required';
+    }
+    if (!formData.preferred_language.trim()) {
+      newErrors.preferred_language = 'Preferred language is required';
+    }
+    if (!formData.status) {
+      newErrors.status = 'Status is required';
+    }
+    if (!formData.current_role_in_company.trim()) {
+      newErrors.current_role_in_company = 'Current role in company is required';
+    }
+    if (!formData.target_role_in_company.trim()) {
+      newErrors.target_role_in_company = 'Target role in company is required';
     }
 
     setErrors(newErrors);
@@ -246,34 +267,37 @@ function AddEmployeeForm({ departments, teams, employees, onSave, onCancel, comp
           {errors.team_id && <p className="text-xs text-red-500 mt-1">{errors.team_id}</p>}
         </div>
 
-        {/* Optional Fields */}
+        {/* Required Fields - Manager ID */}
         <div>
           <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-            Manager ID
+            Manager ID <span className="text-red-500">*</span>
+            <span className="text-xs text-gray-500 ml-2">(Select "No Manager" if none)</span>
           </label>
           <select
             name="manager_id"
-            value={formData.manager_id}
+            value={formData.manager_id || ''}
             onChange={handleChange}
             className="w-full px-3 py-2 rounded border"
             style={{
               background: 'var(--bg-card)',
-              borderColor: 'var(--border-default)',
+              borderColor: errors.manager_id ? 'red' : 'var(--border-default)',
               color: 'var(--text-primary)'
             }}
           >
-            <option value="">No Manager</option>
+            <option value="">No Manager (Empty String)</option>
             {employees?.map(emp => (
               <option key={emp.id} value={emp.employee_id}>
                 {emp.full_name} ({emp.employee_id})
               </option>
             ))}
           </select>
+          {errors.manager_id && <p className="text-xs text-red-500 mt-1">{errors.manager_id}</p>}
         </div>
 
+        {/* Required Fields - Status */}
         <div>
           <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-            Status
+            Status <span className="text-red-500">*</span>
           </label>
           <select
             name="status"
@@ -282,18 +306,20 @@ function AddEmployeeForm({ departments, teams, employees, onSave, onCancel, comp
             className="w-full px-3 py-2 rounded border"
             style={{
               background: 'var(--bg-card)',
-              borderColor: 'var(--border-default)',
+              borderColor: errors.status ? 'red' : 'var(--border-default)',
               color: 'var(--text-primary)'
             }}
           >
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </select>
+          {errors.status && <p className="text-xs text-red-500 mt-1">{errors.status}</p>}
         </div>
 
+        {/* Required Fields - Current Role */}
         <div>
           <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-            Current Role in Company
+            Current Role in Company <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -303,16 +329,18 @@ function AddEmployeeForm({ departments, teams, employees, onSave, onCancel, comp
             className="w-full px-3 py-2 rounded border"
             style={{
               background: 'var(--bg-card)',
-              borderColor: 'var(--border-default)',
+              borderColor: errors.current_role_in_company ? 'red' : 'var(--border-default)',
               color: 'var(--text-primary)'
             }}
-            placeholder="e.g., Software Engineer"
+            placeholder="e.g., Frontend Developer"
           />
+          {errors.current_role_in_company && <p className="text-xs text-red-500 mt-1">{errors.current_role_in_company}</p>}
         </div>
 
+        {/* Required Fields - Target Role */}
         <div>
           <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-            Target Role in Company
+            Target Role in Company <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -322,35 +350,44 @@ function AddEmployeeForm({ departments, teams, employees, onSave, onCancel, comp
             className="w-full px-3 py-2 rounded border"
             style={{
               background: 'var(--bg-card)',
-              borderColor: 'var(--border-default)',
+              borderColor: errors.target_role_in_company ? 'red' : 'var(--border-default)',
               color: 'var(--text-primary)'
             }}
-            placeholder="e.g., Senior Software Engineer"
+            placeholder="e.g., Senior Frontend Developer"
           />
+          {errors.target_role_in_company && <p className="text-xs text-red-500 mt-1">{errors.target_role_in_company}</p>}
         </div>
 
+        {/* Required Fields - Preferred Language */}
         <div>
           <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-            Preferred Language
+            Preferred Language <span className="text-red-500">*</span>
           </label>
-          <input
-            type="text"
+          <select
             name="preferred_language"
             value={formData.preferred_language}
             onChange={handleChange}
             className="w-full px-3 py-2 rounded border"
             style={{
               background: 'var(--bg-card)',
-              borderColor: 'var(--border-default)',
+              borderColor: errors.preferred_language ? 'red' : 'var(--border-default)',
               color: 'var(--text-primary)'
             }}
-            placeholder="e.g., en, es, fr"
-          />
+          >
+            <option value="">Select Language</option>
+            <option value="en">English</option>
+            <option value="ar">Arabic</option>
+            <option value="fr">French</option>
+            <option value="es">Spanish</option>
+            <option value="de">German</option>
+          </select>
+          {errors.preferred_language && <p className="text-xs text-red-500 mt-1">{errors.preferred_language}</p>}
         </div>
 
+        {/* Required Fields - Password */}
         <div>
           <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-            Password
+            Password <span className="text-red-500">*</span>
           </label>
           <input
             type="password"
@@ -360,11 +397,12 @@ function AddEmployeeForm({ departments, teams, employees, onSave, onCancel, comp
             className="w-full px-3 py-2 rounded border"
             style={{
               background: 'var(--bg-card)',
-              borderColor: 'var(--border-default)',
+              borderColor: errors.password ? 'red' : 'var(--border-default)',
               color: 'var(--text-primary)'
             }}
-            placeholder="Leave empty for default"
+            placeholder="Enter password"
           />
+          {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
         </div>
       </div>
 
