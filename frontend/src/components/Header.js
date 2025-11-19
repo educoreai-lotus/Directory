@@ -29,6 +29,15 @@ function Header() {
   const location = useLocation();
   const { tokens, mode, toggleMode, loading, error } = useDesignSystem();
 
+  // Hooks must be called before any conditional returns
+  const logoSources = useMemo(
+    () => ({
+      logo1: getLogoUrl('logo1'),
+      logo2: getLogoUrl('logo2')
+    }),
+    []
+  );
+
   // Show nothing only while actively loading (not if there's an error - use fallbacks)
   if (loading) {
     return null;
@@ -45,14 +54,6 @@ function Header() {
   const createButtonTokens = modeHeader?.createButton || {};
   const themeToggleTokens = modeHeader?.themeToggle || {};
   const spacing = headerConfig?.spacing || {};
-
-  const logoSources = useMemo(
-    () => ({
-      logo1: getLogoUrl('logo1'),
-      logo2: getLogoUrl('logo2')
-    }),
-    []
-  );
 
   const logoZone = tokens?.layout?.logoZone || {};
   const logoImageStyle = {
