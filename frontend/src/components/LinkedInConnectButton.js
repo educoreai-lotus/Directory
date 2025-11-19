@@ -13,6 +13,14 @@ function LinkedInConnectButton({ onConnected, disabled = false, alreadyConnected
       setLoading(true);
       setError(null);
 
+      // Verify token exists before making request
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('You must be logged in to connect LinkedIn. Please log in first.');
+      }
+
+      console.log('[LinkedInConnectButton] Token present, requesting authorization URL...');
+      
       // Get authorization URL from backend
       const result = await getLinkedInAuthUrl();
       console.log('[LinkedInConnectButton] Received result:', result);
@@ -25,11 +33,20 @@ function LinkedInConnectButton({ onConnected, disabled = false, alreadyConnected
       }
 
       // Redirect to LinkedIn OAuth
+      console.log('[LinkedInConnectButton] Redirecting to LinkedIn OAuth...');
       window.location.href = authorizationUrl;
     } catch (error) {
-      console.error('LinkedIn connect error:', error);
-      setError(error.response?.data?.response?.error || 'Failed to connect LinkedIn. Please try again.');
+      console.error('[LinkedInConnectButton] LinkedIn connect error:', error);
+      const errorMessage = error.response?.data?.response?.error 
+        || error.response?.data?.error 
+        || error.message 
+        || 'Failed to connect LinkedIn. Please try again.';
+      
+      setError(errorMessage);
       setLoading(false);
+      
+      // Don't redirect to login - just show error
+      // The user is already on the enrich page, they should stay there
     }
   };
 

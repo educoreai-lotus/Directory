@@ -102,12 +102,32 @@ function EnrichProfilePage() {
   }, [user, navigate]);
 
   // If no user after loading, redirect to login
+  // But only if we're sure auth has finished loading and there's really no user
   useEffect(() => {
-    if (!authLoading && !user) {
-      console.log('[EnrichProfilePage] No user found, redirecting to login');
-      navigate('/login');
+    if (!authLoading && !user && !refreshing) {
+      // Double-check token exists before redirecting
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        console.log('[EnrichProfilePage] No user and no token, redirecting to login');
+        navigate('/login');
+      } else {
+        // Token exists but user is null - might be a validation issue
+        // Try to refresh user data once more before redirecting
+        console.log('[EnrichProfilePage] Token exists but user is null, attempting to refresh...');
+        refreshUser()
+          .then((refreshedUser) => {
+            if (!refreshedUser) {
+              console.log('[EnrichProfilePage] Refresh failed, redirecting to login');
+              navigate('/login');
+            }
+          })
+          .catch(() => {
+            console.log('[EnrichProfilePage] Refresh error, redirecting to login');
+            navigate('/login');
+          });
+      }
     }
-  }, [authLoading, user, navigate]);
+  }, [authLoading, user, navigate, refreshing, refreshUser]);
 
   // Show loading state while checking auth or refreshing user data
   if (authLoading || refreshing) {

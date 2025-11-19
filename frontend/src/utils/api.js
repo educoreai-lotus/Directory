@@ -23,9 +23,9 @@ api.interceptors.request.use(
       // For dummy tokens, we'll send it as Bearer token
       // The backend authMiddleware will handle it
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('[api] Request interceptor - Authorization header added');
+      console.log('[api] Request interceptor - Authorization header added:', `Bearer ${token.substring(0, 20)}...`);
     } else {
-      console.warn('[api] Request interceptor - No token found in localStorage');
+      console.warn('[api] Request interceptor - No token found in localStorage for URL:', config.url);
     }
     
     // Skip stringification for FormData (file uploads)
@@ -68,6 +68,15 @@ api.interceptors.response.use(
         console.error('Failed to parse error response:', e);
       }
     }
+    
+    // Log 401 errors for debugging
+    if (error.response?.status === 401) {
+      const token = localStorage.getItem('auth_token');
+      console.error('[api] 401 Unauthorized error for URL:', error.config?.url);
+      console.error('[api] Token in localStorage:', token ? 'present' : 'missing');
+      console.error('[api] Error response:', error.response?.data);
+    }
+    
     return Promise.reject(error);
   }
 );

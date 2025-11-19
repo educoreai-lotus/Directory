@@ -13,6 +13,14 @@ function GitHubConnectButton({ onConnected, disabled = false, alreadyConnected =
       setLoading(true);
       setError(null);
 
+      // Verify token exists before making request
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('You must be logged in to connect GitHub. Please log in first.');
+      }
+
+      console.log('[GitHubConnectButton] Token present, requesting authorization URL...');
+      
       // Get authorization URL from backend
       const result = await getGitHubAuthUrl();
       console.log('[GitHubConnectButton] Received result:', result);
@@ -25,11 +33,20 @@ function GitHubConnectButton({ onConnected, disabled = false, alreadyConnected =
       }
 
       // Redirect to GitHub OAuth
+      console.log('[GitHubConnectButton] Redirecting to GitHub OAuth...');
       window.location.href = authorizationUrl;
     } catch (error) {
-      console.error('GitHub connect error:', error);
-      setError(error.response?.data?.response?.error || 'Failed to connect GitHub. Please try again.');
+      console.error('[GitHubConnectButton] GitHub connect error:', error);
+      const errorMessage = error.response?.data?.response?.error 
+        || error.response?.data?.error 
+        || error.message 
+        || 'Failed to connect GitHub. Please try again.';
+      
+      setError(errorMessage);
       setLoading(false);
+      
+      // Don't redirect to login - just show error
+      // The user is already on the enrich page, they should stay there
     }
   };
 
