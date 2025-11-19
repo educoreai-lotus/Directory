@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 
-function CompanyHierarchy({ hierarchy, onEmployeeClick }) {
+function CompanyHierarchy({ hierarchy }) {
   const [expandedDepartments, setExpandedDepartments] = useState({});
   const [expandedTeams, setExpandedTeams] = useState({});
 
@@ -111,9 +111,8 @@ function CompanyHierarchy({ hierarchy, onEmployeeClick }) {
                               teamData.employees.map((employee) => (
                                 <div
                                   key={employee.id}
-                                  className="p-2 rounded cursor-pointer hover:bg-opacity-50 transition-colors"
+                                  className="p-2 rounded"
                                   style={{ background: 'var(--bg-card)' }}
-                                  onClick={() => onEmployeeClick && onEmployeeClick(employee)}
                                 >
                                   <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                                     {employee.full_name}

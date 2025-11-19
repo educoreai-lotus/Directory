@@ -38,7 +38,8 @@ const cssVarMap = [
   ['--spacing-lg', ['global', 'spacing', 'scale', 'lg']],
   ['--radius-card', ['global', 'borderRadius', 'scale', 'card']],
   ['--radius-input', ['global', 'borderRadius', 'scale', 'input']],
-  ['--radius-button', ['global', 'borderRadius', 'scale', 'button']]
+  ['--radius-button', ['global', 'borderRadius', 'scale', 'button']],
+  ['--radius-avatar', ['global', 'borderRadius', 'scale', 'avatar']]
 ];
 
 const getValueByPath = (source, path, mode) => {
@@ -81,6 +82,11 @@ const applyCssVariables = (tokens, mode) => {
     root.style.setProperty('--spacing-md', spacingScale.md || '16px');
     root.style.setProperty('--spacing-lg', spacingScale.lg || '24px');
     root.style.setProperty('--spacing-xl', spacingScale.xl || '32px');
+  }
+
+  const borderRadiusScale = tokens?.global?.borderRadius?.scale;
+  if (borderRadiusScale) {
+    root.style.setProperty('--radius-avatar', borderRadiusScale.avatar || borderRadiusScale.full || '9999px');
   }
 };
 

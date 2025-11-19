@@ -4,12 +4,12 @@
 
 class DatabaseConstraintValidator {
   /**
-   * Validate learning_path_approval value
+   * Validate approval_policy value
    * @param {string|null|undefined} value - Value to validate
-   * @returns {string} Valid value ('manual' or 'automatic')
+   * @returns {string} Valid value ('manual' or 'auto')
    * @throws {Error} If value cannot be normalized
    */
-  validateLearningPathApproval(value) {
+  validateApprovalPolicy(value) {
     if (!value) {
       return 'manual'; // Default
     }
@@ -17,8 +17,8 @@ class DatabaseConstraintValidator {
     if (normalized === 'manual' || normalized.startsWith('manual')) {
       return 'manual';
     }
-    if (normalized === 'automatic' || normalized.startsWith('automatic')) {
-      return 'automatic';
+    if (normalized === 'auto' || normalized === 'automatic' || normalized.startsWith('auto')) {
+      return 'auto';
     }
     // Invalid value - return default
     return 'manual';
@@ -116,17 +116,21 @@ class DatabaseConstraintValidator {
    * Validate company settings update
    * @param {Object} row - Row with company settings
    * @returns {Object} Validated company settings
+   * @throws {Error} If KPIs is missing (mandatory field)
    */
   validateCompanySettings(row) {
     const validated = {};
     
-    if (row.learning_path_approval !== undefined && row.learning_path_approval !== null) {
-      validated.learning_path_approval = this.validateLearningPathApproval(row.learning_path_approval);
+    if (row.approval_policy !== undefined && row.approval_policy !== null) {
+      validated.approval_policy = this.validateApprovalPolicy(row.approval_policy);
     }
     
-    if (row.primary_kpis !== undefined && row.primary_kpis !== null) {
-      validated.primary_kpis = String(row.primary_kpis).trim();
+    // KPIs is mandatory
+    const kpisValue = row.kpis || row.KPIs || row.primary_kpis || row.primary_KPIs;
+    if (!kpisValue || String(kpisValue).trim() === '') {
+      throw new Error('KPIs field is mandatory. Please provide company KPIs in the first row of your CSV.');
     }
+    validated.kpis = String(kpisValue).trim();
 
     return validated;
   }

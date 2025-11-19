@@ -104,7 +104,7 @@ function CompanyProfilePage() {
                 Logo URL: {profileData.company?.logo_url || 'NOT FOUND'}
               </div>
             )}
-            {/* Company Logo */}
+            {/* Company Logo - Circular */}
             {profileData.company?.logo_url ? (
               <img
                 src={profileData.company.logo_url}
@@ -113,12 +113,11 @@ function CompanyProfilePage() {
                 style={{
                   width: 'var(--logo-size, 80px)',
                   height: 'var(--logo-size, 80px)',
-                  borderRadius: 'var(--radius-card, 8px)',
-                  objectFit: 'contain',
+                  borderRadius: 'var(--radius-avatar, 9999px)',
+                  objectFit: 'cover',
                   border: '2px solid var(--border-default, #e2e8f0)',
                   boxShadow: 'var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.1))',
-                  background: 'var(--bg-card, #ffffff)',
-                  padding: 'var(--spacing-sm, 8px)'
+                  background: 'var(--bg-card, #ffffff)'
                 }}
                 onError={(e) => {
                   // Fallback to initial letter if image fails to load
@@ -133,7 +132,7 @@ function CompanyProfilePage() {
               style={{
                 width: 'var(--logo-size, 80px)',
                 height: 'var(--logo-size, 80px)',
-                borderRadius: 'var(--radius-card, 8px)',
+                borderRadius: 'var(--radius-avatar, 9999px)',
                 display: profileData.company?.logo_url ? 'none' : 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

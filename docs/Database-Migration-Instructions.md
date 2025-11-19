@@ -39,25 +39,41 @@ After running the migration, verify in Supabase:
 
 ---
 
-## What This Migration Adds
+## What This Migration Creates
 
-1. **`profile_status` column** to `employees` table
-   - Values: 'basic', 'enriched', 'approved', 'rejected'
-   - Default: 'basic'
+1. **`approval_policy` column** in `companies` table
+   - Values: 'manual' or 'auto'
+   - Default: 'manual'
+   - Replaces old `learning_path_approval` column
 
-2. **`profile_photo_url` column** to `employees` table
-   - Stores profile photo URL from LinkedIn/GitHub OAuth
-   - Optional field (VARCHAR 500)
+2. **`kpis` column** in `companies` table
+   - Company's primary Key Performance Indicators (MANDATORY)
+   - Required for integration with Learning Analytics and Management & Reporting microservices
+   - Replaces old `primary_kpis` column
 
-3. **`logo_url` column** to `companies` table
+3. **`logo_url` column** in `companies` table
    - Stores company logo URL from CSV upload
    - Optional field (VARCHAR 500)
 
-4. **`employee_profile_approvals` table**
+4. **`profile_status` column** in `employees` table
+   - Values: 'basic', 'enriched', 'approved', 'rejected'
+   - Default: 'basic'
+
+5. **`profile_photo_url` column** in `employees` table
+   - Stores profile photo URL from LinkedIn/GitHub OAuth
+   - Optional field (VARCHAR 500)
+
+6. **`employee_profile_approvals` table**
    - Tracks HR approval requests for enriched profiles
    - Links employees to their approval status
 
-5. **Indexes** for performance
+7. **Indexes** for performance
    - Index on `employees.profile_status`
    - Indexes on `employee_profile_approvals` for company and employee lookups
+
+## Important Notes
+
+- **KPIs is mandatory**: The `kpis` column is NOT NULL. Your CSV must include KPIs in the first row.
+- **DECISION_MAKER requirement**: If `approval_policy` is set to "manual", your CSV must include at least one employee with `DECISION_MAKER` role.
+- **DECISION_MAKER can be combined**: The DECISION_MAKER role can be combined with other roles (e.g., "REGULAR_EMPLOYEE + TRAINER + DECISION_MAKER").
 

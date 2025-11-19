@@ -172,7 +172,7 @@ function CompanyDashboard({ company, departments, teams, employees, hierarchy, m
             <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
               Organizational Hierarchy
             </h3>
-            <CompanyHierarchy hierarchy={hierarchy} onEmployeeClick={onEmployeeClick} />
+            <CompanyHierarchy hierarchy={hierarchy} />
           </div>
         )}
 

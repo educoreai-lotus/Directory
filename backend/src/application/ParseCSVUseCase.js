@@ -92,9 +92,21 @@ class ParseCSVUseCase {
 
     try {
       // Update company settings from first row (with validation)
+      // KPIs is mandatory, so we always update company settings
       const firstRow = validRows[0];
-      if (firstRow.learning_path_approval || firstRow.primary_kpis || firstRow.logo_url) {
-        await this.updateCompanySettings(companyId, firstRow, client);
+      await this.updateCompanySettings(companyId, firstRow, client);
+      
+      // Validate DECISION_MAKER requirement if approval_policy is "manual"
+      const approvalPolicy = firstRow.approval_policy || 'manual';
+      if (approvalPolicy === 'manual') {
+        const hasDecisionMaker = validRows.some(row => {
+          const roles = this.dbConstraintValidator.validateRoleType(row.role_type);
+          return roles.includes('DECISION_MAKER');
+        });
+        
+        if (!hasDecisionMaker) {
+          throw new Error('When approval_policy is "manual", your CSV must include at least one employee with DECISION_MAKER role. The DECISION_MAKER role can be combined with other roles (e.g., "REGULAR_EMPLOYEE + DECISION_MAKER").');
+        }
       }
 
       // Track created records
@@ -312,20 +324,22 @@ class ParseCSVUseCase {
     }
 
     // Validate company settings against database constraints
+    // This will throw an error if KPIs is missing (mandatory field)
     const validatedSettings = this.dbConstraintValidator.validateCompanySettings(row);
 
     const updates = [];
     const values = [];
     let paramIndex = 1;
 
-    if (validatedSettings.learning_path_approval !== undefined) {
-      updates.push(`learning_path_approval = $${paramIndex++}`);
-      values.push(validatedSettings.learning_path_approval);
+    if (validatedSettings.approval_policy !== undefined) {
+      updates.push(`approval_policy = $${paramIndex++}`);
+      values.push(validatedSettings.approval_policy);
     }
 
-    if (validatedSettings.primary_kpis !== undefined) {
-      updates.push(`primary_kpis = $${paramIndex++}`);
-      values.push(validatedSettings.primary_kpis);
+    // KPIs is mandatory, always update
+    if (validatedSettings.kpis !== undefined) {
+      updates.push(`kpis = $${paramIndex++}`);
+      values.push(validatedSettings.kpis);
     }
 
     // Add logo_url if provided in CSV
@@ -334,24 +348,24 @@ class ParseCSVUseCase {
       values.push(row.logo_url);
     }
 
-    if (updates.length > 0) {
-      values.push(companyId);
-      const query = `
-        UPDATE companies
-        SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $${paramIndex}
-      `;
-      const result = await client.query(query, values);
-      
-      // Verify update succeeded
-      if (result.rowCount === 0) {
-        throw new Error(`Failed to update company settings. Company ${companyId} may not exist.`);
-      }
-      
-      if (row.logo_url) {
-        console.log(`[ParseCSVUseCase] Updated company logo URL: ${row.logo_url.substring(0, 50)}...`);
-      }
+    // Always update (at minimum KPIs is required)
+    values.push(companyId);
+    const query = `
+      UPDATE companies
+      SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $${paramIndex}
+    `;
+    const result = await client.query(query, values);
+    
+    // Verify update succeeded
+    if (result.rowCount === 0) {
+      throw new Error(`Failed to update company settings. Company ${companyId} may not exist.`);
     }
+    
+    if (row.logo_url) {
+      console.log(`[ParseCSVUseCase] Updated company logo URL: ${row.logo_url.substring(0, 50)}...`);
+    }
+    console.log(`[ParseCSVUseCase] Updated company settings: approval_policy=${validatedSettings.approval_policy || 'manual'}, kpis=${validatedSettings.kpis ? 'provided' : 'missing'}`);
   }
 
 }

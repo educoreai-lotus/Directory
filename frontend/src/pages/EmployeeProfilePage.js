@@ -12,6 +12,7 @@ import ProfileCourses from '../components/ProfileCourses';
 import ProfileDashboard from '../components/ProfileDashboard';
 import ProfileRequests from '../components/ProfileRequests';
 import LearningPath from '../components/LearningPath';
+import LearningPathApprovals from '../components/LearningPathApprovals';
 
 function EmployeeProfilePage() {
   const { employeeId } = useParams();
@@ -450,6 +451,30 @@ function EmployeeProfilePage() {
 
             {/* Requests Section */}
             <ProfileRequests employeeId={employeeId} />
+          </div>
+        )}
+
+        {/* Learning Path Approvals - Only visible for Decision Makers */}
+        {employee.roles && Array.isArray(employee.roles) && employee.roles.includes('DECISION_MAKER') && (
+          <div 
+            className="rounded-lg shadow-lg border p-8 mb-6"
+            style={{
+              background: 'var(--gradient-card)',
+              borderRadius: 'var(--radius-card, 8px)',
+              boxShadow: 'var(--shadow-card)',
+              borderColor: 'var(--border-default)'
+            }}
+          >
+            <h2 
+              className="text-2xl font-semibold mb-6"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              Learning Paths Approvals
+            </h2>
+            <LearningPathApprovals 
+              employeeId={employeeId}
+              companyId={user?.companyId}
+            />
           </div>
         )}
 

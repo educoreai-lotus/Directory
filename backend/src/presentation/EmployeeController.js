@@ -148,12 +148,20 @@ class EmployeeController {
         }
       }
 
-      // Combine employee data with project summaries and trainer settings
+      // Fetch employee roles
+      const rolesQuery = 'SELECT role_type FROM employee_roles WHERE employee_id = $1';
+      const rolesResult = await this.employeeRepository.pool.query(rolesQuery, [employeeId]);
+      const roles = rolesResult.rows.map(row => row.role_type);
+      const isDecisionMaker = roles.includes('DECISION_MAKER');
+
+      // Combine employee data with project summaries, trainer settings, and roles
       const employeeData = {
         ...employee,
         project_summaries: projectSummaries,
         is_trainer: isTrainer,
-        trainer_settings: trainerSettings
+        trainer_settings: trainerSettings,
+        roles: roles,
+        is_decision_maker: isDecisionMaker
       };
 
       res.status(200).json({

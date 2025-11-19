@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useDesignSystem } from '../context/DesignSystemContext';
 import { useAuth } from '../context/AuthContext';
+import { getLogoUrl } from '../services/designTokenService';
 import './Header.css';
 
 const blurMap = {
@@ -37,6 +38,16 @@ function Header() {
   const modeTokens = tokens?.modes?.[mode] || tokens?.modes?.light || {};
   const themeToggleTokens = modeHeader?.themeToggle || {};
   const spacing = headerConfig?.spacing || {};
+  const logoZone = tokens?.layout?.logoZone || {};
+  
+  // Logo selection: light mode → logo2, dark mode → logo1
+  const logoSources = useMemo(() => {
+    const logoVariant = mode === 'light' ? 'logo2' : 'logo1';
+    return {
+      src: getLogoUrl(logoVariant),
+      alt: 'EDUCORE Directory'
+    };
+  }, [mode]);
 
   const headerStyle = {
     width: headerConfig?.width || '100%',
@@ -105,10 +116,45 @@ function Header() {
     await logout();
   };
 
+  // Logo container style from design tokens
+  const logoContainerStyle = {
+    ...logoZone?.container || {},
+    height: logoZone?.container?.height || headerConfig?.height || '80px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginRight: logoZone?.margin?.right || spacing?.gap?.desktop || '16px'
+  };
+
+  const logoImageStyle = {
+    ...logoZone?.image || {},
+    height: logoZone?.image?.height || logoZone?.image?.maxHeight || '80px',
+    maxHeight: logoZone?.image?.maxHeight || '80px',
+    minHeight: logoZone?.image?.minHeight || '32px',
+    width: logoZone?.image?.width || 'auto',
+    maxWidth: logoZone?.image?.maxWidth || '200px',
+    minWidth: logoZone?.image?.minWidth || '120px',
+    objectFit: logoZone?.image?.objectFit || 'contain',
+    transition: logoZone?.image?.transition || 'all 300ms ease-in-out'
+  };
+
   return (
     <header className="app-header" style={headerStyle}>
       <div className="header-inner">
         <div style={{ flex: 1 }}></div>
+        
+        {/* Project Logo - Right Side */}
+        <div className="logo-container" style={logoContainerStyle}>
+          <img
+            src={logoSources.src}
+            alt={logoSources.alt}
+            style={logoImageStyle}
+            onError={(e) => {
+              console.error('Failed to load logo:', logoSources.src);
+              e.target.style.display = 'none';
+            }}
+          />
+        </div>
         
         <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* User Info - Only show when authenticated */}

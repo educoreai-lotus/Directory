@@ -33,8 +33,12 @@ class ErrorTranslator {
         return 'A referenced record does not exist. Please check your data relationships.';
 
       case '23514': // Check constraint violation
+        if (error.constraint === 'companies_approval_policy_check') {
+          return 'Approval policy must be either "manual" or "auto".';
+        }
         if (error.constraint === 'companies_learning_path_approval_check') {
-          return 'Learning path approval must be either "manual" or "automatic".';
+          // Legacy constraint name (for backward compatibility during migration)
+          return 'Approval policy must be either "manual" or "auto".';
         }
         if (error.constraint === 'employees_status_check') {
           return 'Employee status must be either "active" or "inactive".';
@@ -56,6 +60,9 @@ class ErrorTranslator {
         }
         if (error.column === 'employee_id') {
           return 'Employee ID is required for all employees.';
+        }
+        if (error.column === 'kpis') {
+          return 'KPIs field is mandatory. Please provide company KPIs in the first row of your CSV.';
         }
         return `The field "${error.column}" is required but was not provided.`;
 

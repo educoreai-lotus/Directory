@@ -55,8 +55,8 @@ class CSVParser {
       // Company data
       company_name: this.trimValue(row.company_name),
       industry: this.trimValue(row.industry),
-      learning_path_approval: this.normalizeLearningPathApproval(this.trimValue(row.learning_path_approval)) || 'manual',
-      primary_kpis: this.trimValue(row.primary_KPIs) || this.trimValue(row.primary_kpis),
+      approval_policy: this.normalizeApprovalPolicy(this.trimValue(row.approval_policy) || this.trimValue(row.learning_path_approval)) || 'manual',
+      kpis: this.trimValue(row.KPIs) || this.trimValue(row.kpis) || this.trimValue(row.primary_KPIs) || this.trimValue(row.primary_kpis),
       logo_url: this.trimValue(row.logo_url) || this.trimValue(row.company_logo) || this.trimValue(row.logo),
       
       // Department data
@@ -112,11 +112,11 @@ class CSVParser {
   }
 
   /**
-   * Normalize learning_path_approval value
+   * Normalize approval_policy value
    * @param {string} value - Value to normalize
-   * @returns {string|null} Normalized value ('manual' or 'automatic') or null
+   * @returns {string|null} Normalized value ('manual' or 'auto') or null
    */
-  normalizeLearningPathApproval(value) {
+  normalizeApprovalPolicy(value) {
     if (!value) {
       return null;
     }
@@ -125,15 +125,15 @@ class CSVParser {
     if (normalized === 'manual') {
       return 'manual';
     }
-    if (normalized === 'automatic') {
-      return 'automatic';
+    if (normalized === 'auto' || normalized === 'automatic') {
+      return 'auto';
     }
-    // Check for partial matches (e.g., "Manual", "AUTOMATIC")
+    // Check for partial matches (e.g., "Manual", "AUTO", "AUTOMATIC")
     if (normalized.startsWith('manual')) {
       return 'manual';
     }
-    if (normalized.startsWith('automatic')) {
-      return 'automatic';
+    if (normalized.startsWith('auto')) {
+      return 'auto';
     }
     return null; // Invalid value, will default to 'manual' in the parser
   }
