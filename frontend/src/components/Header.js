@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useDesignSystem } from '../context/DesignSystemContext';
+import { useAuth } from '../context/AuthContext';
 import './Header.css';
 
 const blurMap = {
@@ -18,6 +19,8 @@ const resolveBackdropBlur = (value) => {
 
 function Header() {
   const { tokens, mode, toggleMode, loading } = useDesignSystem();
+  const { user, isAuthenticated, logout } = useAuth();
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   // Show nothing only while actively loading
   if (loading) {
@@ -31,6 +34,7 @@ function Header() {
 
   const headerConfig = tokens?.components?.header || {};
   const modeHeader = tokens?.modes?.[mode]?.header || {};
+  const modeTokens = tokens?.modes?.[mode] || tokens?.modes?.light || {};
   const themeToggleTokens = modeHeader?.themeToggle || {};
   const spacing = headerConfig?.spacing || {};
 
@@ -53,6 +57,30 @@ function Header() {
     '--header-padding-desktop': spacing?.padding?.desktop || '32px'
   };
 
+  const userMenuStyle = {
+    background: modeHeader?.background || 'rgba(255, 255, 255, 0.95)',
+    border: modeHeader?.border || '1px solid #e2e8f0',
+    boxShadow: headerConfig?.shadow?.[mode] || modeHeader?.shadow || '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+    borderRadius: tokens?.global?.borderRadius?.scale?.card || '8px',
+    padding: tokens?.global?.spacing?.padding?.card?.sm || '16px',
+    minWidth: '200px'
+  };
+
+  const userButtonStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens?.global?.spacing?.scale?.sm || '8px',
+    padding: `${tokens?.global?.spacing?.scale?.sm || '8px'} ${tokens?.global?.spacing?.scale?.md || '16px'}`,
+    background: 'transparent',
+    border: `1px solid ${modeTokens?.border?.default || '#e2e8f0'}`,
+    borderRadius: tokens?.global?.borderRadius?.scale?.button || '6px',
+    color: modeTokens?.text?.primary || '#1e293b',
+    cursor: 'pointer',
+    transition: 'all 200ms ease',
+    fontSize: tokens?.global?.typography?.fontSize?.base?.size || '16px',
+    fontWeight: tokens?.global?.typography?.fontWeight?.medium || 500
+  };
+
   const toggleStyle = {
     width: themeToggleTokens?.size || '40px',
     height: themeToggleTokens?.size || '40px',
@@ -72,27 +100,192 @@ function Header() {
     transform: 'scale(1.05)'
   };
 
+  const handleLogout = async () => {
+    setShowUserMenu(false);
+    await logout();
+  };
+
   return (
     <header className="app-header" style={headerStyle}>
       <div className="header-inner">
         <div style={{ flex: 1 }}></div>
-        <button
-          type="button"
-          className="theme-toggle"
-          style={toggleStyle}
-          onClick={toggleMode}
-          aria-label="Toggle theme"
-          disabled={loading}
-          onMouseEnter={(e) => {
-            Object.assign(e.currentTarget.style, toggleHoverStyle);
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = toggleStyle.background;
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
-        >
-          {mode === 'light' ? '🌞' : '🌙'}
-        </button>
+        
+        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* User Info - Only show when authenticated */}
+          {isAuthenticated && user && (
+            <div className="user-menu-container" style={{ position: 'relative' }}>
+              <button
+                type="button"
+                className="user-button"
+                style={userButtonStyle}
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = modeTokens?.button?.secondary?.backgroundHover || '#f1f5f9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <div 
+                  className="user-avatar"
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: modeTokens?.gradient?.primary || 'linear-gradient(135deg, #065f46, #047857)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    fontWeight: 600
+                  }}
+                >
+                  {user.fullName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+                <span className="user-name">
+                  {user.fullName || user.email}
+                </span>
+                <svg 
+                  width="12" 
+                  height="12" 
+                  viewBox="0 0 12 12" 
+                  fill="none" 
+                  style={{ 
+                    transform: showUserMenu ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 200ms ease'
+                  }}
+                >
+                  <path 
+                    d="M3 4.5L6 7.5L9 4.5" 
+                    stroke={modeTokens?.text?.secondary || '#475569'} 
+                    strokeWidth="1.5" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+
+              {/* User Dropdown Menu */}
+              {showUserMenu && (
+                <>
+                  <div 
+                    className="menu-backdrop"
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 49
+                    }}
+                    onClick={() => setShowUserMenu(false)}
+                  />
+                  <div 
+                    className="user-menu"
+                    style={{
+                      ...userMenuStyle,
+                      position: 'absolute',
+                      top: 'calc(100% + 8px)',
+                      right: 0,
+                      zIndex: 51,
+                      marginTop: '8px'
+                    }}
+                  >
+                    <div style={{ 
+                      paddingBottom: '12px', 
+                      borderBottom: `1px solid ${modeTokens?.border?.default || '#e2e8f0'}`,
+                      marginBottom: '12px'
+                    }}>
+                      <div style={{ 
+                        fontSize: tokens?.global?.typography?.fontSize?.sm?.size || '14px',
+                        color: modeTokens?.text?.muted || '#64748b',
+                        marginBottom: '4px'
+                      }}>
+                        {user.email}
+                      </div>
+                      <div style={{ 
+                        fontSize: tokens?.global?.typography?.fontSize?.base?.size || '16px',
+                        fontWeight: tokens?.global?.typography?.fontWeight?.semibold || 600,
+                        color: modeTokens?.text?.primary || '#1e293b'
+                      }}>
+                        {user.fullName || 'User'}
+                      </div>
+                      {user.isHR && (
+                        <div style={{ 
+                          fontSize: tokens?.global?.typography?.fontSize?.xs?.size || '12px',
+                          color: modeTokens?.text?.link || '#047857',
+                          marginTop: '4px',
+                          fontWeight: tokens?.global?.typography?.fontWeight?.medium || 500
+                        }}>
+                          HR Manager
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      style={{
+                        width: '100%',
+                        padding: `${tokens?.global?.spacing?.scale?.sm || '8px'} ${tokens?.global?.spacing?.scale?.md || '16px'}`,
+                        background: modeTokens?.button?.destructive?.background || '#ef4444',
+                        color: modeTokens?.button?.destructive?.text || '#ffffff',
+                        border: 'none',
+                        borderRadius: tokens?.global?.borderRadius?.scale?.button || '6px',
+                        cursor: 'pointer',
+                        fontSize: tokens?.global?.typography?.fontSize?.sm?.size || '14px',
+                        fontWeight: tokens?.global?.typography?.fontWeight?.medium || 500,
+                        transition: 'all 200ms ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: tokens?.global?.spacing?.scale?.sm || '8px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = modeTokens?.button?.destructive?.backgroundHover || '#dc2626';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = modeTokens?.button?.destructive?.background || '#ef4444';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path 
+                          d="M6 14H3.333A1.333 1.333 0 0 1 2 12.667V3.333A1.333 1.333 0 0 1 3.333 2H6M10 11.333L14 8M14 8L10 4.667M14 8H6" 
+                          stroke="currentColor" 
+                          strokeWidth="1.5" 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      Logout
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Theme Toggle */}
+          <button
+            type="button"
+            className="theme-toggle"
+            style={toggleStyle}
+            onClick={toggleMode}
+            aria-label="Toggle theme"
+            disabled={loading}
+            onMouseEnter={(e) => {
+              Object.assign(e.currentTarget.style, toggleHoverStyle);
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = toggleStyle.background;
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            {mode === 'light' ? '🌞' : '🌙'}
+          </button>
+        </div>
       </div>
     </header>
   );
