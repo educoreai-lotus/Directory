@@ -34,12 +34,17 @@ function Header() {
     return null;
   }
 
-  const headerConfig = tokens?.components?.header;
-  const modeHeader = tokens?.modes?.[mode]?.header;
+  // Early return if tokens are not loaded
+  if (!tokens) {
+    return null;
+  }
+
+  const headerConfig = tokens?.components?.header || {};
+  const modeHeader = tokens?.modes?.[mode]?.header || {};
   const navigationTokens = modeHeader?.navigation || {};
   const createButtonTokens = modeHeader?.createButton || {};
   const themeToggleTokens = modeHeader?.themeToggle || {};
-  const spacing = headerConfig?.spacing;
+  const spacing = headerConfig?.spacing || {};
 
   const logoSources = useMemo(
     () => ({
@@ -49,57 +54,53 @@ function Header() {
     []
   );
 
-  const logoZone = tokens?.layout?.logoZone;
+  const logoZone = tokens?.layout?.logoZone || {};
   const logoImageStyle = {
     height: logoZone?.image?.height || '100%',
     width: logoZone?.image?.width || 'auto',
     minWidth: logoZone?.image?.minWidth || '120px',
     maxWidth: logoZone?.image?.maxWidth || '200px',
     minHeight: logoZone?.image?.minHeight || '32px',
-    maxHeight: logoZone?.image?.maxHeight || headerConfig.height
+    maxHeight: logoZone?.image?.maxHeight || headerConfig?.height || '80px'
   };
 
-  if (!headerConfig || !modeHeader) {
-    return null;
-  }
-
   const headerStyle = {
-    width: headerConfig.width,
-    height: headerConfig.height,
-    minWidth: headerConfig.minWidth,
-    maxWidth: headerConfig.maxWidth,
-    minHeight: headerConfig.minHeight,
-    maxHeight: headerConfig.maxHeight,
-    fontFamily: headerConfig.fontFamily,
-    fontSize: headerConfig.fontSize,
-    lineHeight: headerConfig.lineHeight,
-    letterSpacing: headerConfig.letterSpacing,
-    background: headerConfig.surface?.[mode] || modeHeader.background,
-    borderBottom: modeHeader.border,
-    boxShadow: headerConfig.shadow?.[mode],
-    zIndex: headerConfig.zIndex,
-    position: headerConfig.position,
+    width: headerConfig?.width || '100%',
+    height: headerConfig?.height || '80px',
+    minWidth: headerConfig?.minWidth || '320px',
+    maxWidth: headerConfig?.maxWidth || '1280px',
+    minHeight: headerConfig?.minHeight || '80px',
+    maxHeight: headerConfig?.maxHeight || '80px',
+    fontFamily: headerConfig?.fontFamily || 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontSize: headerConfig?.fontSize || '16px',
+    lineHeight: headerConfig?.lineHeight || '24px',
+    letterSpacing: headerConfig?.letterSpacing || '0',
+    background: headerConfig?.surface?.[mode] || modeHeader?.background || 'rgba(255, 255, 255, 0.95)',
+    borderBottom: modeHeader?.border || '1px solid #e2e8f0',
+    boxShadow: headerConfig?.shadow?.[mode] || modeHeader?.shadow || '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+    zIndex: headerConfig?.zIndex || 50,
+    position: headerConfig?.position || 'fixed',
     top: 0,
     left: 0,
     right: 0,
-    backdropFilter: resolveBackdropBlur(headerConfig.backdropBlur || modeHeader.backdropBlur),
+    backdropFilter: resolveBackdropBlur(headerConfig?.backdropBlur || modeHeader?.backdropBlur),
     '--header-padding-mobile': spacing?.padding?.mobile || '16px',
     '--header-padding-tablet': spacing?.padding?.tablet || '24px',
     '--header-padding-desktop': spacing?.padding?.desktop || '32px',
     '--header-gap-mobile': spacing?.gap?.mobile || '8px',
     '--header-gap-tablet': spacing?.gap?.tablet || '12px',
     '--header-gap-desktop': spacing?.gap?.desktop || '16px',
-    '--header-max-width': modeHeader.maxWidth || '1280px'
+    '--header-max-width': modeHeader?.maxWidth || '1280px'
   };
 
   const buttonStyle = {
     background: createButtonTokens?.gradient || navigationTokens?.active?.background || '#047857',
     color: createButtonTokens?.text || '#ffffff',
-    borderRadius: createButtonTokens?.borderRadius || headerConfig.radius || '12px',
+    borderRadius: createButtonTokens?.borderRadius || headerConfig?.radius || '12px',
     padding: createButtonTokens?.padding || '8px 16px',
     fontSize: createButtonTokens?.fontSize || '14px',
     fontWeight: createButtonTokens?.fontWeight || 500,
-    boxShadow: createButtonTokens?.shadow || headerConfig.shadow?.[mode],
+    boxShadow: createButtonTokens?.shadow || headerConfig?.shadow?.[mode] || '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
     gap: createButtonTokens?.gap || '8px'
   };
 
@@ -146,8 +147,8 @@ function Header() {
 
               const navStyle = {
                 color: isActive
-                  ? navigationTokens?.active?.text || modeHeader.text
-                  : navigationTokens?.inactive?.text || modeHeader.text,
+                  ? navigationTokens?.active?.text || modeHeader?.text || '#1e293b'
+                  : navigationTokens?.inactive?.text || modeHeader?.text || '#475569',
                 background: isActive
                   ? navigationTokens?.active?.background || 'transparent'
                   : navigationTokens?.inactive?.background || 'transparent',
@@ -170,7 +171,7 @@ function Header() {
                   {isActive && (
                     <span
                       className="nav-indicator"
-                      style={{ background: navigationTokens?.hover?.underline || navigationTokens?.active?.text || modeHeader.text }}
+                      style={{ background: navigationTokens?.hover?.underline || navigationTokens?.active?.text || modeHeader?.text || '#047857' }}
                     />
                   )}
                 </button>
