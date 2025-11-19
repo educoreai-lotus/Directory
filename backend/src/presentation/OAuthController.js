@@ -101,9 +101,9 @@ class OAuthController {
         console.log('[OAuthController] Both OAuth connections complete, redirecting to profile');
         return res.redirect(`${frontendUrl}/employee/${employeeId}?enrichment=complete`);
       } else {
-        // Only GitHub connected - go back to enrich page to connect LinkedIn
-        console.log('[OAuthController] GitHub connected, redirecting back to enrich page');
-        return res.redirect(`${frontendUrl}/enrich?github=connected`);
+        // Only LinkedIn connected - go back to enrich page to connect GitHub
+        console.log('[OAuthController] LinkedIn connected, redirecting back to enrich page');
+        return res.redirect(`${frontendUrl}/enrich?linkedin=connected`);
       }
     } catch (error) {
       console.error('[OAuthController] LinkedIn callback error:', error);

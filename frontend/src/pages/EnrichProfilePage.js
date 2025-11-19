@@ -264,15 +264,18 @@ function EnrichProfilePage() {
               LinkedIn
             </h3>
             {linkedinConnected && (
-              <span 
-                className="text-sm px-3 py-1 rounded-full"
-                style={{
-                  background: 'rgba(34, 197, 94, 0.1)',
-                  color: 'rgb(34, 197, 94)'
-                }}
-              >
-                ✓ Connected
-              </span>
+              <div className="flex items-center gap-2">
+                <span 
+                  className="text-sm px-3 py-1 rounded-full flex items-center gap-2"
+                  style={{
+                    background: 'rgba(34, 197, 94, 0.1)',
+                    color: 'rgb(34, 197, 94)'
+                  }}
+                >
+                  <span className="text-green-600 font-bold">✓</span>
+                  LinkedIn enrichment completed
+                </span>
+              </div>
             )}
           </div>
           <p 
