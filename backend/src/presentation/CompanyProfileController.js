@@ -20,6 +20,9 @@ class CompanyProfileController {
 
       const profile = await this.getCompanyProfileUseCase.execute(companyId);
 
+      // Debug logging
+      console.log(`[CompanyProfileController] Company logo_url: ${profile.company?.logo_url || 'NOT SET'}`);
+
       res.status(200).json({
         company: profile.company,
         departments: profile.departments,
