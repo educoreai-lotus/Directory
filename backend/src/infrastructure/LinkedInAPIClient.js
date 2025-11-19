@@ -124,8 +124,16 @@ class LinkedInAPIClient {
       this.getUserEmail(accessToken)
     ]);
 
+    // Ensure picture field is properly extracted
+    const pictureUrl = profile.picture 
+      || profile.profilePicture?.displayImage 
+      || (typeof profile.profilePicture === 'string' ? profile.profilePicture : null)
+      || profile.profilePicture?.url
+      || null;
+
     return {
       ...profile,
+      picture: pictureUrl, // Normalize to 'picture' field for consistent access
       email: email || profile.email || null,
       fetched_at: new Date().toISOString()
     };

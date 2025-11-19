@@ -510,12 +510,33 @@ class EmployeeRepository {
    */
   async updateLinkedInData(employeeId, linkedinUrl, linkedinData, client = null) {
     // Extract profile photo URL from LinkedIn data
-    // Priority: picture (OpenID Connect) > profilePicture.displayImage (legacy)
-    const profilePhotoUrl = linkedinData.picture 
-      || linkedinData.profilePicture?.displayImage 
-      || linkedinData.profilePicture 
-      || null;
+    // Priority: picture (OpenID Connect) > profilePicture.displayImage (legacy) > profilePicture (string)
+    // LinkedIn photo always takes priority (overwrites existing GitHub photo if any)
+    let profilePhotoUrl = null;
+    
+    if (linkedinData.picture) {
+      // OpenID Connect endpoint returns picture as URL string
+      profilePhotoUrl = linkedinData.picture;
+      console.log(`[EmployeeRepository] ✅ Extracted LinkedIn photo from 'picture' field: ${profilePhotoUrl.substring(0, 50)}...`);
+    } else if (linkedinData.profilePicture) {
+      // Legacy endpoint may return profilePicture as object or string
+      if (typeof linkedinData.profilePicture === 'string') {
+        profilePhotoUrl = linkedinData.profilePicture;
+        console.log(`[EmployeeRepository] ✅ Extracted LinkedIn photo from 'profilePicture' (string): ${profilePhotoUrl.substring(0, 50)}...`);
+      } else if (linkedinData.profilePicture.displayImage) {
+        // Object with displayImage property
+        profilePhotoUrl = linkedinData.profilePicture.displayImage;
+        console.log(`[EmployeeRepository] ✅ Extracted LinkedIn photo from 'profilePicture.displayImage': ${profilePhotoUrl.substring(0, 50)}...`);
+      } else if (linkedinData.profilePicture.url) {
+        // Object with url property
+        profilePhotoUrl = linkedinData.profilePicture.url;
+        console.log(`[EmployeeRepository] ✅ Extracted LinkedIn photo from 'profilePicture.url': ${profilePhotoUrl.substring(0, 50)}...`);
+      }
+    } else {
+      console.log('[EmployeeRepository] ⚠️  No LinkedIn photo found in profile data');
+    }
 
+    // LinkedIn photo always takes priority - overwrite existing photo
     const query = `
       UPDATE employees
       SET linkedin_url = $1,
@@ -545,8 +566,15 @@ class EmployeeRepository {
    */
   async updateGitHubData(employeeId, githubUrl, githubData, client = null) {
     // Extract profile photo URL from GitHub data (avatar_url)
-    // Only update if LinkedIn photo doesn't exist (fallback)
+    // GitHub photo is only used as fallback if LinkedIn photo doesn't exist
+    // COALESCE(profile_photo_url, $4) means: keep existing photo if it exists, otherwise use GitHub photo
     const profilePhotoUrl = githubData.avatar_url || null;
+    
+    if (profilePhotoUrl) {
+      console.log(`[EmployeeRepository] 📸 GitHub photo available: ${profilePhotoUrl.substring(0, 50)}... (will be used only if LinkedIn photo doesn't exist)`);
+    } else {
+      console.log('[EmployeeRepository] ⚠️  No GitHub photo found in profile data');
+    }
 
     const query = `
       UPDATE employees
