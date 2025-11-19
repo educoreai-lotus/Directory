@@ -103,6 +103,61 @@ class CSVValidator {
         });
       }
 
+      // Mandatory employee fields
+      if (!row.manager_id) {
+        rowErrors.push({
+          type: 'missing_field',
+          message: 'manager_id is required (use empty string if no manager)',
+          row: rowNumber,
+          column: 'manager_id'
+        });
+      }
+
+      if (!row.password) {
+        rowErrors.push({
+          type: 'missing_field',
+          message: 'password is required',
+          row: rowNumber,
+          column: 'password'
+        });
+      }
+
+      if (!row.preferred_language) {
+        rowErrors.push({
+          type: 'missing_field',
+          message: 'preferred_language is required',
+          row: rowNumber,
+          column: 'preferred_language'
+        });
+      }
+
+      if (!row.status) {
+        rowErrors.push({
+          type: 'missing_field',
+          message: 'status is required',
+          row: rowNumber,
+          column: 'status'
+        });
+      }
+
+      if (!row.current_role_in_company) {
+        rowErrors.push({
+          type: 'missing_field',
+          message: 'current_role_in_company is required',
+          row: rowNumber,
+          column: 'current_role_in_company'
+        });
+      }
+
+      if (!row.target_role_in_company) {
+        rowErrors.push({
+          type: 'missing_field',
+          message: 'target_role_in_company is required',
+          row: rowNumber,
+          column: 'target_role_in_company'
+        });
+      }
+
       if (!row.department_id || !row.department_name) {
         rowErrors.push({
           type: 'missing_field',
@@ -121,24 +176,8 @@ class CSVValidator {
         });
       }
 
-      // Validate optional fields with warnings
-      if (!row.manager_id) {
-        rowWarnings.push({
-          type: 'missing_optional_field',
-          message: 'manager_id is missing (optional but recommended)',
-          row: rowNumber,
-          column: 'manager_id'
-        });
-      }
-
-      if (!row.password) {
-        rowWarnings.push({
-          type: 'missing_optional_field',
-          message: 'password is missing (will use default)',
-          row: rowNumber,
-          column: 'password'
-        });
-      }
+      // Note: manager_id, password, preferred_language, status, current_role_in_company, target_role_in_company
+      // are now validated as mandatory above
 
       // Track department and team IDs
       if (row.department_id) {

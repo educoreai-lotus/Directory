@@ -50,13 +50,22 @@ function Header() {
   const spacing = headerConfig?.spacing || {};
   const logoZone = tokens?.layout?.logoZone || {};
 
+  // Header background should change with dark mode
+  const headerBackground = mode === 'dark' 
+    ? (headerConfig?.surface?.dark || modeHeader?.background || 'rgba(15, 23, 42, 0.95)')
+    : (headerConfig?.surface?.light || modeHeader?.background || 'rgba(255, 255, 255, 0.95)');
+  
+  const headerBorder = mode === 'dark'
+    ? (modeHeader?.border || '1px solid rgba(255, 255, 255, 0.1)')
+    : (modeHeader?.border || '1px solid #e2e8f0');
+
   const headerStyle = {
     width: headerConfig?.width || '100%',
     height: headerConfig?.height || '80px',
     minHeight: headerConfig?.minHeight || '80px',
     maxHeight: headerConfig?.maxHeight || '80px',
-    background: headerConfig?.surface?.[mode] || modeHeader?.background || 'rgba(255, 255, 255, 0.95)',
-    borderBottom: modeHeader?.border || '1px solid #e2e8f0',
+    background: headerBackground,
+    borderBottom: headerBorder,
     boxShadow: headerConfig?.shadow?.[mode] || modeHeader?.shadow || '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
     zIndex: headerConfig?.zIndex || 50,
     position: headerConfig?.position || 'fixed',
@@ -117,13 +126,14 @@ function Header() {
     await logout();
   };
 
-  // Logo container style from design tokens
+  // Logo container style from design tokens - positioned on LEFT
   const logoContainerStyle = {
     ...logoZone?.container || {},
     height: logoZone?.container?.height || headerConfig?.height || '80px',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-start', // Changed to flex-start for left alignment
+    marginLeft: '0',
     marginRight: logoZone?.margin?.right || spacing?.gap?.desktop || '16px'
   };
 
@@ -142,10 +152,13 @@ function Header() {
   return (
     <header className="app-header" style={headerStyle}>
       <div className="header-inner">
-        <div style={{ flex: 1 }}></div>
-        
-        {/* Project Logo - Right Side */}
-        <div className="logo-container" style={logoContainerStyle}>
+        {/* Project Logo - Left Side */}
+        <div className="logo-container" style={{
+          ...logoContainerStyle,
+          marginRight: logoZone?.margin?.right || spacing?.gap?.desktop || '16px',
+          marginLeft: '0',
+          justifyContent: 'flex-start'
+        }}>
           <img
             src={logoSources.src}
             alt={logoSources.alt}
@@ -156,6 +169,8 @@ function Header() {
             }}
           />
         </div>
+        
+        <div style={{ flex: 1 }}></div>
         
         <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* User Info - Only show when authenticated */}

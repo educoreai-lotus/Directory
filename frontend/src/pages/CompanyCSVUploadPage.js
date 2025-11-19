@@ -202,6 +202,34 @@ function CompanyCSVUploadPage() {
                   If not provided, a placeholder will be shown.
                 </span>
               </li>
+              <li>
+                <strong style={{ color: 'var(--text-primary)' }}>passing_grade</strong> (Required)
+                <br />
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  Minimum passing grade for assessments (0-100). Example: 70
+                </span>
+              </li>
+              <li>
+                <strong style={{ color: 'var(--text-primary)' }}>max_attempts</strong> (Required)
+                <br />
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  Maximum number of attempts allowed for assessments. Example: 3
+                </span>
+              </li>
+              <li>
+                <strong style={{ color: 'var(--text-primary)' }}>exercises_limited</strong> (Required)
+                <br />
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  Whether exercises are limited (true or false). If true, num_of_exercises is also required.
+                </span>
+              </li>
+              <li>
+                <strong style={{ color: 'var(--text-primary)' }}>num_of_exercises</strong> (Required if exercises_limited is true)
+                <br />
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  Number of exercises allowed when exercises_limited is true. Example: 10
+                </span>
+              </li>
             </ul>
           </div>
 
@@ -212,15 +240,8 @@ function CompanyCSVUploadPage() {
             </h4>
             <ul className="space-y-1 text-sm ml-4" style={{ color: 'var(--text-secondary)' }}>
               <li>• employee_id, full_name, email, role_type, department_id, department_name, team_id, team_name</li>
-            </ul>
-          </div>
-
-          <div className="mb-4">
-            <h4 className="font-semibold mb-2 text-base" style={{ color: 'var(--text-primary)' }}>
-              Optional Employee Fields
-            </h4>
-            <ul className="space-y-1 text-sm ml-4" style={{ color: 'var(--text-secondary)' }}>
-              <li>• manager_id, password, preferred_language, status, current_role_in_company, target_role_in_company</li>
+              <li>• manager_id (use empty string if no manager), password, preferred_language, status</li>
+              <li>• current_role_in_company, target_role_in_company</li>
             </ul>
           </div>
 

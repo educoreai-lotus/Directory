@@ -116,7 +116,7 @@ class DatabaseConstraintValidator {
    * Validate company settings update
    * @param {Object} row - Row with company settings
    * @returns {Object} Validated company settings
-   * @throws {Error} If KPIs is missing (mandatory field)
+   * @throws {Error} If mandatory fields are missing
    */
   validateCompanySettings(row) {
     const validated = {};
@@ -131,6 +131,48 @@ class DatabaseConstraintValidator {
       throw new Error('KPIs field is mandatory. Please provide company KPIs in the first row of your CSV.');
     }
     validated.kpis = String(kpisValue).trim();
+
+    // Company settings for microservice integration - all mandatory
+    if (row.passing_grade === null || row.passing_grade === undefined || row.passing_grade === '') {
+      throw new Error('passing_grade is mandatory. Please provide a passing grade (e.g., 70) in the first row of your CSV.');
+    }
+    const passingGrade = parseInt(row.passing_grade, 10);
+    if (isNaN(passingGrade) || passingGrade < 0 || passingGrade > 100) {
+      throw new Error('passing_grade must be a number between 0 and 100.');
+    }
+    validated.passing_grade = passingGrade;
+
+    if (row.max_attempts === null || row.max_attempts === undefined || row.max_attempts === '') {
+      throw new Error('max_attempts is mandatory. Please provide maximum attempts (e.g., 3) in the first row of your CSV.');
+    }
+    const maxAttempts = parseInt(row.max_attempts, 10);
+    if (isNaN(maxAttempts) || maxAttempts < 1) {
+      throw new Error('max_attempts must be a positive number.');
+    }
+    validated.max_attempts = maxAttempts;
+
+    if (row.exercises_limited === null || row.exercises_limited === undefined || row.exercises_limited === '') {
+      throw new Error('exercises_limited is mandatory. Please provide true or false in the first row of your CSV.');
+    }
+    const exercisesLimited = String(row.exercises_limited).trim().toUpperCase();
+    if (exercisesLimited !== 'TRUE' && exercisesLimited !== 'FALSE' && exercisesLimited !== '1' && exercisesLimited !== '0') {
+      throw new Error('exercises_limited must be true or false.');
+    }
+    validated.exercises_limited = exercisesLimited === 'TRUE' || exercisesLimited === '1';
+
+    // num_of_exercises is mandatory if exercises_limited is true
+    if (validated.exercises_limited) {
+      if (row.num_of_exercises === null || row.num_of_exercises === undefined || row.num_of_exercises === '') {
+        throw new Error('num_of_exercises is mandatory when exercises_limited is true. Please provide the number of exercises in the first row of your CSV.');
+      }
+      const numOfExercises = parseInt(row.num_of_exercises, 10);
+      if (isNaN(numOfExercises) || numOfExercises < 1) {
+        throw new Error('num_of_exercises must be a positive number.');
+      }
+      validated.num_of_exercises = numOfExercises;
+    } else {
+      validated.num_of_exercises = null;
+    }
 
     return validated;
   }

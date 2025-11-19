@@ -58,6 +58,11 @@ class CSVParser {
       approval_policy: this.normalizeApprovalPolicy(this.trimValue(row.approval_policy) || this.trimValue(row.learning_path_approval)) || 'manual',
       kpis: this.trimValue(row.KPIs) || this.trimValue(row.kpis) || this.trimValue(row.primary_KPIs) || this.trimValue(row.primary_kpis),
       logo_url: this.trimValue(row.logo_url) || this.trimValue(row.company_logo) || this.trimValue(row.logo),
+      // Company settings for microservice integration
+      passing_grade: this.parseIntValue(row.passing_grade),
+      max_attempts: this.parseIntValue(row.max_attempts),
+      exercises_limited: this.parseBoolean(row.exercises_limited),
+      num_of_exercises: this.parseIntValue(row.num_of_exercises),
       
       // Department data
       department_id: this.trimValue(row.department_id),
@@ -109,6 +114,19 @@ class CSVParser {
     }
     const str = String(value).trim().toUpperCase();
     return str === 'TRUE' || str === '1' || str === 'YES';
+  }
+
+  /**
+   * Parse integer value from CSV
+   * @param {string} value - Value to parse
+   * @returns {number|null} Parsed integer or null if invalid
+   */
+  parseIntValue(value) {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+    const parsed = parseInt(String(value).trim(), 10);
+    return isNaN(parsed) ? null : parsed;
   }
 
   /**

@@ -17,6 +17,11 @@ CREATE TABLE IF NOT EXISTS companies (
     approval_policy VARCHAR(50) DEFAULT 'manual' CHECK (approval_policy IN ('manual', 'auto')),
     kpis TEXT NOT NULL,
     logo_url VARCHAR(500),
+    -- Company settings for microservice integration
+    passing_grade INTEGER,
+    max_attempts INTEGER,
+    exercises_limited BOOLEAN DEFAULT FALSE,
+    num_of_exercises INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

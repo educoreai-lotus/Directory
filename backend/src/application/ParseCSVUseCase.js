@@ -348,6 +348,27 @@ class ParseCSVUseCase {
       values.push(row.logo_url);
     }
 
+    // Company settings for microservice integration - all mandatory
+    if (validatedSettings.passing_grade !== undefined) {
+      updates.push(`passing_grade = $${paramIndex++}`);
+      values.push(validatedSettings.passing_grade);
+    }
+
+    if (validatedSettings.max_attempts !== undefined) {
+      updates.push(`max_attempts = $${paramIndex++}`);
+      values.push(validatedSettings.max_attempts);
+    }
+
+    if (validatedSettings.exercises_limited !== undefined) {
+      updates.push(`exercises_limited = $${paramIndex++}`);
+      values.push(validatedSettings.exercises_limited);
+    }
+
+    if (validatedSettings.num_of_exercises !== undefined) {
+      updates.push(`num_of_exercises = $${paramIndex++}`);
+      values.push(validatedSettings.num_of_exercises);
+    }
+
     // Always update (at minimum KPIs is required)
     values.push(companyId);
     const query = `
