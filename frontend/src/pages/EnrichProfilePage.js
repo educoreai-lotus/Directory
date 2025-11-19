@@ -101,6 +101,14 @@ function EnrichProfilePage() {
     }
   }, [user, navigate]);
 
+  // If no user after loading, redirect to login
+  useEffect(() => {
+    if (!authLoading && !user) {
+      console.log('[EnrichProfilePage] No user found, redirecting to login');
+      navigate('/login');
+    }
+  }, [authLoading, user, navigate]);
+
   // Show loading state while checking auth or refreshing user data
   if (authLoading || refreshing) {
     return (
@@ -115,14 +123,7 @@ function EnrichProfilePage() {
     );
   }
 
-  // If no user after loading, redirect to login
-  useEffect(() => {
-    if (!authLoading && !user) {
-      console.log('[EnrichProfilePage] No user found, redirecting to login');
-      navigate('/login');
-    }
-  }, [authLoading, user, navigate]);
-
+  // If no user after loading, show redirect message
   if (!user && !authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
