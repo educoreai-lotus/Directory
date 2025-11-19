@@ -17,6 +17,8 @@ If you're getting errors like `relation "employee_profile_approvals" does not ex
 9. You should see all tables created, including:
    - ✅ employee_profile_approvals table
    - ✅ profile_status column in employees table
+   - ✅ logo_url column in companies table
+   - ✅ profile_photo_url column in employees table
 
 ### Option 2: Using Railway CLI (If configured)
 
@@ -43,11 +45,19 @@ After running the migration, verify in Supabase:
    - Values: 'basic', 'enriched', 'approved', 'rejected'
    - Default: 'basic'
 
-2. **`employee_profile_approvals` table**
+2. **`profile_photo_url` column** to `employees` table
+   - Stores profile photo URL from LinkedIn/GitHub OAuth
+   - Optional field (VARCHAR 500)
+
+3. **`logo_url` column** to `companies` table
+   - Stores company logo URL from CSV upload
+   - Optional field (VARCHAR 500)
+
+4. **`employee_profile_approvals` table**
    - Tracks HR approval requests for enriched profiles
    - Links employees to their approval status
 
-3. **Indexes** for performance
+5. **Indexes** for performance
    - Index on `employees.profile_status`
    - Indexes on `employee_profile_approvals` for company and employee lookups
 
