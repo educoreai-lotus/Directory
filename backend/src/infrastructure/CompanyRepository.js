@@ -51,9 +51,10 @@ class CompanyRepository {
         hr_contact_name,
         hr_contact_email,
         hr_contact_role,
-        verification_status
+        verification_status,
+        kpis
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `;
 
@@ -64,7 +65,8 @@ class CompanyRepository {
       hr_contact_name,
       hr_contact_email,
       hr_contact_role,
-      'pending' // Default verification status
+      'pending', // Default verification status
+      'Not specified' // Default KPIs - will be updated from CSV
     ];
 
     try {
