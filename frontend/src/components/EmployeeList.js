@@ -19,6 +19,61 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
   const [sortDirection, setSortDirection] = useState('asc');
   const [statusFilter, setStatusFilter] = useState('all');
 
+  // Filter and sort employees - Must be called before any conditional returns (React Hooks rule)
+  const filteredAndSortedEmployees = useMemo(() => {
+    if (!employees) return [];
+
+    let filtered = [...employees];
+
+    // Apply search filter (name or email)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(emp => 
+        emp.full_name?.toLowerCase().includes(query) ||
+        emp.email?.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(emp => emp.status === statusFilter);
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue = a[sortField] || '';
+      let bValue = b[sortField] || '';
+      
+      // Handle nested fields (e.g., roles)
+      if (sortField === 'roles' && Array.isArray(aValue)) {
+        aValue = aValue.join(', ');
+      }
+      if (sortField === 'roles' && Array.isArray(bValue)) {
+        bValue = bValue.join(', ');
+      }
+
+      aValue = String(aValue).toLowerCase();
+      bValue = String(bValue).toLowerCase();
+
+      if (sortDirection === 'asc') {
+        return aValue.localeCompare(bValue);
+      } else {
+        return bValue.localeCompare(aValue);
+      }
+    });
+
+    return filtered;
+  }, [employees, searchQuery, sortField, sortDirection, statusFilter]);
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
   if (showCSVUpload) {
     return (
       <div className="space-y-4">
@@ -142,61 +197,6 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
     } catch (error) {
       console.error('Error deleting employee:', error);
       alert(error.response?.data?.response?.error || error.message || 'Failed to delete employee');
-    }
-  };
-
-  // Filter and sort employees
-  const filteredAndSortedEmployees = useMemo(() => {
-    if (!employees) return [];
-
-    let filtered = [...employees];
-
-    // Apply search filter (name or email)
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(emp => 
-        emp.full_name?.toLowerCase().includes(query) ||
-        emp.email?.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(emp => emp.status === statusFilter);
-    }
-
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aValue = a[sortField] || '';
-      let bValue = b[sortField] || '';
-      
-      // Handle nested fields (e.g., roles)
-      if (sortField === 'roles' && Array.isArray(aValue)) {
-        aValue = aValue.join(', ');
-      }
-      if (sortField === 'roles' && Array.isArray(bValue)) {
-        bValue = bValue.join(', ');
-      }
-
-      aValue = String(aValue).toLowerCase();
-      bValue = String(bValue).toLowerCase();
-
-      if (sortDirection === 'asc') {
-        return aValue.localeCompare(bValue);
-      } else {
-        return bValue.localeCompare(aValue);
-      }
-    });
-
-    return filtered;
-  }, [employees, searchQuery, sortField, sortDirection, statusFilter]);
-
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
     }
   };
 

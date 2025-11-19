@@ -23,6 +23,16 @@ function Header() {
   const { user, isAuthenticated, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
+  // Logo selection: light mode → logo2, dark mode → logo1
+  // Must be called before any conditional returns (React Hooks rule)
+  const logoSources = useMemo(() => {
+    const logoVariant = mode === 'light' ? 'logo2' : 'logo1';
+    return {
+      src: getLogoUrl(logoVariant),
+      alt: 'EDUCORE Directory'
+    };
+  }, [mode]);
+
   // Show nothing only while actively loading
   if (loading) {
     return null;
@@ -39,15 +49,6 @@ function Header() {
   const themeToggleTokens = modeHeader?.themeToggle || {};
   const spacing = headerConfig?.spacing || {};
   const logoZone = tokens?.layout?.logoZone || {};
-  
-  // Logo selection: light mode → logo2, dark mode → logo1
-  const logoSources = useMemo(() => {
-    const logoVariant = mode === 'light' ? 'logo2' : 'logo1';
-    return {
-      src: getLogoUrl(logoVariant),
-      alt: 'EDUCORE Directory'
-    };
-  }, [mode]);
 
   const headerStyle = {
     width: headerConfig?.width || '100%',
