@@ -41,8 +41,31 @@ export const AuthProvider = ({ children }) => {
         console.log('[AuthContext] Token exists:', !!token, 'Stored user exists:', !!storedUser);
 
         // If OAuth callback, ALWAYS preserve token and user, skip validation
+        // OAuth callbacks include user data in URL, so we should have it in localStorage
         if (isOAuthCallback) {
           console.log('[AuthContext] ⚠️ OAuth callback detected - preserving token and user without validation');
+          
+          // Check if user was just stored from OAuth callback (might be in URL params)
+          const urlParams = new URLSearchParams(window.location.search);
+          const userParam = urlParams.get('user');
+          
+          if (userParam) {
+            // User data is in URL - decode and store it
+            try {
+              const userDataJson = atob(userParam);
+              const userData = JSON.parse(userDataJson);
+              localStorage.setItem('user', JSON.stringify(userData));
+              console.log('[AuthContext] User data extracted from OAuth callback URL and stored');
+              setUser(userData);
+              setIsAuthenticated(true);
+              setLoading(false);
+              return;
+            } catch (error) {
+              console.error('[AuthContext] Failed to decode user data from URL:', error);
+            }
+          }
+          
+          // Use stored user from localStorage (should be there from OAuth callback)
           if (token && storedUser) {
             setUser(storedUser);
             setIsAuthenticated(true);
@@ -56,11 +79,21 @@ export const AuthProvider = ({ children }) => {
             setLoading(false);
             return;
           } else {
-            console.warn('[AuthContext] No token or user found during OAuth callback');
-            // Don't clear anything during OAuth - just set to null
-            setUser(null);
-            setIsAuthenticated(false);
-            setLoading(false);
+            console.warn('[AuthContext] No token or user found during OAuth callback - waiting for OAuth callback to store data');
+            // Don't clear anything during OAuth - wait a bit for OAuth callback to store data
+            setTimeout(() => {
+              const retryStoredUser = authService.getCurrentUser();
+              const retryToken = authService.getToken();
+              if (retryToken && retryStoredUser) {
+                console.log('[AuthContext] User data found after delay, setting user');
+                setUser(retryStoredUser);
+                setIsAuthenticated(true);
+              } else {
+                setUser(null);
+                setIsAuthenticated(false);
+              }
+              setLoading(false);
+            }, 500);
             return;
           }
         }
