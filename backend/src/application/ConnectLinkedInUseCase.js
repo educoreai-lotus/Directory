@@ -72,7 +72,9 @@ class ConnectLinkedInUseCase {
       const tokenResponse = await this.oauthClient.exchangeCodeForToken(code);
 
       // Fetch LinkedIn profile data
-      const profileData = await this.apiClient.getCompleteProfile(tokenResponse.access_token);
+      // Pass useLegacyScopes flag to use correct API endpoints
+      const useLegacyScopes = this.oauthClient.useLegacyScopes || false;
+      const profileData = await this.apiClient.getCompleteProfile(tokenResponse.access_token, useLegacyScopes);
 
       // Build LinkedIn profile URL
       const linkedinUrl = profileData.id 

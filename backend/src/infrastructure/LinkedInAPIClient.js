@@ -69,13 +69,17 @@ class LinkedInAPIClient {
   }
 
   /**
-   * Fetch user profile using legacy LinkedIn API endpoint
+   * Fetch user profile using legacy LinkedIn API endpoint (r_liteprofile scope)
    * @param {string} accessToken - LinkedIn access token
    * @returns {Promise<Object>} User profile data
    */
   async getLegacyProfile(accessToken) {
     try {
-      const response = await axios.get(this.profileUrl, {
+      // Legacy endpoint with projection for basic profile fields
+      // This requires r_liteprofile scope (deprecated but still works)
+      const legacyProfileUrl = 'https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))';
+      
+      const response = await axios.get(legacyProfileUrl, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
@@ -83,12 +87,42 @@ class LinkedInAPIClient {
         timeout: 10000
       });
 
-      return {
+      const firstName = response.data.firstName?.localized 
+        ? Object.values(response.data.firstName.localized)[0] 
+        : response.data.firstName?.preferredLocale?.language 
+        ? response.data.firstName.localized?.[response.data.firstName.preferredLocale.language]
+        : response.data.firstName;
+      
+      const lastName = response.data.lastName?.localized 
+        ? Object.values(response.data.lastName.localized)[0] 
+        : response.data.lastName?.preferredLocale?.language 
+        ? response.data.lastName.localized?.[response.data.lastName.preferredLocale.language]
+        : response.data.lastName;
+
+      // Extract profile picture URL
+      let profilePicture = null;
+      if (response.data.profilePicture?.displayImage) {
+        const displayImage = response.data.profilePicture.displayImage;
+        if (displayImage.elements && displayImage.elements.length > 0) {
+          // Get the largest image
+          const sortedImages = displayImage.elements.sort((a, b) => (b.width || 0) - (a.width || 0));
+          profilePicture = sortedImages[0].identifiers?.[0]?.identifier || null;
+        }
+      }
+
+      const profileData = {
         id: response.data.id,
-        firstName: response.data.firstName?.localized?.en_US || response.data.firstName,
-        lastName: response.data.lastName?.localized?.en_US || response.data.lastName,
-        profilePicture: response.data.profilePicture?.displayImage || null
+        name: `${firstName || ''} ${lastName || ''}`.trim(),
+        given_name: firstName,
+        family_name: lastName,
+        firstName: firstName,
+        lastName: lastName,
+        profilePicture: profilePicture,
+        picture: profilePicture
       };
+
+      console.log('[LinkedInAPIClient] ✅ Legacy profile fetched successfully');
+      return profileData;
     } catch (error) {
       console.error('[LinkedInAPIClient] Error fetching legacy profile:', error.response?.data || error.message);
       throw new Error(`Failed to fetch LinkedIn profile: ${error.response?.data?.message || error.message}`);
@@ -138,21 +172,45 @@ class LinkedInAPIClient {
 
   /**
    * Fetch complete LinkedIn profile data (profile + email)
+   * Supports both OpenID Connect and legacy scopes (r_liteprofile, r_emailaddress)
    * @param {string} accessToken - LinkedIn access token
+   * @param {boolean} useLegacyScopes - Whether legacy scopes (r_liteprofile, r_emailaddress) were used
    * @returns {Promise<Object>} Complete profile data
    */
-  async getCompleteProfile(accessToken) {
-    // First, get profile from OpenID Connect userinfo (includes email if 'email' scope granted)
-    const profile = await this.getUserProfile(accessToken);
-    
-    // Only try legacy email endpoint if email is not already in profile
-    // This avoids unnecessary API calls and 403 errors
-    let email = profile.email;
-    if (!email) {
-      console.log('[LinkedInAPIClient] Email not in userinfo, trying legacy email endpoint...');
-      email = await this.getUserEmail(accessToken);
+  async getCompleteProfile(accessToken, useLegacyScopes = false) {
+    let profile;
+    let email = null;
+
+    if (useLegacyScopes) {
+      // Use legacy endpoints for r_liteprofile and r_emailaddress scopes
+      console.log('[LinkedInAPIClient] Using legacy endpoints (r_liteprofile, r_emailaddress)');
+      
+      // Fetch profile and email in parallel
+      [profile, email] = await Promise.all([
+        this.getLegacyProfile(accessToken),
+        this.getUserEmail(accessToken)
+      ]);
     } else {
-      console.log('[LinkedInAPIClient] ✅ Email already available from userinfo, skipping legacy email endpoint');
+      // Try OpenID Connect first (includes email if 'email' scope is granted)
+      try {
+        profile = await this.getUserProfile(accessToken);
+        email = profile.email;
+        
+        // Only try legacy email endpoint if email is not already in profile
+        if (!email) {
+          console.log('[LinkedInAPIClient] Email not in userinfo, trying legacy email endpoint...');
+          email = await this.getUserEmail(accessToken);
+        } else {
+          console.log('[LinkedInAPIClient] ✅ Email already available from userinfo, skipping legacy email endpoint');
+        }
+      } catch (error) {
+        // If OpenID Connect fails, fallback to legacy endpoints
+        console.warn('[LinkedInAPIClient] OpenID Connect failed, falling back to legacy endpoints');
+        [profile, email] = await Promise.all([
+          this.getLegacyProfile(accessToken),
+          this.getUserEmail(accessToken)
+        ]);
+      }
     }
 
     // Ensure picture field is properly extracted
@@ -165,7 +223,7 @@ class LinkedInAPIClient {
     const completeProfile = {
       ...profile,
       picture: pictureUrl, // Normalize to 'picture' field for consistent access
-      email: email || null, // Use email from userinfo (preferred) or legacy endpoint (fallback)
+      email: email || null,
       fetched_at: new Date().toISOString()
     };
 
