@@ -139,14 +139,28 @@ function EnrichProfilePage() {
     const linkedinParam = searchParams.get('linkedin');
     const githubParam = searchParams.get('github');
     const errorParam = searchParams.get('error');
-    const isOAuthCallback = linkedinParam === 'connected' || githubParam === 'connected' || errorParam;
+    const enrichedParam = searchParams.get('enriched');
+    const isOAuthCallback = linkedinParam === 'connected' || githubParam === 'connected' || errorParam || enrichedParam === 'true';
 
     if (!authLoading && !user && !refreshing && !isOAuthCallback) {
       // Double-check token exists before redirecting
       const token = localStorage.getItem('auth_token');
+      const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+      
       if (!token) {
         console.log('[EnrichProfilePage] No user and no token, redirecting to login');
         navigate('/login');
+      } else if (storedUser) {
+        // Token exists and we have stored user - restore from localStorage
+        // This handles the case where OAuth redirect cleared the user state
+        console.log('[EnrichProfilePage] Token exists, restoring user from localStorage');
+        // The AuthContext should handle this, but if it doesn't, we'll wait a bit
+        setTimeout(() => {
+          if (!user) {
+            console.log('[EnrichProfilePage] User still null after timeout, redirecting to login');
+            navigate('/login');
+          }
+        }, 2000);
       } else {
         // Token exists but user is null - might be a validation issue
         // Try to refresh user data once more before redirecting
@@ -162,6 +176,18 @@ function EnrichProfilePage() {
             console.log('[EnrichProfilePage] Refresh error, redirecting to login');
             navigate('/login');
           });
+      }
+    } else if (isOAuthCallback && !user && !authLoading) {
+      // OAuth callback but no user - try to restore from localStorage
+      const token = localStorage.getItem('auth_token');
+      const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+      
+      if (token && storedUser) {
+        console.log('[EnrichProfilePage] OAuth callback detected, restoring user from localStorage');
+        // Force refresh to restore user state
+        refreshUser().catch(err => {
+          console.error('[EnrichProfilePage] Failed to refresh user after OAuth:', err);
+        });
       }
     }
   }, [authLoading, user, navigate, refreshing, refreshUser, searchParams]);

@@ -132,27 +132,26 @@ export const validateToken = async () => {
       return { valid: false };
     }
 
-    const response = await api.get('/auth/me', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+    const response = await api.get('/auth/me');
 
-    if (response.data && response.data.response && response.data.response.user) {
+    // Handle both envelope and direct response formats
+    const userData = response.data?.response?.user || response.data?.user;
+    
+    if (userData) {
       // Update stored user
-      localStorage.setItem('user', JSON.stringify(response.data.response.user));
+      localStorage.setItem('user', JSON.stringify(userData));
       return {
         valid: true,
-        user: response.data.response.user
+        user: userData
       };
     }
 
     return { valid: false };
   } catch (error) {
     console.error('Token validation error:', error);
-    // If validation fails, clear stored data
-    logout();
-    return { valid: false };
+    // Don't automatically logout on validation failure
+    // Let the caller decide (especially during OAuth flows)
+    return { valid: false, error: error.message };
   }
 };
 

@@ -74,17 +74,27 @@ class AuthController {
       // req.user should be set by authMiddleware
       if (!req.user) {
         return res.status(401).json({
-          error: 'Authentication required'
+          requester_service: 'directory_service',
+          response: {
+            error: 'Authentication required'
+          }
         });
       }
 
+      // Return user data in envelope format for consistency
       return res.status(200).json({
-        user: req.user
+        requester_service: 'directory_service',
+        response: {
+          user: req.user
+        }
       });
     } catch (error) {
       console.error('[AuthController] Get current user error:', error);
       return res.status(500).json({
-        error: 'An error occurred. Please try again.'
+        requester_service: 'directory_service',
+        response: {
+          error: 'An error occurred. Please try again.'
+        }
       });
     }
   }

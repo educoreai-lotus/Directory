@@ -25,20 +25,44 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        // Check if we're coming from OAuth callback - preserve token during OAuth flow
+        const urlParams = new URLSearchParams(window.location.search);
+        const isOAuthCallback = urlParams.get('linkedin') === 'connected' || 
+                                urlParams.get('github') === 'connected' || 
+                                urlParams.get('error') ||
+                                urlParams.get('enriched') === 'true';
+
         const storedUser = authService.getCurrentUser();
         const token = authService.getToken();
 
         if (token && storedUser) {
-          // Validate token with server
+          // If OAuth callback, use stored user immediately without validation
+          // This prevents token loss during OAuth redirects
+          if (isOAuthCallback) {
+            console.log('[AuthContext] OAuth callback detected, using stored user without validation');
+            setUser(storedUser);
+            setIsAuthenticated(true);
+            setLoading(false);
+            return;
+          }
+
+          // Validate token with server (only if not OAuth callback)
           const validation = await authService.validateToken();
           if (validation.valid) {
-            setUser(validation.user);
+            setUser(validation.user || storedUser);
             setIsAuthenticated(true);
           } else {
-            // Token invalid, clear storage
-            authService.logout();
-            setUser(null);
-            setIsAuthenticated(false);
+            // Token invalid, clear storage (but not during OAuth flow)
+            if (!isOAuthCallback) {
+              authService.logout();
+              setUser(null);
+              setIsAuthenticated(false);
+            } else {
+              // During OAuth, keep the stored user even if validation fails
+              console.warn('[AuthContext] Token validation failed during OAuth, but preserving session');
+              setUser(storedUser);
+              setIsAuthenticated(true);
+            }
           }
         } else {
           setUser(null);
@@ -46,8 +70,24 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        setUser(null);
-        setIsAuthenticated(false);
+        // During OAuth callback, try to preserve stored user
+        const urlParams = new URLSearchParams(window.location.search);
+        const isOAuthCallback = urlParams.get('linkedin') === 'connected' || 
+                                urlParams.get('github') === 'connected';
+        if (isOAuthCallback) {
+          const storedUser = authService.getCurrentUser();
+          if (storedUser) {
+            console.warn('[AuthContext] Error during OAuth callback, but preserving stored user');
+            setUser(storedUser);
+            setIsAuthenticated(true);
+          } else {
+            setUser(null);
+            setIsAuthenticated(false);
+          }
+        } else {
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       } finally {
         setLoading(false);
       }
