@@ -209,31 +209,47 @@ function EnrichProfilePage() {
   useEffect(() => {
     const enrichedParam = searchParams.get('enriched');
     const isEnriched = enrichedParam === 'true';
+    const linkedinParam = searchParams.get('linkedin');
+    const githubParam = searchParams.get('github');
+    const isOAuthCallback = linkedinParam === 'connected' || githubParam === 'connected';
     
-    if (linkedinConnected && githubConnected && user && !refreshing) {
-      if (isEnriched) {
-        // Enrichment completed - redirect to profile
-        setSuccessMessage('✓ Profile enriched successfully! Redirecting to your profile...');
-        const timer = setTimeout(() => {
-          navigate(`/employee/${user.id}?enrichment=complete`);
-        }, 2000); // 2 second delay to show success message
+    // Only redirect if both are connected AND enrichment is complete AND we're not in the middle of connecting
+    if (linkedinConnected && githubConnected && user && !refreshing && isEnriched && !isOAuthCallback) {
+      // Enrichment completed - redirect to profile
+      setSuccessMessage('✓ Profile enriched successfully! Redirecting to your profile...');
+      const timer = setTimeout(() => {
+        navigate(`/employee/${user.id}?enrichment=complete`);
+      }, 2000); // 2 second delay to show success message
 
-        return () => clearTimeout(timer);
-      } else {
-        // Both connected but enrichment not yet complete - show waiting message
+      return () => clearTimeout(timer);
+    } else if (linkedinConnected && githubConnected && user && !refreshing && !isEnriched) {
+      // Both connected but enrichment not yet complete - show waiting message
+      // But only if we're not in the middle of an OAuth callback
+      if (!isOAuthCallback) {
         setSuccessMessage('✓ Both LinkedIn and GitHub connected! Enriching your profile...');
       }
     }
   }, [linkedinConnected, githubConnected, user, navigate, refreshing, searchParams]);
 
   // Check if user already has both LinkedIn and GitHub connected - redirect to profile
+  // BUT: Only redirect if we're NOT in the middle of an OAuth callback
   useEffect(() => {
-    if (user && user.bothOAuthConnected) {
+    const linkedinParam = searchParams.get('linkedin');
+    const githubParam = searchParams.get('github');
+    const isOAuthCallback = linkedinParam === 'connected' || githubParam === 'connected';
+    
+    // Don't redirect during OAuth callback - let the OAuth callback handler manage the flow
+    if (isOAuthCallback) {
+      return;
+    }
+    
+    // Only redirect if both are actually connected (check state, not just user.bothOAuthConnected)
+    if (user && linkedinConnected && githubConnected && user.bothOAuthConnected) {
       // Both already connected - redirect to profile immediately
       console.log('[EnrichProfilePage] Both OAuth already connected, redirecting to profile');
       navigate(`/employee/${user.id}`);
     }
-  }, [user, navigate]);
+  }, [user, navigate, linkedinConnected, githubConnected, searchParams]);
 
   // If no user after loading, redirect to login
   // BUT: Don't redirect if we just came from OAuth callback (check URL params first)
