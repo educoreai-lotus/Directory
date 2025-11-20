@@ -50,12 +50,26 @@ function EnrichProfilePage() {
     // If OAuth callback detected, refresh user data to get updated connection status
     if (linkedinParam === 'connected' || githubParam === 'connected') {
       setRefreshing(true);
+      
+      // First, ensure we have a user from localStorage (preserve during OAuth)
+      const token = localStorage.getItem('auth_token');
+      const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+      
+      if (token && storedUser) {
+        // Immediately restore user from localStorage to prevent redirect to login
+        console.log('[EnrichProfilePage] OAuth callback detected, restoring user from localStorage first');
+        // Don't set user here - let refreshUser handle it, but ensure token is preserved
+      }
+      
       refreshUser()
         .then((refreshedUser) => {
-          if (refreshedUser) {
+          // If refreshUser returns null but we have stored user, use stored user
+          const finalUser = refreshedUser || storedUser;
+          
+          if (finalUser) {
             // Update connection status from refreshed user (from database, not URL params)
-            const newLinkedinStatus = refreshedUser.hasLinkedIn || false;
-            const newGithubStatus = refreshedUser.hasGitHub || false;
+            const newLinkedinStatus = finalUser.hasLinkedIn || false;
+            const newGithubStatus = finalUser.hasGitHub || false;
             
             setLinkedinConnected(newLinkedinStatus);
             setGithubConnected(newGithubStatus);
@@ -80,18 +94,37 @@ function EnrichProfilePage() {
                 setSuccessMessage(null);
               }, 5000);
             }
+          } else {
+            // No user from refresh or localStorage - fallback to URL params
+            console.warn('[EnrichProfilePage] No user available, using URL params as fallback');
+            if (linkedinParam === 'connected') {
+              setLinkedinConnected(true);
+              setSuccessMessage('✓ LinkedIn connected successfully! Please connect GitHub to continue.');
+            }
+            if (githubParam === 'connected') {
+              setGithubConnected(true);
+              setSuccessMessage('✓ GitHub connected successfully! Please connect LinkedIn to continue.');
+            }
           }
         })
         .catch((err) => {
           console.error('Error refreshing user after OAuth:', err);
-          // Fallback: set connection status based on URL param
-          if (linkedinParam === 'connected') {
-            setLinkedinConnected(true);
-            setSuccessMessage('✓ LinkedIn connected successfully! Please connect GitHub to continue.');
-          }
-          if (githubParam === 'connected') {
-            setGithubConnected(true);
-            setSuccessMessage('✓ GitHub connected successfully! Please connect LinkedIn to continue.');
+          // Fallback: use stored user or URL params
+          if (storedUser) {
+            const newLinkedinStatus = storedUser.hasLinkedIn || linkedinParam === 'connected';
+            const newGithubStatus = storedUser.hasGitHub || githubParam === 'connected';
+            setLinkedinConnected(newLinkedinStatus);
+            setGithubConnected(newGithubStatus);
+          } else {
+            // Fallback: set connection status based on URL param
+            if (linkedinParam === 'connected') {
+              setLinkedinConnected(true);
+              setSuccessMessage('✓ LinkedIn connected successfully! Please connect GitHub to continue.');
+            }
+            if (githubParam === 'connected') {
+              setGithubConnected(true);
+              setSuccessMessage('✓ GitHub connected successfully! Please connect LinkedIn to continue.');
+            }
           }
         })
         .finally(() => {

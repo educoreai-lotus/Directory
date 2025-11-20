@@ -101,20 +101,58 @@ export const AuthProvider = ({ children }) => {
    */
   const refreshUser = async () => {
     try {
+      // Check if we're in an OAuth callback - preserve token during OAuth flow
+      const urlParams = new URLSearchParams(window.location.search);
+      const isOAuthCallback = urlParams.get('linkedin') === 'connected' || 
+                              urlParams.get('github') === 'connected' || 
+                              urlParams.get('error') ||
+                              urlParams.get('enriched') === 'true';
+
       const validation = await authService.validateToken();
       if (validation.valid && validation.user) {
         setUser(validation.user);
         setIsAuthenticated(true);
         return validation.user;
       } else {
-        // Token invalid, clear storage
-        authService.logout();
-        setUser(null);
-        setIsAuthenticated(false);
+        // Token invalid - but preserve during OAuth callbacks
+        if (isOAuthCallback) {
+          // During OAuth, try to restore from localStorage instead of clearing
+          const storedUser = authService.getCurrentUser();
+          const token = authService.getToken();
+          if (token && storedUser) {
+            console.warn('[AuthContext] Token validation failed during OAuth, but preserving stored user');
+            setUser(storedUser);
+            setIsAuthenticated(true);
+            return storedUser;
+          }
+        }
+        
+        // Only clear storage if not in OAuth callback
+        if (!isOAuthCallback) {
+          authService.logout();
+          setUser(null);
+          setIsAuthenticated(false);
+        }
         return null;
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
+      
+      // During OAuth callback, try to preserve stored user
+      const urlParams = new URLSearchParams(window.location.search);
+      const isOAuthCallback = urlParams.get('linkedin') === 'connected' || 
+                              urlParams.get('github') === 'connected';
+      if (isOAuthCallback) {
+        const storedUser = authService.getCurrentUser();
+        const token = authService.getToken();
+        if (token && storedUser) {
+          console.warn('[AuthContext] Error during refresh, but preserving stored user during OAuth');
+          setUser(storedUser);
+          setIsAuthenticated(true);
+          return storedUser;
+        }
+      }
+      
       return null;
     }
   };
