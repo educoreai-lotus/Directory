@@ -28,12 +28,21 @@ export const AuthProvider = ({ children }) => {
         // CRITICAL: Check for OAuth callback FIRST, before any token operations
         // This prevents token from being cleared during OAuth redirects
         const urlParams = new URLSearchParams(window.location.search);
-        const isOAuthCallback = urlParams.get('linkedin') === 'connected' || 
-                                urlParams.get('github') === 'connected' || 
-                                urlParams.get('error') ||
-                                urlParams.get('enriched') === 'true';
+        const linkedinParam = urlParams.get('linkedin');
+        const githubParam = urlParams.get('github');
+        const errorParam = urlParams.get('error');
+        const enrichedParam = urlParams.get('enriched');
+        
+        // OAuth callback is detected by success indicators, not error messages
+        // Error messages are separate and should not trigger OAuth callback logic
+        const isOAuthCallback = linkedinParam === 'connected' || 
+                                githubParam === 'connected' || 
+                                enrichedParam === 'true';
+        
+        // Check if there's an error (but don't treat it as OAuth callback)
+        const hasOAuthError = !!errorParam;
 
-        console.log('[AuthContext] Initializing auth, isOAuthCallback:', isOAuthCallback);
+        console.log('[AuthContext] Initializing auth, isOAuthCallback:', isOAuthCallback, 'hasOAuthError:', hasOAuthError);
 
         const storedUser = authService.getCurrentUser();
         const token = authService.getToken();

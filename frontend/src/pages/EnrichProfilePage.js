@@ -41,6 +41,9 @@ function EnrichProfilePage() {
     const githubParam = searchParams.get('github');
     const errorParam = searchParams.get('error');
     const tokenParam = searchParams.get('token');
+    
+    // Determine if this is an OAuth callback (success indicators, not errors)
+    const isOAuthCallback = linkedinParam === 'connected' || githubParam === 'connected';
 
     // CRITICAL: Extract and store token + user from OAuth callback if present
     const userParam = searchParams.get('user');
