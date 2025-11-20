@@ -26,19 +26,32 @@ function ApprovedProfileTabs({ employeeId, user }) {
   return (
     <div>
       {/* Tab Navigation */}
-      <div className="flex flex-wrap gap-2 mb-6 border-b" style={{ borderColor: 'var(--border-default)' }}>
+      <div className="flex flex-wrap gap-2 mb-6 border-b" style={{ borderColor: 'var(--border-default, #e2e8f0)' }}>
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className="px-4 py-2 text-sm font-medium transition-colors"
             style={{
-              borderBottom: activeTab === tab.id ? '2px solid var(--color-primary, #3b82f6)' : '2px solid transparent',
+              borderBottom: activeTab === tab.id ? '2px solid #047857' : '2px solid transparent',
               color: activeTab === tab.id 
-                ? 'var(--color-primary, #3b82f6)' 
-                : 'var(--text-secondary)',
+                ? '#047857' 
+                : 'var(--text-secondary, #475569)',
               background: 'transparent',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              padding: '8px 16px',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+            onMouseEnter={(e) => {
+              if (activeTab !== tab.id) {
+                e.target.style.background = '#f1f5f9';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== tab.id) {
+                e.target.style.background = 'transparent';
+              }
             }}
           >
             {tab.label}

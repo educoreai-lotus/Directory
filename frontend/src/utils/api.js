@@ -33,8 +33,21 @@ api.interceptors.request.use(
       return config;
     }
     
+    // Skip envelope structure for auth endpoints (login, logout, me)
+    // These endpoints don't use the microservice envelope format
+    const authEndpoints = ['/auth/login', '/auth/logout', '/auth/me'];
+    const isAuthEndpoint = authEndpoints.some(endpoint => config.url?.includes(endpoint));
+    
+    if (isAuthEndpoint) {
+      // For auth endpoints, send data directly without envelope
+      if (config.data && typeof config.data === 'object') {
+        config.data = JSON.stringify(config.data);
+      }
+      return config;
+    }
+    
     if (config.data && typeof config.data === 'object') {
-      // Ensure request body follows the required format
+      // Ensure request body follows the required format for other endpoints
       const requestBody = {
         requester_service: config.data.requester_service || 'directory_service',
         payload: config.data.payload || config.data
