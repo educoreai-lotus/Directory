@@ -70,22 +70,37 @@ class LinkedInAPIClient {
 
   /**
    * Fetch user profile using legacy LinkedIn API endpoint (r_liteprofile scope)
+   * Attempts to fetch headline if available with current permissions
    * @param {string} accessToken - LinkedIn access token
    * @returns {Promise<Object>} User profile data
    */
   async getLegacyProfile(accessToken) {
     try {
-      // Legacy endpoint with projection for basic profile fields
-      // This requires r_liteprofile scope (deprecated but still works)
-      const legacyProfileUrl = 'https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))';
+      // Try to fetch profile with headline if available
+      // First try with headline (may not be available with all scopes)
+      let legacyProfileUrl = 'https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams),headline)';
       
-      const response = await axios.get(legacyProfileUrl, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000
-      });
+      let response;
+      try {
+        response = await axios.get(legacyProfileUrl, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000
+        });
+      } catch (headlineError) {
+        // If headline fails, try without it (fallback for scopes that don't include headline)
+        console.log('[LinkedInAPIClient] Headline not available with current scopes, fetching without it');
+        legacyProfileUrl = 'https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))';
+        response = await axios.get(legacyProfileUrl, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000
+        });
+      }
 
       const firstName = response.data.firstName?.localized 
         ? Object.values(response.data.firstName.localized)[0] 
@@ -98,6 +113,17 @@ class LinkedInAPIClient {
         : response.data.lastName?.preferredLocale?.language 
         ? response.data.lastName.localized?.[response.data.lastName.preferredLocale.language]
         : response.data.lastName;
+
+      // Extract headline if available (localizedHeadline or headline)
+      let headline = null;
+      if (response.data.headline) {
+        if (response.data.headline.localized) {
+          // Try to get localized headline
+          headline = Object.values(response.data.headline.localized)[0] || response.data.headline.localized?.en_US || null;
+        } else if (typeof response.data.headline === 'string') {
+          headline = response.data.headline;
+        }
+      }
 
       // Extract profile picture URL
       let profilePicture = null;
@@ -118,10 +144,15 @@ class LinkedInAPIClient {
         firstName: firstName,
         lastName: lastName,
         profilePicture: profilePicture,
-        picture: profilePicture
+        picture: profilePicture,
+        headline: headline || null
       };
 
-      console.log('[LinkedInAPIClient] ✅ Legacy profile fetched successfully');
+      if (headline) {
+        console.log('[LinkedInAPIClient] ✅ Legacy profile fetched with headline');
+      } else {
+        console.log('[LinkedInAPIClient] ✅ Legacy profile fetched successfully (headline not available)');
+      }
       return profileData;
     } catch (error) {
       console.error('[LinkedInAPIClient] Error fetching legacy profile:', error.response?.data || error.message);
@@ -224,13 +255,20 @@ class LinkedInAPIClient {
       ...profile,
       picture: pictureUrl, // Normalize to 'picture' field for consistent access
       email: email || null,
+      // Ensure headline is included if available
+      headline: profile.headline || null,
       fetched_at: new Date().toISOString()
     };
 
-    if (completeProfile.email) {
-      console.log('[LinkedInAPIClient] ✅ Complete profile fetched with email');
+    const dataFields = [];
+    if (completeProfile.email) dataFields.push('email');
+    if (completeProfile.headline) dataFields.push('headline');
+    if (completeProfile.picture) dataFields.push('picture');
+    
+    if (dataFields.length > 0) {
+      console.log(`[LinkedInAPIClient] ✅ Complete profile fetched with: ${dataFields.join(', ')}`);
     } else {
-      console.warn('[LinkedInAPIClient] ⚠️  Complete profile fetched but email is missing');
+      console.warn('[LinkedInAPIClient] ⚠️  Complete profile fetched but some fields are missing');
     }
 
     return completeProfile;

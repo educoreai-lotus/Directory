@@ -91,10 +91,168 @@ class GitHubAPIClient {
   }
 
   /**
-   * Fetch user repositories
+   * Fetch README content for a repository
+   * @param {string} accessToken - GitHub access token
+   * @param {string} owner - Repository owner
+   * @param {string} repo - Repository name
+   * @returns {Promise<string|null>} README content or null
+   */
+  async getRepositoryReadme(accessToken, owner, repo) {
+    try {
+      const response = await axios.get(`${this.baseUrl}/repos/${owner}/${repo}/readme`, {
+        headers: {
+          'Authorization': `token ${accessToken}`,
+          'Accept': 'application/vnd.github.v3.raw',
+          'User-Agent': 'EDUCORE-Directory-Service'
+        },
+        timeout: 10000
+      });
+      // Return first 5000 characters to avoid storing too much data
+      return response.data.substring(0, 5000);
+    } catch (error) {
+      // README might not exist or might not be accessible
+      if (error.response?.status === 404) {
+        return null;
+      }
+      console.warn(`[GitHubAPIClient] Could not fetch README for ${owner}/${repo}:`, error.response?.data?.message || error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch commit history summary for a repository
+   * @param {string} accessToken - GitHub access token
+   * @param {string} owner - Repository owner
+   * @param {string} repo - Repository name
+   * @param {number} limit - Maximum number of commits to analyze (default: 10)
+   * @returns {Promise<Object>} Commit history summary
+   */
+  async getCommitHistorySummary(accessToken, owner, repo, limit = 10) {
+    try {
+      const response = await axios.get(`${this.baseUrl}/repos/${owner}/${repo}/commits`, {
+        headers: {
+          'Authorization': `token ${accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'EDUCORE-Directory-Service'
+        },
+        params: {
+          per_page: limit
+        },
+        timeout: 15000
+      });
+
+      const commits = response.data;
+      if (!commits || commits.length === 0) {
+        return {
+          total_commits_analyzed: 0,
+          commit_frequency: 'none',
+          last_commit_date: null,
+          commit_messages_sample: []
+        };
+      }
+
+      // Analyze commit patterns
+      const commitDates = commits.map(c => new Date(c.commit.author.date));
+      const lastCommitDate = commitDates[0];
+      const daysSinceLastCommit = Math.floor((Date.now() - lastCommitDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      let commitFrequency = 'active';
+      if (daysSinceLastCommit > 90) commitFrequency = 'inactive';
+      else if (daysSinceLastCommit > 30) commitFrequency = 'moderate';
+
+      // Extract sample commit messages (first 5)
+      const commitMessages = commits.slice(0, 5).map(c => ({
+        message: c.commit.message.split('\n')[0].substring(0, 100), // First line, max 100 chars
+        date: c.commit.author.date
+      }));
+
+      return {
+        total_commits_analyzed: commits.length,
+        commit_frequency: commitFrequency,
+        last_commit_date: lastCommitDate.toISOString(),
+        days_since_last_commit: daysSinceLastCommit,
+        commit_messages_sample: commitMessages
+      };
+    } catch (error) {
+      // Commits might not be accessible (private repo without permission)
+      if (error.response?.status === 403 || error.response?.status === 404) {
+        return {
+          total_commits_analyzed: 0,
+          commit_frequency: 'unknown',
+          last_commit_date: null,
+          error: 'commits_not_accessible'
+        };
+      }
+      console.warn(`[GitHubAPIClient] Could not fetch commit history for ${owner}/${repo}:`, error.response?.data?.message || error.message);
+      return {
+        total_commits_analyzed: 0,
+        commit_frequency: 'unknown',
+        last_commit_date: null,
+        error: 'fetch_failed'
+      };
+    }
+  }
+
+  /**
+   * Fetch contribution statistics for a user
+   * @param {string} accessToken - GitHub access token
+   * @param {string} username - GitHub username
+   * @returns {Promise<Object>} Contribution statistics
+   */
+  async getContributionStatistics(accessToken, username) {
+    try {
+      // Get user's public events (contributions)
+      const response = await axios.get(`${this.baseUrl}/users/${username}/events/public`, {
+        headers: {
+          'Authorization': `token ${accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'EDUCORE-Directory-Service'
+        },
+        params: {
+          per_page: 30 // Get last 30 events
+        },
+        timeout: 15000
+      });
+
+      const events = response.data || [];
+      
+      // Count event types
+      const eventTypes = {};
+      events.forEach(event => {
+        eventTypes[event.type] = (eventTypes[event.type] || 0) + 1;
+      });
+
+      // Calculate activity period
+      const eventDates = events.map(e => new Date(e.created_at));
+      const oldestEvent = eventDates.length > 0 ? new Date(Math.min(...eventDates.map(d => d.getTime()))) : null;
+      const newestEvent = eventDates.length > 0 ? new Date(Math.max(...eventDates.map(d => d.getTime()))) : null;
+
+      return {
+        total_events: events.length,
+        event_types: eventTypes,
+        activity_period: oldestEvent && newestEvent ? {
+          start: oldestEvent.toISOString(),
+          end: newestEvent.toISOString()
+        } : null,
+        last_activity_date: newestEvent ? newestEvent.toISOString() : null
+      };
+    } catch (error) {
+      console.warn(`[GitHubAPIClient] Could not fetch contribution statistics for ${username}:`, error.response?.data?.message || error.message);
+      return {
+        total_events: 0,
+        event_types: {},
+        activity_period: null,
+        last_activity_date: null,
+        error: 'fetch_failed'
+      };
+    }
+  }
+
+  /**
+   * Fetch user repositories with enhanced data (README, commit history)
    * @param {string} accessToken - GitHub access token
    * @param {number} limit - Maximum number of repositories to fetch (default: 30)
-   * @returns {Promise<Array>} Array of repository data
+   * @returns {Promise<Array>} Array of repository data with enhanced information
    */
   async getUserRepositories(accessToken, limit = 30) {
     try {
@@ -113,7 +271,8 @@ class GitHubAPIClient {
         timeout: 15000
       });
 
-      return response.data.map(repo => ({
+      // Fetch basic repo data first
+      const repos = response.data.map(repo => ({
         id: repo.id,
         name: repo.name,
         full_name: repo.full_name,
@@ -128,8 +287,31 @@ class GitHubAPIClient {
         created_at: repo.created_at,
         updated_at: repo.updated_at,
         pushed_at: repo.pushed_at,
-        default_branch: repo.default_branch
+        default_branch: repo.default_branch,
+        topics: repo.topics || [], // Repository topics
+        languages_url: repo.languages_url // URL to fetch languages breakdown
       }));
+
+      // Enhance with README and commit history for top repositories (limit to 10 to avoid rate limits)
+      const reposToEnhance = repos.slice(0, 10);
+      const enhancedRepos = await Promise.all(reposToEnhance.map(async (repo) => {
+        const [owner, repoName] = repo.full_name.split('/');
+        
+        // Fetch README and commit history in parallel
+        const [readme, commitHistory] = await Promise.all([
+          this.getRepositoryReadme(accessToken, owner, repoName).catch(() => null),
+          this.getCommitHistorySummary(accessToken, owner, repoName, 10).catch(() => null)
+        ]);
+
+        return {
+          ...repo,
+          readme: readme || null,
+          commit_history: commitHistory || null
+        };
+      }));
+
+      // Combine enhanced repos with remaining repos
+      return [...enhancedRepos, ...repos.slice(10)];
     } catch (error) {
       console.error('[GitHubAPIClient] Error fetching repositories:', error.response?.data || error.message);
       throw new Error(`Failed to fetch GitHub repositories: ${error.response?.data?.message || error.message}`);
@@ -137,7 +319,7 @@ class GitHubAPIClient {
   }
 
   /**
-   * Fetch complete GitHub profile data (profile + email + repositories)
+   * Fetch complete GitHub profile data (profile + email + repositories + contributions)
    * @param {string} accessToken - GitHub access token
    * @returns {Promise<Object>} Complete profile data
    */
@@ -152,10 +334,21 @@ class GitHubAPIClient {
       })
     ]);
 
+    // Fetch contribution statistics (non-blocking, don't fail if unavailable)
+    let contributionStats = null;
+    if (profile.login) {
+      try {
+        contributionStats = await this.getContributionStatistics(accessToken, profile.login);
+      } catch (error) {
+        console.warn('[GitHubAPIClient] Could not fetch contribution statistics, continuing without them:', error.message);
+      }
+    }
+
     return {
       ...profile,
       email: email || profile.email || null,
       repositories: repositories || [],
+      contribution_statistics: contributionStats,
       fetched_at: new Date().toISOString()
     };
   }
