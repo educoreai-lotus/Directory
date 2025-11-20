@@ -15,14 +15,6 @@ function PendingRequestsSection({ companyId }) {
       priority: 'medium'
     },
     {
-      id: 'req-2',
-      type: 'learning_path',
-      employee: { id: 'emp-2', name: 'Jane Smith', email: 'jane@company.com' },
-      request: 'Request approval for "Full Stack Developer" learning path',
-      submittedAt: '2024-01-14',
-      priority: 'high'
-    },
-    {
       id: 'req-3',
       type: 'trainer_role',
       employee: { id: 'emp-3', name: 'Bob Johnson', email: 'bob@company.com' },

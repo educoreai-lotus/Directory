@@ -17,8 +17,7 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState('full_name');
   const [sortDirection, setSortDirection] = useState('asc');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [roleFilters, setRoleFilters] = useState([]); // Multi-select role filters
+  const [roleFilter, setRoleFilter] = useState('all'); // Single-select role filter
 
   // Filter and sort employees - Must be called before any conditional returns (React Hooks rule)
   const filteredAndSortedEmployees = useMemo(() => {
@@ -35,17 +34,12 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
       );
     }
 
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(emp => emp.status === statusFilter);
-    }
-
-    // Apply role filters (multi-select)
-    if (roleFilters.length > 0) {
+    // Apply role filter (single-select)
+    if (roleFilter !== 'all') {
       filtered = filtered.filter(emp => {
         if (!emp.roles || !Array.isArray(emp.roles)) return false;
-        // Check if employee has at least one of the selected roles
-        return roleFilters.some(role => emp.roles.includes(role));
+        // Check if employee has the selected role
+        return emp.roles.includes(roleFilter);
       });
     }
 
@@ -73,7 +67,7 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
     });
 
     return filtered;
-  }, [employees, searchQuery, sortField, sortDirection, statusFilter, roleFilters]);
+  }, [employees, searchQuery, sortField, sortDirection, roleFilter]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -302,7 +296,7 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
       </div>
 
       {/* Search, Filter, and Sort Controls */}
-      <div className="flex flex-wrap gap-4 p-4 rounded-lg" style={{ background: 'var(--bg-card)' }}>
+      <div className="flex flex-wrap items-center gap-4 p-4 rounded-lg" style={{ background: 'var(--bg-card)' }}>
         {/* Search */}
         <div className="flex-1 min-w-[200px]">
           <input
@@ -319,62 +313,25 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
           />
         </div>
 
-        {/* Status Filter */}
+        {/* Role Filter - Single Select Dropdown */}
         <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 border rounded"
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="px-3 py-2 border rounded min-w-[180px]"
           style={{
             borderColor: 'var(--border-default)',
             background: 'var(--bg-primary)',
-            color: 'var(--text-primary)'
+            color: 'var(--text-primary)',
+            height: '42px'
           }}
         >
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
+          <option value="all">All Roles</option>
+          <option value="REGULAR_EMPLOYEE">Regular Employees</option>
+          <option value="TRAINER">Trainers</option>
+          <option value="TEAM_MANAGER">Team Managers</option>
+          <option value="DEPARTMENT_MANAGER">Department Managers</option>
+          <option value="DECISION_MAKER">Decision Maker</option>
         </select>
-
-        {/* Role Filter - Multi-select */}
-        <div className="relative">
-          <select
-            multiple
-            value={roleFilters}
-            onChange={(e) => {
-              const selected = Array.from(e.target.selectedOptions, option => option.value);
-              setRoleFilters(selected);
-            }}
-            className="px-3 py-2 border rounded min-w-[180px]"
-            style={{
-              borderColor: 'var(--border-default)',
-              background: 'var(--bg-primary)',
-              color: 'var(--text-primary)',
-              minHeight: '42px'
-            }}
-            size={roleFilters.length > 0 ? roleFilters.length + 1 : 1}
-          >
-            <option value="REGULAR_EMPLOYEE">Regular Employees</option>
-            <option value="TRAINER">Trainers</option>
-            <option value="TEAM_MANAGER">Team Managers</option>
-            <option value="DEPARTMENT_MANAGER">Department Managers</option>
-            <option value="DECISION_MAKER">Decision Maker</option>
-          </select>
-          {roleFilters.length > 0 && (
-            <button
-              onClick={() => setRoleFilters([])}
-              className="absolute top-0 right-0 px-2 py-1 text-xs"
-              style={{ color: 'var(--text-secondary)' }}
-              title="Clear role filters"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-        {roleFilters.length > 0 && (
-          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            {roleFilters.length} role{roleFilters.length > 1 ? 's' : ''} selected
-          </div>
-        )}
 
         {/* Sort Field */}
         <select
@@ -384,7 +341,8 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
           style={{
             borderColor: 'var(--border-default)',
             background: 'var(--bg-primary)',
-            color: 'var(--text-primary)'
+            color: 'var(--text-primary)',
+            height: '42px'
           }}
         >
           <option value="full_name">Sort by Name</option>
@@ -396,11 +354,13 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
         {/* Sort Direction Toggle */}
         <button
           onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-          className="px-3 py-2 border rounded hover:bg-opacity-50 transition-colors"
+          className="px-3 py-2 border rounded hover:bg-opacity-50 transition-colors flex items-center justify-center"
           style={{
             borderColor: 'var(--border-default)',
             background: 'var(--bg-primary)',
-            color: 'var(--text-primary)'
+            color: 'var(--text-primary)',
+            height: '42px',
+            width: '42px'
           }}
           title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
         >
@@ -448,7 +408,7 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
             {filteredAndSortedEmployees.length === 0 ? (
               <tr>
                 <td colSpan="6" className="p-6 text-center" style={{ color: 'var(--text-secondary)' }}>
-                  {searchQuery || statusFilter !== 'all' 
+                  {searchQuery || roleFilter !== 'all' 
                     ? 'No employees match your filters' 
                     : 'No employees found'}
                 </td>

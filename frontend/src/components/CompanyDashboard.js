@@ -58,7 +58,7 @@ function CompanyDashboard({ company, departments, teams, employees, hierarchy, m
             borderBottomColor: activeTab === 'dashboard' ? 'var(--border-focus)' : 'transparent'
           }}
         >
-          Dashboard
+          Analytics
         </button>
         <button
           onClick={() => setActiveTab('employees')}
