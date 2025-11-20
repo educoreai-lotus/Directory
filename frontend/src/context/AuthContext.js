@@ -32,16 +32,22 @@ export const AuthProvider = ({ children }) => {
         const githubParam = urlParams.get('github');
         const errorParam = urlParams.get('error');
         const enrichedParam = urlParams.get('enriched');
+        const tokenParam = urlParams.get('token');
         
-        // OAuth callback is detected by success indicators, not error messages
-        // Error messages are separate and should not trigger OAuth callback logic
+        // OAuth callback is detected by:
+        // 1. Success indicators (linkedin=connected, github=connected, enriched=true)
+        // 2. OR error parameter (OAuth errors still come from OAuth callback)
+        // 3. OR token parameter (OAuth callbacks include token in URL)
+        // This ensures we preserve token/user even when OAuth returns an error
         const isOAuthCallback = linkedinParam === 'connected' || 
                                 githubParam === 'connected' || 
-                                enrichedParam === 'true';
+                                enrichedParam === 'true' ||
+                                !!errorParam ||  // OAuth errors are still OAuth callbacks
+                                !!tokenParam;    // Token in URL indicates OAuth callback
         
-        // Check if there's an error (but don't treat it as OAuth callback)
+        // Check if there's an error (for logging, but still treat as OAuth callback)
         const hasOAuthError = !!errorParam;
-
+        
         console.log('[AuthContext] Initializing auth, isOAuthCallback:', isOAuthCallback, 'hasOAuthError:', hasOAuthError);
 
         const storedUser = authService.getCurrentUser();
