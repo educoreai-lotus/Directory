@@ -102,11 +102,14 @@ function CompanyDashboard({ company, departments, teams, employees, hierarchy, m
           }}
         >
           Pending Requests
-          {(() => {
-            // Count pending requests - we need to fetch this or pass it as prop
-            // For now, we'll add the count when we have the data
-            return null;
-          })()}
+          {pendingRequestsCount > 0 && (
+            <span 
+              className="ml-2 px-2 py-0.5 text-xs rounded-full text-white"
+              style={{ background: 'rgb(239, 68, 68)' }}
+            >
+              {pendingRequestsCount}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab('approvals')}
