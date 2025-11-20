@@ -104,36 +104,6 @@ class GitHubAPIClient {
   }
 
   /**
-   * Fetch README content for a repository
-   * @param {string} accessToken - GitHub access token
-   * @param {string} owner - Repository owner
-   * @param {string} repo - Repository name
-   * @returns {Promise<string|null>} README content or null
-   */
-  async getRepositoryReadme(accessToken, owner, repo) {
-    try {
-      const response = await axios.get(`${this.baseUrl}/repos/${owner}/${repo}/readme`, {
-        headers: {
-          'Authorization': `token ${accessToken}`,
-          'Accept': 'application/vnd.github.v3.raw',
-          'User-Agent': 'EDUCORE-Directory-Service'
-        },
-        timeout: 10000
-      });
-      // Return first 5000 characters to avoid storing too much data
-      const truncated = response.data.substring(0, 5000);
-      return this.sanitizeTextForJson(truncated);
-    } catch (error) {
-      // README might not exist or might not be accessible
-      if (error.response?.status === 404) {
-        return null;
-      }
-      console.warn(`[GitHubAPIClient] Could not fetch README for ${owner}/${repo}:`, error.response?.data?.message || error.message);
-      return null;
-    }
-  }
-
-  /**
    * Fetch commit history summary for a repository
    * @param {string} accessToken - GitHub access token
    * @param {string} owner - Repository owner
@@ -311,15 +281,11 @@ class GitHubAPIClient {
       const enhancedRepos = await Promise.all(reposToEnhance.map(async (repo) => {
         const [owner, repoName] = repo.full_name.split('/');
         
-        // Fetch README and commit history in parallel
-        const [readme, commitHistory] = await Promise.all([
-          this.getRepositoryReadme(accessToken, owner, repoName).catch(() => null),
-          this.getCommitHistorySummary(accessToken, owner, repoName, 10).catch(() => null)
-        ]);
+        // Fetch commit history (skip README to avoid Unicode issues)
+        const commitHistory = await this.getCommitHistorySummary(accessToken, owner, repoName, 10).catch(() => null);
 
         return {
           ...repo,
-          readme: readme || null,
           commit_history: commitHistory || null
         };
       }));

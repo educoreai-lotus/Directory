@@ -19,12 +19,10 @@ class LinkedInOAuthClient {
     this.tokenUrl = 'https://www.linkedin.com/oauth/v2/accessToken';
     
     // Required scopes for profile enrichment
-    // Option 1: Legacy scopes (r_liteprofile + r_emailaddress) - may fail if products not approved
-    // Option 2: OpenID Connect scopes (openid, profile, email) - recommended, more reliable
-    // Check environment variable to determine which scopes to use
-    // DEFAULT: OpenID Connect (more reliable, less likely to have scope errors)
-    // Only use legacy if explicitly set to 'true'
-    const useLegacyScopes = process.env.LINKEDIN_USE_LEGACY_SCOPES === 'true';
+    // We now default to legacy scopes (r_liteprofile + r_emailaddress) because they expose localizedHeadline
+    // This behavior can be overridden by setting LINKEDIN_USE_LEGACY_SCOPES=false
+    const legacyEnv = process.env.LINKEDIN_USE_LEGACY_SCOPES;
+    const useLegacyScopes = legacyEnv === undefined ? true : legacyEnv === 'true';
     
     if (useLegacyScopes) {
       // Legacy scopes (r_liteprofile + r_emailaddress)
@@ -33,19 +31,18 @@ class LinkedInOAuthClient {
       // ⚠️ WARNING: These scopes may fail with unauthorized_scope_error if products are not approved
       this.scopes = ['r_liteprofile', 'r_emailaddress'];
       this.useLegacyScopes = true;
-      console.log('[LinkedInOAuthClient] ⚠️  Using legacy scopes: r_liteprofile, r_emailaddress');
-      console.log('[LinkedInOAuthClient] ⚠️  WARNING: r_emailaddress requires "Email Address" product approval in LinkedIn Developer Portal');
+      console.log('[LinkedInOAuthClient] ✅ Using legacy scopes: r_liteprofile, r_emailaddress (default)');
+      console.log('[LinkedInOAuthClient] ℹ️  These scopes expose localizedHeadline for enrichment.');
+      console.log('[LinkedInOAuthClient] ⚠️  r_emailaddress requires "Email Address" product approval in LinkedIn Developer Portal');
       console.log('[LinkedInOAuthClient] ⚠️  If you see unauthorized_scope_error, check Products tab in LinkedIn Developer Portal');
-      console.log('[LinkedInOAuthClient] ⚠️  See docs/LINKEDIN-DEVELOPER-PORTAL-CHECKLIST.md for setup instructions');
-      console.log('[LinkedInOAuthClient] 💡 TIP: Remove LINKEDIN_USE_LEGACY_SCOPES env var or set to false to use OpenID Connect');
     } else {
       // OpenID Connect scopes (DEFAULT - more reliable, less likely to have scope errors)
       // These scopes work with "Sign In with LinkedIn using OpenID Connect" product
       this.scopes = ['openid', 'profile', 'email'];
       this.useLegacyScopes = false;
-      console.log('[LinkedInOAuthClient] ✅ Using OpenID Connect scopes: openid, profile, email (DEFAULT)');
+      console.log('[LinkedInOAuthClient] ⚠️  Using OpenID Connect scopes: openid, profile, email (legacy disabled via env var)');
       console.log('[LinkedInOAuthClient] ℹ️  These scopes require "Sign In with LinkedIn using OpenID Connect" product');
-      console.log('[LinkedInOAuthClient] ℹ️  If you need legacy scopes, set LINKEDIN_USE_LEGACY_SCOPES=true in Railway');
+      console.log('[LinkedInOAuthClient] ℹ️  Set LINKEDIN_USE_LEGACY_SCOPES=true (or unset) to use r_liteprofile for localizedHeadline.');
     }
     
     if (!this.clientId || !this.clientSecret) {
