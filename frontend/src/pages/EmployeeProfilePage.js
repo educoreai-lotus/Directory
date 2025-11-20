@@ -408,126 +408,70 @@ function EmployeeProfilePage() {
                 className="leading-relaxed"
                 style={{ color: 'var(--text-primary)' }}
               >
-                {/* Format value proposition with READ MORE */}
+                {/* Format value proposition with READ MORE at the end of sentences */}
                 {(() => {
                   const valueProp = employee.value_proposition;
                   const firstName = employee.full_name?.split(' ')[0] || 'they';
                   const pronoun = firstName.toLowerCase() === 'they' ? 'their' : firstName.toLowerCase().endsWith('s') ? 'their' : 'his';
                   
-                  // Find where to insert READ MORE - look for mentions of skills/knowledge/experience
-                  // Split by sentences first
+                  // Split by sentences
                   const sentences = valueProp.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
                   
-                  // Find sentence that mentions skills/knowledge/experience/develop/improve
-                  let insertIndex = -1;
-                  for (let i = 0; i < sentences.length; i++) {
-                    const lower = sentences[i].toLowerCase();
-                    if (lower.includes('skill') || lower.includes('knowledge') || lower.includes('experience') || 
-                        lower.includes('develop') || lower.includes('improve') || lower.includes('need')) {
-                      insertIndex = i;
-                      break;
-                    }
-                  }
-                  
-                  // If we found a skills sentence, format with READ MORE after it
-                  if (insertIndex >= 0) {
-                    const beforeReadMore = sentences.slice(0, insertIndex + 1).join(' ');
-                    const afterReadMore = sentences.slice(insertIndex + 1).join(' ');
-                    
+                  if (sentences.length > 0) {
+                    // Place READ MORE at the end of all sentences
                     return (
                       <>
-                        <p className="mb-2">
-                          {beforeReadMore.trim().replace(/\.$/, '')} -{' '}
-                          <button
-                            onClick={() => {
-                              alert('You are being redirected to the Skills Engine page.');
-                              // TODO: When Skills Engine frontend is available, redirect to it
-                              // navigate('/skills-engine');
-                            }}
-                            className="text-teal-600 hover:text-teal-700 underline font-medium cursor-pointer"
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              padding: 0,
-                              textDecoration: 'underline'
-                            }}
-                          >
-                            READ MORE
-                          </button>
-                        </p>
-                        {afterReadMore && (
-                          <p>
-                            {afterReadMore}
+                        {sentences.map((sentence, idx) => (
+                          <p key={idx} className={idx < sentences.length - 1 ? 'mb-2' : 'mb-2'}>
+                            {sentence.trim()}
+                            {idx === sentences.length - 1 && (
+                              <>
+                                {' '}
+                                <button
+                                  onClick={() => {
+                                    alert('You are being redirected to the Skills Engine page.');
+                                    // TODO: When Skills Engine frontend is available, redirect to it
+                                    // navigate('/skills-engine');
+                                  }}
+                                  className="text-teal-600 hover:text-teal-700 underline font-medium cursor-pointer"
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    padding: 0,
+                                    textDecoration: 'underline'
+                                  }}
+                                >
+                                  READ MORE
+                                </button>
+                              </>
+                            )}
                           </p>
-                        )}
-                        {!afterReadMore && (
-                          <p>
-                            This will allow {firstName} to realize {pronoun} potential in the company and contribute meaningfully.
-                          </p>
-                        )}
+                        ))}
                       </>
                     );
                   }
                   
-                  // Fallback: Insert READ MORE before the last sentence or at a natural break
-                  if (sentences.length > 1) {
-                    const beforeReadMore = sentences.slice(0, sentences.length - 1).join(' ');
-                    const lastSentence = sentences[sentences.length - 1];
-                    
-                    return (
-                      <>
-                        <p className="mb-2">
-                          {beforeReadMore.trim().replace(/\.$/, '')} -{' '}
-                          <button
-                            onClick={() => {
-                              alert('You are being redirected to the Skills Engine page.');
-                              // TODO: When Skills Engine frontend is available, redirect to it
-                              // navigate('/skills-engine');
-                            }}
-                            className="text-teal-600 hover:text-teal-700 underline font-medium cursor-pointer"
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              padding: 0,
-                              textDecoration: 'underline'
-                            }}
-                          >
-                            READ MORE
-                          </button>
-                        </p>
-                        <p>
-                          {lastSentence}
-                        </p>
-                      </>
-                    );
-                  }
-                  
-                  // Last fallback: Just add READ MORE at the end
+                  // Fallback: Just add READ MORE at the end
                   return (
-                    <>
-                      <p className="mb-2">
-                        {valueProp.trim().replace(/\.$/, '')} -{' '}
-                        <button
-                          onClick={() => {
-                            alert('You are being redirected to the Skills Engine page.');
-                            // TODO: When Skills Engine frontend is available, redirect to it
-                            // navigate('/skills-engine');
-                          }}
-                          className="text-teal-600 hover:text-teal-700 underline font-medium cursor-pointer"
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            padding: 0,
-                            textDecoration: 'underline'
-                          }}
-                        >
-                          READ MORE
-                        </button>
-                      </p>
-                      <p>
-                        This will allow {firstName} to realize {pronoun} potential in the company and contribute meaningfully.
-                      </p>
-                    </>
+                    <p>
+                      {valueProp.trim()}{' '}
+                      <button
+                        onClick={() => {
+                          alert('You are being redirected to the Skills Engine page.');
+                          // TODO: When Skills Engine frontend is available, redirect to it
+                          // navigate('/skills-engine');
+                        }}
+                        className="text-teal-600 hover:text-teal-700 underline font-medium cursor-pointer"
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          padding: 0,
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        READ MORE
+                      </button>
+                    </p>
                   );
                 })()}
               </div>

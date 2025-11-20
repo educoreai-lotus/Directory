@@ -5,6 +5,7 @@ const EmployeeRepository = require('../infrastructure/EmployeeRepository');
 const OpenAIAPIClient = require('../infrastructure/OpenAIAPIClient');
 const EmployeeProfileApprovalRepository = require('../infrastructure/EmployeeProfileApprovalRepository');
 const MicroserviceClient = require('../infrastructure/MicroserviceClient');
+const CompanyRepository = require('../infrastructure/CompanyRepository');
 
 class EnrichProfileUseCase {
   constructor() {
@@ -12,6 +13,7 @@ class EnrichProfileUseCase {
     this.openAIClient = new OpenAIAPIClient();
     this.approvalRepository = new EmployeeProfileApprovalRepository();
     this.microserviceClient = new MicroserviceClient();
+    this.companyRepository = new CompanyRepository();
   }
 
   /**
@@ -60,11 +62,16 @@ class EnrichProfileUseCase {
         ? JSON.parse(employee.github_data)
         : employee.github_data;
 
+      // Get company name
+      const company = await this.companyRepository.findById(employee.company_id);
+      const companyName = company?.company_name || 'the company';
+
       // Prepare basic employee info
       const employeeBasicInfo = {
         full_name: employee.full_name,
         current_role_in_company: employee.current_role_in_company,
-        target_role_in_company: employee.target_role_in_company
+        target_role_in_company: employee.target_role_in_company,
+        company_name: companyName
       };
 
       // Generate bio using OpenAI AI (NO FALLBACK - must succeed)

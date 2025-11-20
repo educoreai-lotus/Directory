@@ -313,9 +313,10 @@ class OpenAIAPIClient {
     const name = employeeBasicInfo?.full_name || 'the employee';
     const role = employeeBasicInfo?.current_role_in_company || 'their role';
     const targetRole = employeeBasicInfo?.target_role_in_company || null;
+    const companyName = employeeBasicInfo?.company_name || 'the company';
     
     prompt += `CONTEXT:\n`;
-    prompt += `You are creating a professional bio for ${name}, who currently works as ${role}`;
+    prompt += `You are creating a professional bio for ${name}, who currently works as ${role} at ${companyName}`;
     if (targetRole && targetRole !== role) {
       prompt += ` with career goals to transition to ${targetRole}`;
     }
@@ -622,11 +623,13 @@ class OpenAIAPIClient {
     const name = employeeBasicInfo?.full_name || 'the employee';
     const currentRole = employeeBasicInfo?.current_role_in_company || 'their current role';
     const targetRole = employeeBasicInfo?.target_role_in_company || null;
+    const companyName = employeeBasicInfo?.company_name || 'the company';
     
     let prompt = `You are a professional HR and career development AI assistant specializing in creating value propositions for employee career progression.\n\n`;
     
     prompt += `CONTEXT:\n`;
     prompt += `You are creating a value proposition statement for ${name}.\n`;
+    prompt += `- Company: ${companyName}\n`;
     prompt += `- Current Role: ${currentRole}\n`;
     if (targetRole && targetRole !== currentRole) {
       prompt += `- Target Role: ${targetRole}\n`;
@@ -637,7 +640,7 @@ class OpenAIAPIClient {
     
     prompt += `TASK:\n`;
     prompt += `Create a professional, concise value proposition statement that:\n`;
-    prompt += `1. States that ${name} currently works as ${currentRole} in the company\n`;
+    prompt += `1. States that ${name} currently works as ${currentRole} at ${companyName}\n`;
     if (targetRole && targetRole !== currentRole) {
       prompt += `2. States that ${name} will be upgraded to work as ${targetRole}\n`;
       prompt += `3. Identifies what skills, knowledge, or experience ${name} is missing to reach the target role\n`;
@@ -652,7 +655,7 @@ class OpenAIAPIClient {
     prompt += `- Format: Plain text, no markdown, no code blocks, no bullet points\n`;
     prompt += `- Tone: Professional, clear, and motivating\n`;
     prompt += `- Structure: Start with current role, mention target role (if different), then mention what's needed to get there\n`;
-    prompt += `- Example format: "${name} currently works as ${currentRole} in the company. ${name} will be upgraded to work as ${targetRole}. To achieve this transition, ${name} needs to develop [specific skills/knowledge/experience]."\n\n`;
+    prompt += `- Example format: "${name} currently works as ${currentRole} at ${companyName}. ${name} will be upgraded to work as ${targetRole}. To achieve this transition, ${name} needs to develop [specific skills/knowledge/experience]."\n\n`;
     
     prompt += `Now generate a value proposition statement for ${name}:\n`;
     
