@@ -259,8 +259,8 @@ function EnrichProfilePage() {
     }
   }, [linkedinConnected, githubConnected, user, navigate, refreshing, searchParams]);
 
-  // Check if user already has both LinkedIn and GitHub connected - redirect to profile
-  // BUT: Only redirect if we're NOT in the middle of an OAuth callback
+  // CRITICAL: Check if user has already completed enrichment - redirect immediately
+  // Enrichment is ONE-TIME only - if already enriched, never show this page again
   useEffect(() => {
     const linkedinParam = searchParams.get('linkedin');
     const githubParam = searchParams.get('github');
@@ -271,9 +271,16 @@ function EnrichProfilePage() {
       return;
     }
     
-    // Only redirect if both are actually connected (check state, not just user.bothOAuthConnected)
+    // If user has already completed enrichment (enriched or approved status), redirect immediately
+    if (user && (user.profileStatus === 'enriched' || user.profileStatus === 'approved')) {
+      console.log('[EnrichProfilePage] User has already completed enrichment, redirecting to profile');
+      navigate(`/employee/${user.id}`);
+      return;
+    }
+    
+    // If both OAuth are already connected (but enrichment not yet complete), redirect to profile
+    // This handles the case where enrichment is in progress
     if (user && linkedinConnected && githubConnected && user.bothOAuthConnected) {
-      // Both already connected - redirect to profile immediately
       console.log('[EnrichProfilePage] Both OAuth already connected, redirecting to profile');
       navigate(`/employee/${user.id}`);
     }

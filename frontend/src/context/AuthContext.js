@@ -288,18 +288,25 @@ export const AuthProvider = ({ children }) => {
           navigate(`/company/${result.user.companyId}`);
         } else {
           // Regular employee
-          // If both LinkedIn and GitHub are already connected, go directly to profile
-          if (result.user.bothOAuthConnected) {
-            // Already connected - go to profile
+          // CRITICAL: Enrichment is ONE-TIME only - if already enriched, never show enrich page
+          if (result.user.profileStatus === 'enriched' || result.user.profileStatus === 'approved') {
+            // Already completed enrichment - go directly to profile
+            if (result.user.profileStatus === 'enriched' && !result.user.isProfileApproved) {
+              // Enriched but not approved - show waiting message
+              navigate(`/employee/${result.user.id}?status=waiting-approval`);
+            } else {
+              // Approved or enriched - show profile
+              navigate(`/employee/${result.user.id}`);
+            }
+          } else if (result.user.bothOAuthConnected) {
+            // Both OAuth connected but enrichment not complete yet - go to profile
+            // (Enrichment might be in progress or failed)
             navigate(`/employee/${result.user.id}`);
           } else if (result.user.isFirstLogin || result.user.profileStatus === 'basic') {
             // First login - redirect to enrichment page
             navigate(`/enrich`);
-          } else if (result.user.profileStatus === 'enriched' && !result.user.isProfileApproved) {
-            // Enriched but not approved - show waiting message
-            navigate(`/employee/${result.user.id}?status=waiting-approval`);
           } else {
-            // Approved or returning user - show profile
+            // Default: show profile
             navigate(`/employee/${result.user.id}`);
           }
         }
