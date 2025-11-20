@@ -75,13 +75,63 @@ class OAuthController {
       const result = await this.connectLinkedInUseCase.handleCallback(code, state);
       console.log('[OAuthController] LinkedIn connected successfully for employee:', result.employee.id);
 
+      // Get full employee data to build user object
+      const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+      const CompanyRepository = require('../infrastructure/CompanyRepository');
+      const employeeRepo = new EmployeeRepository();
+      const companyRepo = new CompanyRepository();
+      
+      const employeeId = result.employee.id;
+      const employee = await employeeRepo.findById(employeeId);
+      if (!employee) {
+        throw new Error('Employee not found after LinkedIn connection');
+      }
+
+      // Get company to check HR status
+      const company = await companyRepo.findById(employee.company_id);
+      const isHR = company && company.hr_contact_email && 
+                   company.hr_contact_email.toLowerCase() === employee.email.toLowerCase();
+
+      // Get employee roles
+      const rolesQuery = 'SELECT role_type FROM employee_roles WHERE employee_id = $1';
+      const rolesResult = await employeeRepo.pool.query(rolesQuery, [employeeId]);
+      const roles = rolesResult.rows.map(row => row.role_type);
+      const isTrainer = roles.includes('TRAINER');
+      const isDecisionMaker = roles.includes('DECISION_MAKER');
+
+      // Build user object (same format as AuthenticateUserUseCase)
+      const profileStatus = employee.profile_status || 'basic';
+      const isProfileApproved = profileStatus === 'approved';
+      const hasLinkedIn = !!employee.linkedin_data;
+      const hasGitHub = !!employee.github_data;
+      const bothConnected = hasLinkedIn && hasGitHub;
+
+      const userObject = {
+        id: employee.id,
+        email: employee.email,
+        employeeId: employee.employee_id,
+        companyId: employee.company_id,
+        fullName: employee.full_name,
+        profilePhotoUrl: employee.profile_photo_url || null,
+        isHR: isHR,
+        profileStatus: profileStatus,
+        isFirstLogin: false, // Not first login if OAuth is happening
+        isProfileApproved: isProfileApproved,
+        hasLinkedIn: hasLinkedIn,
+        hasGitHub: hasGitHub,
+        bothOAuthConnected: bothConnected,
+        isTrainer: isTrainer,
+        isDecisionMaker: isDecisionMaker
+      };
+
       // Generate dummy token for the employee (same format as login)
-      const employee = result.employee;
       const dummyToken = `dummy-token-${employee.id}-${employee.email}-${Date.now()}`;
       console.log('[OAuthController] Generated dummy token for employee:', employee.id);
 
+      // Encode user object as base64 JSON for URL
+      const userDataEncoded = Buffer.from(JSON.stringify(userObject)).toString('base64');
+
       // Check if both OAuth connections are complete
-      const employeeId = result.employee.id;
       const isReady = await this.enrichProfileUseCase.isReadyForEnrichment(employeeId);
       
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -93,18 +143,21 @@ class OAuthController {
           const enrichmentResult = await this.enrichProfileUseCase.enrichProfile(employeeId);
           console.log('[OAuthController] ✅ Profile enrichment completed:', enrichmentResult);
           
-          // After enrichment completes, redirect to enrich page with both connected status and token
-          // Frontend will show both checkmarks and then auto-redirect to profile
-          return res.redirect(`${frontendUrl}/enrich?linkedin=connected&github=connected&enriched=true&token=${encodeURIComponent(dummyToken)}`);
+          // Update user object after enrichment
+          userObject.profileStatus = 'enriched';
+          const updatedUserDataEncoded = Buffer.from(JSON.stringify(userObject)).toString('base64');
+          
+          // After enrichment completes, redirect to enrich page with both connected status, token, and user
+          return res.redirect(`${frontendUrl}/enrich?linkedin=connected&github=connected&enriched=true&token=${encodeURIComponent(dummyToken)}&user=${encodeURIComponent(updatedUserDataEncoded)}`);
         } catch (error) {
           console.error('[OAuthController] ❌ Enrichment failed:', error);
-          // Still redirect to enrich page, but with error and token
-          return res.redirect(`${frontendUrl}/enrich?linkedin=connected&github=connected&error=${encodeURIComponent(error.message)}&token=${encodeURIComponent(dummyToken)}`);
+          // Still redirect to enrich page, but with error, token, and user
+          return res.redirect(`${frontendUrl}/enrich?linkedin=connected&github=connected&error=${encodeURIComponent(error.message)}&token=${encodeURIComponent(dummyToken)}&user=${encodeURIComponent(userDataEncoded)}`);
         }
       } else {
-        // Only LinkedIn connected - go back to enrich page to connect GitHub with token
+        // Only LinkedIn connected - go back to enrich page to connect GitHub with token and user
         console.log('[OAuthController] LinkedIn connected, waiting for GitHub. Redirecting back to enrich page');
-        return res.redirect(`${frontendUrl}/enrich?linkedin=connected&token=${encodeURIComponent(dummyToken)}`);
+        return res.redirect(`${frontendUrl}/enrich?linkedin=connected&token=${encodeURIComponent(dummyToken)}&user=${encodeURIComponent(userDataEncoded)}`);
       }
     } catch (error) {
       console.error('[OAuthController] LinkedIn callback error:', error);
@@ -166,13 +219,63 @@ class OAuthController {
       const result = await this.connectGitHubUseCase.handleCallback(code, state);
       console.log('[OAuthController] GitHub connected successfully for employee:', result.employee.id);
 
+      // Get full employee data to build user object
+      const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+      const CompanyRepository = require('../infrastructure/CompanyRepository');
+      const employeeRepo = new EmployeeRepository();
+      const companyRepo = new CompanyRepository();
+      
+      const employeeId = result.employee.id;
+      const employee = await employeeRepo.findById(employeeId);
+      if (!employee) {
+        throw new Error('Employee not found after GitHub connection');
+      }
+
+      // Get company to check HR status
+      const company = await companyRepo.findById(employee.company_id);
+      const isHR = company && company.hr_contact_email && 
+                   company.hr_contact_email.toLowerCase() === employee.email.toLowerCase();
+
+      // Get employee roles
+      const rolesQuery = 'SELECT role_type FROM employee_roles WHERE employee_id = $1';
+      const rolesResult = await employeeRepo.pool.query(rolesQuery, [employeeId]);
+      const roles = rolesResult.rows.map(row => row.role_type);
+      const isTrainer = roles.includes('TRAINER');
+      const isDecisionMaker = roles.includes('DECISION_MAKER');
+
+      // Build user object (same format as AuthenticateUserUseCase)
+      const profileStatus = employee.profile_status || 'basic';
+      const isProfileApproved = profileStatus === 'approved';
+      const hasLinkedIn = !!employee.linkedin_data;
+      const hasGitHub = !!employee.github_data;
+      const bothConnected = hasLinkedIn && hasGitHub;
+
+      const userObject = {
+        id: employee.id,
+        email: employee.email,
+        employeeId: employee.employee_id,
+        companyId: employee.company_id,
+        fullName: employee.full_name,
+        profilePhotoUrl: employee.profile_photo_url || null,
+        isHR: isHR,
+        profileStatus: profileStatus,
+        isFirstLogin: false, // Not first login if OAuth is happening
+        isProfileApproved: isProfileApproved,
+        hasLinkedIn: hasLinkedIn,
+        hasGitHub: hasGitHub,
+        bothOAuthConnected: bothConnected,
+        isTrainer: isTrainer,
+        isDecisionMaker: isDecisionMaker
+      };
+
       // Generate dummy token for the employee (same format as login)
-      const employee = result.employee;
       const dummyToken = `dummy-token-${employee.id}-${employee.email}-${Date.now()}`;
       console.log('[OAuthController] Generated dummy token for employee:', employee.id);
 
+      // Encode user object as base64 JSON for URL
+      const userDataEncoded = Buffer.from(JSON.stringify(userObject)).toString('base64');
+
       // Check if both OAuth connections are complete
-      const employeeId = result.employee.id;
       const isReady = await this.enrichProfileUseCase.isReadyForEnrichment(employeeId);
       
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -184,18 +287,21 @@ class OAuthController {
           const enrichmentResult = await this.enrichProfileUseCase.enrichProfile(employeeId);
           console.log('[OAuthController] ✅ Profile enrichment completed:', enrichmentResult);
           
-          // After enrichment completes, redirect to enrich page with both connected status and token
-          // Frontend will show both checkmarks and then auto-redirect to profile
-          return res.redirect(`${frontendUrl}/enrich?linkedin=connected&github=connected&enriched=true&token=${encodeURIComponent(dummyToken)}`);
+          // Update user object after enrichment
+          userObject.profileStatus = 'enriched';
+          const updatedUserDataEncoded = Buffer.from(JSON.stringify(userObject)).toString('base64');
+          
+          // After enrichment completes, redirect to enrich page with both connected status, token, and user
+          return res.redirect(`${frontendUrl}/enrich?linkedin=connected&github=connected&enriched=true&token=${encodeURIComponent(dummyToken)}&user=${encodeURIComponent(updatedUserDataEncoded)}`);
         } catch (error) {
           console.error('[OAuthController] ❌ Enrichment failed:', error);
-          // Still redirect to enrich page, but with error and token
-          return res.redirect(`${frontendUrl}/enrich?linkedin=connected&github=connected&error=${encodeURIComponent(error.message)}&token=${encodeURIComponent(dummyToken)}`);
+          // Still redirect to enrich page, but with error, token, and user
+          return res.redirect(`${frontendUrl}/enrich?linkedin=connected&github=connected&error=${encodeURIComponent(error.message)}&token=${encodeURIComponent(dummyToken)}&user=${encodeURIComponent(userDataEncoded)}`);
         }
       } else {
-        // Only GitHub connected - go back to enrich page to connect LinkedIn with token
+        // Only GitHub connected - go back to enrich page to connect LinkedIn with token and user
         console.log('[OAuthController] GitHub connected, waiting for LinkedIn. Redirecting back to enrich page');
-        return res.redirect(`${frontendUrl}/enrich?github=connected&token=${encodeURIComponent(dummyToken)}`);
+        return res.redirect(`${frontendUrl}/enrich?github=connected&token=${encodeURIComponent(dummyToken)}&user=${encodeURIComponent(userDataEncoded)}`);
       }
     } catch (error) {
       console.error('[OAuthController] GitHub callback error:', error);

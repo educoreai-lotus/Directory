@@ -42,16 +42,34 @@ function EnrichProfilePage() {
     const errorParam = searchParams.get('error');
     const tokenParam = searchParams.get('token');
 
-    // CRITICAL: Extract and store token from OAuth callback if present
-    if (tokenParam) {
-      console.log('[EnrichProfilePage] Token received from OAuth callback, storing in localStorage');
-      localStorage.setItem('auth_token', tokenParam);
+    // CRITICAL: Extract and store token + user from OAuth callback if present
+    const userParam = searchParams.get('user');
+    if (tokenParam && userParam) {
+      console.log('[EnrichProfilePage] Token and user received from OAuth callback, storing in localStorage');
       
-      // If we have a stored user, keep it. Otherwise, we'll need to fetch user data
-      const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
-      if (!storedUser) {
-        console.warn('[EnrichProfilePage] Token received but no user in localStorage - will need to fetch user data');
+      // Decode user data from base64
+      try {
+        const userDataJson = atob(userParam);
+        const userData = JSON.parse(userDataJson);
+        
+        // Store both token and user in localStorage
+        localStorage.setItem('auth_token', tokenParam);
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        console.log('[EnrichProfilePage] Token and user stored successfully:', {
+          token: tokenParam.substring(0, 30) + '...',
+          userId: userData.id,
+          email: userData.email
+        });
+      } catch (error) {
+        console.error('[EnrichProfilePage] Failed to decode user data from OAuth callback:', error);
+        // Still store token even if user decode fails
+        localStorage.setItem('auth_token', tokenParam);
       }
+    } else if (tokenParam) {
+      // Only token, no user - store token but warn
+      console.warn('[EnrichProfilePage] Token received but no user data in OAuth callback');
+      localStorage.setItem('auth_token', tokenParam);
     }
 
     if (errorParam) {
@@ -60,20 +78,57 @@ function EnrichProfilePage() {
       return;
     }
 
-    // If OAuth callback detected, refresh user data to get updated connection status
+    // If OAuth callback detected, use stored user data (don't call /auth/me)
     if (linkedinParam === 'connected' || githubParam === 'connected') {
       setRefreshing(true);
       
-      // First, ensure we have a user from localStorage (preserve during OAuth)
+      // Get user from localStorage (should be stored from OAuth callback)
       const token = localStorage.getItem('auth_token');
       const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
       
       if (token && storedUser) {
-        // Immediately restore user from localStorage to prevent redirect to login
-        console.log('[EnrichProfilePage] OAuth callback detected, restoring user from localStorage first');
-        // Don't set user here - let refreshUser handle it, but ensure token is preserved
+        // Use stored user directly - don't call /auth/me during OAuth callback
+        console.log('[EnrichProfilePage] OAuth callback detected, using stored user from localStorage (skipping /auth/me)');
+        
+        // Update connection status from stored user
+        const newLinkedinStatus = storedUser.hasLinkedIn || false;
+        const newGithubStatus = storedUser.hasGitHub || false;
+        
+        setLinkedinConnected(newLinkedinStatus);
+        setGithubConnected(newGithubStatus);
+        
+        // Show success message based on what was just connected
+        const enrichedParam = searchParams.get('enriched');
+        if (linkedinParam === 'connected' && !newGithubStatus) {
+          setSuccessMessage('✓ LinkedIn connected successfully! Please connect GitHub to continue.');
+        } else if (githubParam === 'connected' && !newLinkedinStatus) {
+          setSuccessMessage('✓ GitHub connected successfully! Please connect LinkedIn to continue.');
+        } else if (newLinkedinStatus && newGithubStatus) {
+          if (enrichedParam === 'true') {
+            setSuccessMessage('✓ Both LinkedIn and GitHub connected! Profile enriched successfully. Redirecting...');
+          } else {
+            setSuccessMessage('✓ Both LinkedIn and GitHub connected! Enriching your profile...');
+          }
+        }
+        
+        // Clear success message after 5 seconds (unless both are connected, then redirect will happen)
+        if (!(newLinkedinStatus && newGithubStatus)) {
+          setTimeout(() => {
+            setSuccessMessage(null);
+          }, 5000);
+        }
+        
+        setRefreshing(false);
+        // Clear URL params after processing (but keep token and user in localStorage)
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('token'); // Remove token from URL for security
+        newUrl.searchParams.delete('user'); // Remove user from URL for security
+        window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+        return; // Don't call refreshUser - we already have the user
       }
       
+      // Fallback: if no stored user, try refreshUser (but this shouldn't happen)
+      console.warn('[EnrichProfilePage] OAuth callback but no stored user, attempting refreshUser as fallback');
       refreshUser()
         .then((refreshedUser) => {
           // If refreshUser returns null but we have stored user, use stored user
