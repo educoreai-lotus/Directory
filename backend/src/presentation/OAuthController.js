@@ -62,9 +62,19 @@ class OAuthController {
       // Check for OAuth errors
       if (error) {
         console.error('[OAuthController] LinkedIn OAuth error:', error);
-        // Redirect to frontend with error
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-        return res.redirect(`${frontendUrl}/enrich?error=${encodeURIComponent(error)}`);
+        
+        // Handle specific error types with better messages
+        let errorMessage = error;
+        if (error === 'unauthorized_scope_error') {
+          errorMessage = 'LinkedIn app does not have required permissions. Please check LinkedIn Developer Portal settings. See docs/LINKEDIN-SCOPES-SETUP.md for instructions.';
+          console.error('[OAuthController] ⚠️  Unauthorized scope error - LinkedIn app may need product approvals or scope configuration');
+        } else if (error === 'access_denied') {
+          errorMessage = 'LinkedIn connection was cancelled or denied. Please try again.';
+        }
+        
+        // Redirect to frontend with error
+        return res.redirect(`${frontendUrl}/enrich?error=${encodeURIComponent(errorMessage)}`);
       }
 
       if (!code || !state) {

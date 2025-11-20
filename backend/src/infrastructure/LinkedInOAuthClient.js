@@ -19,25 +19,30 @@ class LinkedInOAuthClient {
     this.tokenUrl = 'https://www.linkedin.com/oauth/v2/accessToken';
     
     // Required scopes for profile enrichment
-    // Option 1: Legacy scopes (r_liteprofile + r_emailaddress) - recommended for development
-    // Option 2: OpenID Connect scopes (openid, profile, email) - requires app approval
+    // Option 1: Legacy scopes (r_liteprofile + r_emailaddress) - may fail if products not approved
+    // Option 2: OpenID Connect scopes (openid, profile, email) - recommended, more reliable
     // Check environment variable to determine which scopes to use
-    // Default to legacy scopes if not specified (more reliable for development)
-    const useLegacyScopes = process.env.LINKEDIN_USE_LEGACY_SCOPES !== 'false'; // Default to true
+    // Default to OpenID Connect (more reliable, less likely to have scope errors)
+    const useLegacyScopes = process.env.LINKEDIN_USE_LEGACY_SCOPES === 'true';
     
     if (useLegacyScopes) {
       // Legacy scopes (r_liteprofile + r_emailaddress)
       // r_liteprofile: Basic profile info (deprecated but still works)
       // r_emailaddress: Email address (requires "Email Address" product approval in LinkedIn Developer Portal)
+      // ⚠️ WARNING: These scopes may fail with unauthorized_scope_error if products are not approved
       this.scopes = ['r_liteprofile', 'r_emailaddress'];
       this.useLegacyScopes = true;
       console.log('[LinkedInOAuthClient] ✅ Using legacy scopes: r_liteprofile, r_emailaddress');
-      console.log('[LinkedInOAuthClient] ⚠️  Note: r_emailaddress requires "Email Address" product approval in LinkedIn Developer Portal');
+      console.log('[LinkedInOAuthClient] ⚠️  WARNING: r_emailaddress requires "Email Address" product approval in LinkedIn Developer Portal');
+      console.log('[LinkedInOAuthClient] ⚠️  If you see unauthorized_scope_error, check Products tab in LinkedIn Developer Portal');
+      console.log('[LinkedInOAuthClient] ⚠️  See docs/LINKEDIN-DEVELOPER-PORTAL-CHECKLIST.md for setup instructions');
     } else {
-      // OpenID Connect scopes (recommended for production, but may require app approval)
+      // OpenID Connect scopes (recommended - more reliable, less likely to have scope errors)
+      // These scopes work with "Sign In with LinkedIn using OpenID Connect" product
       this.scopes = ['openid', 'profile', 'email'];
       this.useLegacyScopes = false;
       console.log('[LinkedInOAuthClient] ✅ Using OpenID Connect scopes: openid, profile, email');
+      console.log('[LinkedInOAuthClient] ℹ️  These scopes require "Sign In with LinkedIn using OpenID Connect" product');
     }
     
     if (!this.clientId || !this.clientSecret) {

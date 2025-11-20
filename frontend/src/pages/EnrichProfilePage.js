@@ -73,7 +73,15 @@ function EnrichProfilePage() {
     }
 
     if (errorParam) {
-      setError(decodeURIComponent(errorParam));
+      const decodedError = decodeURIComponent(errorParam);
+      
+      // Handle specific LinkedIn OAuth errors with helpful messages
+      if (decodedError.includes('unauthorized_scope_error') || decodedError.includes('LinkedIn app does not have required permissions')) {
+        setError('LinkedIn connection failed: The LinkedIn app does not have the required permissions. Please check the LinkedIn Developer Portal settings. See the documentation for setup instructions.');
+      } else {
+        setError(decodedError);
+      }
+      
       setSuccessMessage(null);
       return;
     }
