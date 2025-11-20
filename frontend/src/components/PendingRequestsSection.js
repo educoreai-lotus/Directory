@@ -145,67 +145,68 @@ function PendingRequestsSection({ companyId, onRequestsLoaded }) {
             const priority = request.priority || 'medium';
             
             return (
-            <div
-              key={request.id}
-              className="p-4 rounded-lg border"
-              style={{ background: 'var(--bg-card)', borderColor: 'var(--border-default)' }}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span
-                      className="px-2 py-1 text-xs rounded"
-                      style={{
-                        background: 'var(--bg-primary)',
-                        color: 'var(--text-primary)',
-                        border: '1px solid var(--border-default)'
-                      }}
-                    >
-                      {getRequestTypeLabel(request.request_type || request.type)}
-                    </span>
-                    <span className={`px-2 py-1 text-xs rounded ${getPriorityColor(request.priority || 'medium')}`}>
-                      {request.priority || 'medium'}
-                    </span>
-                  </div>
-                  <p className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-                    {request.employee_name || request.employee?.name} ({request.employee_email || request.employee?.email})
-                  </p>
-                  <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
-                    {request.title || request.request}
-                  </p>
-                  {request.description && (
-                    <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
-                      {request.description}
+              <div
+                key={requestId}
+                className="p-4 rounded-lg border"
+                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-default)' }}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className="px-2 py-1 text-xs rounded"
+                        style={{
+                          background: 'var(--bg-primary)',
+                          color: 'var(--text-primary)',
+                          border: '1px solid var(--border-default)'
+                        }}
+                      >
+                        {getRequestTypeLabel(requestType)}
+                      </span>
+                      <span className={`px-2 py-1 text-xs rounded ${getPriorityColor(priority)}`}>
+                        {priority}
+                      </span>
+                    </div>
+                    <p className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                      {employeeName} ({employeeEmail})
                     </p>
-                  )}
-                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                    Submitted: {request.requested_at ? new Date(request.requested_at).toLocaleDateString() : request.submittedAt}
-                  </p>
+                    <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                      {requestTitle}
+                    </p>
+                    {requestDescription && (
+                      <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                        {requestDescription}
+                      </p>
+                    )}
+                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                      Submitted: {submittedAt}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => handleApprove(requestId)}
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleReject(requestId)}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    onClick={() => window.location.href = `/employee/${employeeId}`}
+                    className="px-4 py-2 border rounded hover:bg-opacity-50 transition-colors text-sm"
+                    style={{ borderColor: 'var(--border-default)', color: 'var(--text-primary)' }}
+                  >
+                    View Employee
+                  </button>
                 </div>
               </div>
-              <div className="flex gap-2 mt-3">
-                <button
-                  onClick={() => handleApprove(request.id)}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
-                >
-                  Approve
-                </button>
-                <button
-                  onClick={() => handleReject(request.id)}
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
-                >
-                  Reject
-                </button>
-                <button
-                  onClick={() => window.location.href = `/employee/${request.employee_id || request.employee?.id}`}
-                  className="px-4 py-2 border rounded hover:bg-opacity-50 transition-colors text-sm"
-                  style={{ borderColor: 'var(--border-default)', color: 'var(--text-primary)' }}
-                >
-                  View Employee
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
