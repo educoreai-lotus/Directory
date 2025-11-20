@@ -353,13 +353,19 @@ class OAuthController {
       const userDataEncoded = Buffer.from(JSON.stringify(userObject)).toString('base64');
 
       // Check if both OAuth connections are complete
+      console.log('[OAuthController] Checking if ready for enrichment (GitHub callback)...');
+      console.log('[OAuthController] Employee ID:', employeeId);
+      console.log('[OAuthController] Has LinkedIn:', hasLinkedIn);
+      console.log('[OAuthController] Has GitHub:', hasGitHub);
+      
       const isReady = await this.enrichProfileUseCase.isReadyForEnrichment(employeeId);
+      console.log('[OAuthController] isReadyForEnrichment result:', isReady);
       
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
       
       if (isReady) {
         // Both connected - trigger enrichment synchronously (wait for it to complete)
-        console.log('[OAuthController] Both OAuth connections complete, triggering enrichment...');
+        console.log('[OAuthController] ✅ Both OAuth connections complete, triggering enrichment...');
         try {
           const enrichmentResult = await this.enrichProfileUseCase.enrichProfile(employeeId);
           console.log('[OAuthController] ✅ Profile enrichment completed:', enrichmentResult);
