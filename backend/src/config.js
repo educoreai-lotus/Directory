@@ -138,7 +138,12 @@ const config = {
     redirectUri: process.env.GITHUB_REDIRECT_URI || `${process.env.DIRECTORY_URL || 'https://directory3-production.up.railway.app'}/api/v1/oauth/github/callback`
   },
   
-  // Gemini AI Configuration
+  // OpenAI AI Configuration
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY
+  },
+  
+  // Gemini AI Configuration (deprecated - kept for backward compatibility)
   gemini: {
     apiKey: process.env.GEMINI_API_KEY
   }

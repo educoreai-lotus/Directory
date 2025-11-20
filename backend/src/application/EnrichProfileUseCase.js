@@ -2,16 +2,14 @@
 // Orchestrates profile enrichment after both LinkedIn and GitHub OAuth connections
 
 const EmployeeRepository = require('../infrastructure/EmployeeRepository');
-const GeminiAPIClient = require('../infrastructure/GeminiAPIClient');
-const MockDataService = require('../infrastructure/MockDataService');
+const OpenAIAPIClient = require('../infrastructure/OpenAIAPIClient');
 const EmployeeProfileApprovalRepository = require('../infrastructure/EmployeeProfileApprovalRepository');
 const MicroserviceClient = require('../infrastructure/MicroserviceClient');
 
 class EnrichProfileUseCase {
   constructor() {
     this.employeeRepository = new EmployeeRepository();
-    this.geminiClient = new GeminiAPIClient();
-    this.mockDataService = new MockDataService();
+    this.openAIClient = new OpenAIAPIClient();
     this.approvalRepository = new EmployeeProfileApprovalRepository();
     this.microserviceClient = new MicroserviceClient();
   }
@@ -69,71 +67,102 @@ class EnrichProfileUseCase {
         target_role_in_company: employee.target_role_in_company
       };
 
-      // Generate bio using Gemini AI (with fallback to mock data)
+      // Generate bio using OpenAI AI (NO FALLBACK - must succeed)
+      console.log('[EnrichProfileUseCase] ========== GENERATING BIO ==========');
+      console.log('[EnrichProfileUseCase] Calling OpenAI API to generate bio...');
+      console.log('[EnrichProfileUseCase] Employee:', employeeBasicInfo.full_name);
+      console.log('[EnrichProfileUseCase] LinkedIn data present:', !!linkedinData);
+      console.log('[EnrichProfileUseCase] GitHub data present:', !!githubData);
+      if (linkedinData) {
+        console.log('[EnrichProfileUseCase] LinkedIn data keys:', Object.keys(linkedinData).join(', '));
+      }
+      if (githubData) {
+        console.log('[EnrichProfileUseCase] GitHub data keys:', Object.keys(githubData).join(', '));
+        console.log('[EnrichProfileUseCase] GitHub repositories count:', githubData.repositories?.length || 0);
+      }
+      
       let bio;
-      let bioFromGemini = false; // Track if bio came from Gemini or mock
       try {
-        console.log('[EnrichProfileUseCase] Calling Gemini API to generate bio...');
-        console.log('[EnrichProfileUseCase] Employee:', employeeBasicInfo.full_name);
-        console.log('[EnrichProfileUseCase] LinkedIn data present:', !!linkedinData);
-        console.log('[EnrichProfileUseCase] GitHub data present:', !!githubData);
-        bio = await this.geminiClient.generateBio(linkedinData, githubData, employeeBasicInfo);
-        bioFromGemini = true;
-        console.log('[EnrichProfileUseCase] ✅ Bio generated successfully by Gemini:', bio.substring(0, 100) + '...');
+        bio = await this.openAIClient.generateBio(linkedinData, githubData, employeeBasicInfo);
+        console.log('[EnrichProfileUseCase] ✅ Bio generated successfully by OpenAI');
+        console.log('[EnrichProfileUseCase] Bio length:', bio.length, 'characters');
+        console.log('[EnrichProfileUseCase] Bio preview:', bio.substring(0, 200));
       } catch (error) {
-        console.error('[EnrichProfileUseCase] ❌ Gemini API failed:', error.message);
-        console.error('[EnrichProfileUseCase] Error details:', error.response?.data || error.stack);
-        console.warn('[EnrichProfileUseCase] ⚠️  Using mock bio as fallback');
-        bio = this.mockDataService.getMockBio(employeeBasicInfo);
-        bioFromGemini = false;
-        console.warn('[EnrichProfileUseCase] ⚠️  MOCK BIO USED - This is generic and not personalized!');
+        console.error('[EnrichProfileUseCase] ❌❌❌ OPENAI ENRICHMENT FAILED - BIO GENERATION ❌❌❌');
+        console.error('[EnrichProfileUseCase] Error message:', error.message);
+        console.error('[EnrichProfileUseCase] Error stack:', error.stack);
+        if (error.response) {
+          console.error('[EnrichProfileUseCase] Error response status:', error.response.status);
+          console.error('[EnrichProfileUseCase] Error response data:', JSON.stringify(error.response.data, null, 2));
+        }
+        throw new Error('OpenAI enrichment failed: Bio generation failed. ' + error.message);
       }
 
-      // Generate project summaries using Gemini AI (with fallback to mock data)
+      // Generate project summaries using OpenAI AI (NO FALLBACK - must succeed if repos exist)
       let projectSummaries = [];
-      let summariesFromGemini = false; // Track if summaries came from Gemini or mock
       const repositories = githubData.repositories || [];
       
       if (repositories.length > 0) {
+        console.log('[EnrichProfileUseCase] ========== GENERATING PROJECT SUMMARIES ==========');
+        console.log('[EnrichProfileUseCase] Calling OpenAI API to generate project summaries...');
+        console.log('[EnrichProfileUseCase] Number of repositories:', repositories.length);
         try {
-          console.log('[EnrichProfileUseCase] Calling Gemini API to generate project summaries...');
-          console.log('[EnrichProfileUseCase] Number of repositories:', repositories.length);
-          projectSummaries = await this.geminiClient.generateProjectSummaries(repositories);
-          summariesFromGemini = true;
-          console.log(`[EnrichProfileUseCase] ✅ Generated ${projectSummaries.length} project summaries by Gemini`);
+          projectSummaries = await this.openAIClient.generateProjectSummaries(repositories);
+          console.log(`[EnrichProfileUseCase] ✅ Generated ${projectSummaries.length} project summaries by OpenAI`);
           if (projectSummaries.length > 0) {
-            console.log('[EnrichProfileUseCase] Sample summary:', projectSummaries[0].summary?.substring(0, 100) + '...');
+            console.log('[EnrichProfileUseCase] Sample summary:', projectSummaries[0].summary?.substring(0, 200));
           }
         } catch (error) {
-          console.error('[EnrichProfileUseCase] ❌ Gemini API failed for project summaries:', error.message);
-          console.error('[EnrichProfileUseCase] Error details:', error.response?.data || error.stack);
-          console.warn('[EnrichProfileUseCase] ⚠️  Using mock project summaries as fallback');
-          projectSummaries = this.mockDataService.getMockProjectSummaries(repositories);
-          summariesFromGemini = false;
-          console.warn('[EnrichProfileUseCase] ⚠️  MOCK SUMMARIES USED - These are generic and not personalized!');
+          console.error('[EnrichProfileUseCase] ❌❌❌ OPENAI ENRICHMENT FAILED - PROJECT SUMMARIES GENERATION ❌❌❌');
+          console.error('[EnrichProfileUseCase] Error message:', error.message);
+          console.error('[EnrichProfileUseCase] Error stack:', error.stack);
+          if (error.response) {
+            console.error('[EnrichProfileUseCase] Error response status:', error.response.status);
+            console.error('[EnrichProfileUseCase] Error response data:', JSON.stringify(error.response.data, null, 2));
+          }
+          throw new Error('OpenAI enrichment failed: Project summaries generation failed. ' + error.message);
         }
       } else {
         console.log('[EnrichProfileUseCase] No repositories found in GitHub data, skipping project summaries');
       }
 
-      // Only mark as completed if Gemini succeeded for both bio and summaries
-      const geminiSucceeded = bioFromGemini && (repositories.length === 0 || summariesFromGemini);
+      // Generate value proposition using OpenAI AI (NO FALLBACK - must succeed)
+      console.log('[EnrichProfileUseCase] ========== GENERATING VALUE PROPOSITION ==========');
+      console.log('[EnrichProfileUseCase] Calling OpenAI API to generate value proposition...');
+      console.log('[EnrichProfileUseCase] Current role:', employeeBasicInfo.current_role_in_company);
+      console.log('[EnrichProfileUseCase] Target role:', employeeBasicInfo.target_role_in_company);
       
-      if (!geminiSucceeded) {
-        console.warn('[EnrichProfileUseCase] ⚠️  WARNING: Enrichment used mock data. Will NOT mark as completed.');
-        console.warn('[EnrichProfileUseCase] ⚠️  This allows re-enrichment when Gemini API is fixed.');
-        console.warn('[EnrichProfileUseCase] ⚠️  Bio from Gemini:', bioFromGemini, 'Summaries from Gemini:', summariesFromGemini);
-      } else {
-        console.log('[EnrichProfileUseCase] ✅ All enrichment from Gemini - will mark as completed');
+      let valueProposition;
+      try {
+        valueProposition = await this.openAIClient.generateValueProposition(employeeBasicInfo);
+        console.log('[EnrichProfileUseCase] ✅ Value proposition generated successfully by OpenAI');
+        console.log('[EnrichProfileUseCase] Value proposition length:', valueProposition.length, 'characters');
+        console.log('[EnrichProfileUseCase] Value proposition preview:', valueProposition);
+      } catch (error) {
+        console.error('[EnrichProfileUseCase] ❌❌❌ OPENAI ENRICHMENT FAILED - VALUE PROPOSITION GENERATION ❌❌❌');
+        console.error('[EnrichProfileUseCase] Error message:', error.message);
+        console.error('[EnrichProfileUseCase] Error stack:', error.stack);
+        if (error.response) {
+          console.error('[EnrichProfileUseCase] Error response status:', error.response.status);
+          console.error('[EnrichProfileUseCase] Error response data:', JSON.stringify(error.response.data, null, 2));
+        }
+        throw new Error('OpenAI enrichment failed: Value proposition generation failed. ' + error.message);
       }
 
+      // All OpenAI calls succeeded - mark enrichment as completed
+      console.log('[EnrichProfileUseCase] ✅✅✅ ALL OPENAI ENRICHMENT SUCCEEDED ✅✅✅');
+      console.log('[EnrichProfileUseCase] Bio generated: YES');
+      console.log('[EnrichProfileUseCase] Project summaries generated:', projectSummaries.length);
+      console.log('[EnrichProfileUseCase] Value proposition generated: YES');
+
       // Update employee profile with enriched data
-      // Only set enrichment_completed = TRUE if Gemini succeeded
+      // Set enrichment_completed = TRUE since all OpenAI calls succeeded
       const updatedEmployee = await this.employeeRepository.updateEnrichment(
         employeeId,
         bio,
         projectSummaries,
-        geminiSucceeded // Pass flag to control enrichment_completed
+        valueProposition,
+        true // All Gemini calls succeeded
       );
 
       // Send skills data to Skills Engine for normalization (after enrichment)
