@@ -17,19 +17,19 @@ export const getLinkedInAuthUrl = async () => {
     
     console.log('[oauthService] LinkedIn response:', JSON.stringify(response.data, null, 2));
     
-    if (response.data && response.data.response) {
-      const result = response.data.response;
-      console.log('[oauthService] LinkedIn result:', result);
-      console.log('[oauthService] LinkedIn authorizationUrl:', result.authorizationUrl);
-      
-      if (!result.authorizationUrl) {
-        throw new Error('Authorization URL not found in response');
-      }
-      
-      return result;
+    // Backend returns {authorizationUrl, state} directly, not nested in response
+    if (response.data && response.data.authorizationUrl) {
+      console.log('[oauthService] LinkedIn authorizationUrl:', response.data.authorizationUrl);
+      return response.data;
     }
     
-    throw new Error('Unexpected response format');
+    // Fallback: check if nested in response (for backwards compatibility)
+    if (response.data && response.data.response && response.data.response.authorizationUrl) {
+      console.log('[oauthService] LinkedIn authorizationUrl (nested):', response.data.response.authorizationUrl);
+      return response.data.response;
+    }
+    
+    throw new Error('Authorization URL not found in response');
   } catch (error) {
     console.error('[oauthService] Get LinkedIn auth URL error:', error);
     console.error('[oauthService] Error response:', error.response?.data);
@@ -51,19 +51,19 @@ export const getGitHubAuthUrl = async () => {
     
     console.log('[oauthService] GitHub response:', JSON.stringify(response.data, null, 2));
     
-    if (response.data && response.data.response) {
-      const result = response.data.response;
-      console.log('[oauthService] GitHub result:', result);
-      console.log('[oauthService] GitHub authorizationUrl:', result.authorizationUrl);
-      
-      if (!result.authorizationUrl) {
-        throw new Error('Authorization URL not found in response');
-      }
-      
-      return result;
+    // Backend returns {authorizationUrl, state} directly, not nested in response
+    if (response.data && response.data.authorizationUrl) {
+      console.log('[oauthService] GitHub authorizationUrl:', response.data.authorizationUrl);
+      return response.data;
     }
     
-    throw new Error('Unexpected response format');
+    // Fallback: check if nested in response (for backwards compatibility)
+    if (response.data && response.data.response && response.data.response.authorizationUrl) {
+      console.log('[oauthService] GitHub authorizationUrl (nested):', response.data.response.authorizationUrl);
+      return response.data.response;
+    }
+    
+    throw new Error('Authorization URL not found in response');
   } catch (error) {
     console.error('[oauthService] Get GitHub auth URL error:', error);
     console.error('[oauthService] Error response:', error.response?.data);
