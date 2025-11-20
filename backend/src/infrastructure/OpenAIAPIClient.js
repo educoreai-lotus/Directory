@@ -420,11 +420,11 @@ class OpenAIAPIClient {
     }
     
     prompt += `- Write in third person using "${pronoun}" and "${possessive}" as the pronoun (e.g., "${name} is a...", "${pronoun.charAt(0).toUpperCase() + pronoun.slice(1)} has...", "${pronoun.charAt(0).toUpperCase() + pronoun.slice(1)} specializes in...")\n`;
-    prompt += `- Length: 3-5 sentences, maximum 250 words\n`;
+    prompt += `- Length: 2-3 sentences, maximum 150 words (keep it concise and general)\n`;
     prompt += `- Tone: Professional, confident, and engaging\n`;
-    prompt += `- Content: Synthesize information from LinkedIn (professional experience, positions, summary) and GitHub (repositories, languages, contributions) to create a unique, personalized bio\n`;
-    prompt += `- Style: Use active voice, specific achievements, technologies mentioned in repositories, and career progression\n`;
-    prompt += `- Personalization: Make it unique to this person - reference specific technologies, projects, or experiences from their LinkedIn and GitHub data\n`;
+    prompt += `- Content: Provide a general overview synthesizing information from LinkedIn (basic profile info, headline) and GitHub (repositories, languages, contributions) to create a unique, personalized bio\n`;
+    prompt += `- Style: Use active voice, keep it general and concise - avoid excessive detail\n`;
+    prompt += `- Personalization: Make it unique to this person - reference key technologies or general expertise from their GitHub data, but keep it brief\n`;
     prompt += `- Restrictions: Do NOT include personal contact information, email addresses, URLs, or social media handles\n`;
     prompt += `- Format: Return ONLY the bio text, no markdown, no code blocks, no explanations, no additional formatting\n\n`;
     
