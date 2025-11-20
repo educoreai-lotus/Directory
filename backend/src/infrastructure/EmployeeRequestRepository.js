@@ -119,8 +119,19 @@ class EmployeeRequestRepository {
 
     query += ' ORDER BY er.requested_at DESC';
 
-    const result = await this.pool.query(query, values);
-    return result.rows;
+    try {
+      const result = await this.pool.query(query, values);
+      console.log(`[EmployeeRequestRepository] ✅ Found ${result.rows.length} requests for company ${companyId} with status ${status || 'all'}`);
+      return result.rows;
+    } catch (error) {
+      if (error.code === '42P01') {
+        // Table doesn't exist
+        console.error('[EmployeeRequestRepository] ❌ Table employee_requests does not exist. Please run the migration script.');
+        throw new Error('Database table employee_requests does not exist. Please contact your administrator to run the database migration.');
+      }
+      console.error('[EmployeeRequestRepository] Error fetching company requests:', error);
+      throw error;
+    }
   }
 
   /**

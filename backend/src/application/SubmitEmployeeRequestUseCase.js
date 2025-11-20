@@ -63,8 +63,21 @@ class SubmitEmployeeRequestUseCase {
       console.log('[SubmitEmployeeRequestUseCase] ✅ Request created:', {
         id: request.id,
         employee_id: request.employee_id,
+        company_id: request.company_id,
         request_type: request.request_type,
-        status: request.status
+        status: request.status,
+        title: request.title
+      });
+      
+      // Verify the request was created correctly
+      const verifyRequest = await this.requestRepository.findById(request.id);
+      if (!verifyRequest) {
+        throw new Error('Request was created but could not be retrieved');
+      }
+      console.log('[SubmitEmployeeRequestUseCase] ✅ Request verified in database:', {
+        id: verifyRequest.id,
+        company_id: verifyRequest.company_id,
+        status: verifyRequest.status
       });
 
       return {

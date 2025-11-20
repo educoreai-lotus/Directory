@@ -99,7 +99,11 @@ class RequestController {
       const { id: companyId } = req.params;
       const { status } = req.query;
 
+      console.log(`[RequestController] Fetching company requests for company ${companyId} with status: ${status || 'all'}`);
+
       const requests = await this.requestRepository.findByCompanyId(companyId, status || null);
+
+      console.log(`[RequestController] ✅ Found ${requests.length} requests for company ${companyId}`);
 
       res.status(200).json({
         success: true,
@@ -107,8 +111,9 @@ class RequestController {
       });
     } catch (error) {
       console.error('[RequestController] Error fetching company requests:', error);
+      const userFriendlyMessage = ErrorTranslator.translateError(error);
       res.status(500).json({
-        error: 'An error occurred while fetching requests'
+        error: userFriendlyMessage || 'An error occurred while fetching requests'
       });
     }
   }

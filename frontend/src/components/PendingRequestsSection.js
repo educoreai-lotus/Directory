@@ -16,8 +16,11 @@ function PendingRequestsSection({ companyId }) {
       try {
         setLoading(true);
         setError(null);
+        console.log('[PendingRequestsSection] Fetching pending requests for company:', companyId);
         const response = await getCompanyRequests(companyId, 'pending');
+        console.log('[PendingRequestsSection] Response:', response);
         const requestsData = response?.requests || response?.data?.requests || response?.response?.requests || [];
+        console.log('[PendingRequestsSection] Parsed requests:', requestsData.length, requestsData);
         setRequests(requestsData);
       } catch (err) {
         console.error('[PendingRequestsSection] Error fetching requests:', err);
@@ -29,6 +32,11 @@ function PendingRequestsSection({ companyId }) {
     };
 
     fetchRequests();
+    
+    // Refresh every 5 seconds to catch new requests
+    const interval = setInterval(fetchRequests, 5000);
+    
+    return () => clearInterval(interval);
   }, [companyId]);
 
   const handleApprove = (requestId) => {
