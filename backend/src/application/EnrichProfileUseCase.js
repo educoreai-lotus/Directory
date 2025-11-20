@@ -24,21 +24,34 @@ class EnrichProfileUseCase {
    */
   async enrichProfile(employeeId) {
     try {
+      console.log('[EnrichProfileUseCase] ========== STARTING ENRICHMENT ==========');
+      console.log('[EnrichProfileUseCase] Employee ID:', employeeId);
+      
       // Get employee data
       const employee = await this.employeeRepository.findById(employeeId);
       if (!employee) {
+        console.error('[EnrichProfileUseCase] ❌ Employee not found:', employeeId);
         throw new Error('Employee not found');
       }
 
+      console.log('[EnrichProfileUseCase] Employee found:', employee.email);
+      console.log('[EnrichProfileUseCase] enrichment_completed:', employee.enrichment_completed);
+      console.log('[EnrichProfileUseCase] linkedin_data exists:', !!employee.linkedin_data);
+      console.log('[EnrichProfileUseCase] github_data exists:', !!employee.github_data);
+
       // Check if already enriched (one-time only)
       if (employee.enrichment_completed) {
+        console.warn('[EnrichProfileUseCase] ⚠️  Profile already enriched - skipping');
         throw new Error('Profile has already been enriched. This is a one-time process.');
       }
 
       // Check if both LinkedIn and GitHub are connected
       if (!employee.linkedin_data || !employee.github_data) {
+        console.error('[EnrichProfileUseCase] ❌ Missing OAuth data - LinkedIn:', !!employee.linkedin_data, 'GitHub:', !!employee.github_data);
         throw new Error('Both LinkedIn and GitHub must be connected before enrichment');
       }
+      
+      console.log('[EnrichProfileUseCase] ✅ All checks passed, proceeding with enrichment...');
 
       // Parse stored data
       const linkedinData = typeof employee.linkedin_data === 'string' 

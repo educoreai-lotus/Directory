@@ -26,11 +26,18 @@ class GeminiAPIClient {
    * @returns {Promise<string>} Generated bio
    */
   async generateBio(linkedinData, githubData, employeeBasicInfo) {
+    console.log('[GeminiAPIClient] ========== GENERATING BIO ==========');
+    console.log('[GeminiAPIClient] API Key configured:', !!this.apiKey);
+    console.log('[GeminiAPIClient] API Key length:', this.apiKey ? this.apiKey.length : 0);
+    console.log('[GeminiAPIClient] API Key starts with:', this.apiKey ? this.apiKey.substring(0, 10) + '...' : 'N/A');
+    
     if (!this.apiKey) {
+      console.error('[GeminiAPIClient] ❌ Gemini API key not configured');
       throw new Error('Gemini API key not configured');
     }
 
     const prompt = this.buildBioPrompt(linkedinData, githubData, employeeBasicInfo);
+    console.log('[GeminiAPIClient] Prompt built, length:', prompt.length, 'characters');
 
     // Retry logic for rate limits (max 3 attempts with exponential backoff)
     const maxRetries = 3;
@@ -40,8 +47,18 @@ class GeminiAPIClient {
       try {
         // Use gemini-1.5-flash for faster responses (free tier compatible)
         const model = 'gemini-1.5-flash';
+        const apiUrl = `${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`;
+        
+        if (attempt === 0) {
+          console.log('[GeminiAPIClient] Making API call to Gemini (attempt 1)...');
+          console.log('[GeminiAPIClient] Model:', model);
+          console.log('[GeminiAPIClient] Base URL:', this.baseUrl);
+        } else {
+          console.log(`[GeminiAPIClient] Retrying API call (attempt ${attempt + 1}/${maxRetries})...`);
+        }
+        
         const response = await axios.post(
-          `${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`,
+          apiUrl,
           {
             contents: [{
               parts: [{
@@ -57,13 +74,23 @@ class GeminiAPIClient {
           }
         );
 
+        console.log('[GeminiAPIClient] ✅ API call successful');
+        console.log('[GeminiAPIClient] Response status:', response.status);
+        console.log('[GeminiAPIClient] Response has candidates:', !!response.data?.candidates);
+        console.log('[GeminiAPIClient] Number of candidates:', response.data?.candidates?.length || 0);
+
         const bio = response.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
         if (!bio) {
+          console.error('[GeminiAPIClient] ❌ No bio in response');
+          console.error('[GeminiAPIClient] Response data:', JSON.stringify(response.data, null, 2));
           throw new Error('No bio generated from Gemini API');
         }
 
+        console.log('[GeminiAPIClient] ✅ Bio extracted, length:', bio.length, 'characters');
         if (attempt > 0) {
           console.log(`[GeminiAPIClient] ✅ Bio generated successfully after ${attempt} retry(ies)`);
+        } else {
+          console.log('[GeminiAPIClient] ✅ Bio generated successfully on first attempt');
         }
         return bio;
       } catch (error) {
@@ -71,6 +98,17 @@ class GeminiAPIClient {
         const errorData = error.response?.data;
         const statusCode = error.response?.status;
         const errorMessage = errorData?.error?.message || error.message;
+        
+        console.error(`[GeminiAPIClient] ❌ API call failed (attempt ${attempt + 1}/${maxRetries}):`);
+        console.error('[GeminiAPIClient] Status code:', statusCode);
+        console.error('[GeminiAPIClient] Error message:', errorMessage);
+        console.error('[GeminiAPIClient] Error data:', JSON.stringify(errorData, null, 2));
+        if (error.response) {
+          console.error('[GeminiAPIClient] Response headers:', JSON.stringify(error.response.headers, null, 2));
+        }
+        if (error.request) {
+          console.error('[GeminiAPIClient] Request made but no response received');
+        }
         
         // Check if it's a rate limit error (429) or quota exceeded
         const isRateLimit = statusCode === 429 || 
@@ -87,8 +125,8 @@ class GeminiAPIClient {
         }
         
         // If not rate limit or last attempt, throw error
-        console.error(`[GeminiAPIClient] Error generating bio (attempt ${attempt + 1}/${maxRetries}):`, errorData || errorMessage);
         if (attempt === maxRetries - 1) {
+          console.error(`[GeminiAPIClient] ❌ All ${maxRetries} attempts failed`);
           throw new Error(`Failed to generate bio after ${maxRetries} attempts: ${errorMessage}`);
         }
       }
@@ -112,6 +150,14 @@ class GeminiAPIClient {
       return [];
     }
 
+    console.log('[GeminiAPIClient] ========== GENERATING PROJECT SUMMARIES ==========');
+    console.log('[GeminiAPIClient] API Key configured:', !!this.apiKey);
+    
+    if (!this.apiKey) {
+      console.error('[GeminiAPIClient] ❌ Gemini API key not configured');
+      throw new Error('Gemini API key not configured');
+    }
+    
     const prompt = this.buildProjectSummariesPrompt(repositories);
     
     console.log('[GeminiAPIClient] Generating project summaries for', repositories.length, 'repositories');
