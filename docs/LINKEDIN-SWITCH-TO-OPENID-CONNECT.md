@@ -8,7 +8,9 @@ Your Railway logs show the system is using **legacy scopes** (`r_liteprofile`, `
 scopes: [ 'r_liteprofile', 'r_emailaddress' ]
 ```
 
-This causes `unauthorized_scope_error` because legacy scopes require different product approvals.
+**The Problem**: Your OAuth URL is requesting legacy scopes, but your LinkedIn app is configured for OpenID Connect scopes. LinkedIn rejects this mismatch with `unauthorized_scope_error`.
+
+**The Solution**: Remove `LINKEDIN_USE_LEGACY_SCOPES` from Railway so the system uses OpenID Connect scopes (`openid`, `profile`, `email`) that match your app configuration.
 
 ## Solution: Remove Legacy Scopes Environment Variable
 

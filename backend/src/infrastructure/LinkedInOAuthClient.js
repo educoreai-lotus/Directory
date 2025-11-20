@@ -82,12 +82,20 @@ class LinkedInOAuthClient {
       scopes: this.scopes
     });
 
+    // Build scope parameter - use space-separated for OAuth 2.0
+    // For OpenID Connect: "openid profile email"
+    // For legacy: "r_liteprofile r_emailaddress"
+    const scopeParam = this.scopes.join(' ');
+    
+    console.log('[LinkedInOAuthClient] Requesting scopes:', scopeParam);
+    console.log('[LinkedInOAuthClient] Scope array:', this.scopes);
+    
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.clientId,
       redirect_uri: this.redirectUri,
       state: state,
-      scope: this.scopes.join(' ')
+      scope: scopeParam
     });
 
     const url = `${this.authorizationUrl}?${params.toString()}`;
