@@ -630,7 +630,7 @@ class EmployeeRepository {
    * @param {Object} client - Optional database client
    * @returns {Promise<Object>} Updated employee
    */
-  async updateEnrichment(employeeId, bio, projectSummaries, client = null) {
+  async updateEnrichment(employeeId, bio, projectSummaries, markAsCompleted = true, client = null) {
     const queryRunner = client || this.pool;
     
     // Start transaction if using client
@@ -642,7 +642,8 @@ class EmployeeRepository {
     try {
       // Update employee bio, enrichment flags, and profile status
       // State transition: basic/enrichment_pending -> enriched
-      const updateQuery = `
+      // Only mark as completed if Gemini succeeded (markAsCompleted = true)
+      const updateQuery = markAsCompleted ? `
         UPDATE employees
         SET bio = $1,
             enrichment_completed = TRUE,
@@ -651,9 +652,20 @@ class EmployeeRepository {
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
         RETURNING *
+      ` : `
+        UPDATE employees
+        SET bio = $1,
+            profile_status = 'enriched',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        RETURNING *
       `;
       const updateResult = await queryRunner.query(updateQuery, [bio, employeeId]);
       const updatedEmployee = updateResult.rows[0];
+      
+      if (!markAsCompleted) {
+        console.log('[EmployeeRepository] ⚠️  Enrichment updated but NOT marked as completed (mock data used)');
+      }
 
       // Delete existing project summaries
       await queryRunner.query(

@@ -71,23 +71,27 @@ class EnrichProfileUseCase {
 
       // Generate bio using Gemini AI (with fallback to mock data)
       let bio;
+      let bioFromGemini = false; // Track if bio came from Gemini or mock
       try {
         console.log('[EnrichProfileUseCase] Calling Gemini API to generate bio...');
         console.log('[EnrichProfileUseCase] Employee:', employeeBasicInfo.full_name);
         console.log('[EnrichProfileUseCase] LinkedIn data present:', !!linkedinData);
         console.log('[EnrichProfileUseCase] GitHub data present:', !!githubData);
         bio = await this.geminiClient.generateBio(linkedinData, githubData, employeeBasicInfo);
+        bioFromGemini = true;
         console.log('[EnrichProfileUseCase] ✅ Bio generated successfully by Gemini:', bio.substring(0, 100) + '...');
       } catch (error) {
         console.error('[EnrichProfileUseCase] ❌ Gemini API failed:', error.message);
         console.error('[EnrichProfileUseCase] Error details:', error.response?.data || error.stack);
         console.warn('[EnrichProfileUseCase] ⚠️  Using mock bio as fallback');
         bio = this.mockDataService.getMockBio(employeeBasicInfo);
+        bioFromGemini = false;
         console.warn('[EnrichProfileUseCase] ⚠️  MOCK BIO USED - This is generic and not personalized!');
       }
 
       // Generate project summaries using Gemini AI (with fallback to mock data)
       let projectSummaries = [];
+      let summariesFromGemini = false; // Track if summaries came from Gemini or mock
       const repositories = githubData.repositories || [];
       
       if (repositories.length > 0) {
@@ -95,6 +99,7 @@ class EnrichProfileUseCase {
           console.log('[EnrichProfileUseCase] Calling Gemini API to generate project summaries...');
           console.log('[EnrichProfileUseCase] Number of repositories:', repositories.length);
           projectSummaries = await this.geminiClient.generateProjectSummaries(repositories);
+          summariesFromGemini = true;
           console.log(`[EnrichProfileUseCase] ✅ Generated ${projectSummaries.length} project summaries by Gemini`);
           if (projectSummaries.length > 0) {
             console.log('[EnrichProfileUseCase] Sample summary:', projectSummaries[0].summary?.substring(0, 100) + '...');
@@ -104,17 +109,31 @@ class EnrichProfileUseCase {
           console.error('[EnrichProfileUseCase] Error details:', error.response?.data || error.stack);
           console.warn('[EnrichProfileUseCase] ⚠️  Using mock project summaries as fallback');
           projectSummaries = this.mockDataService.getMockProjectSummaries(repositories);
+          summariesFromGemini = false;
           console.warn('[EnrichProfileUseCase] ⚠️  MOCK SUMMARIES USED - These are generic and not personalized!');
         }
       } else {
         console.log('[EnrichProfileUseCase] No repositories found in GitHub data, skipping project summaries');
       }
 
-      // Update employee profile with enriched data (sets profile_status to 'enriched')
+      // Only mark as completed if Gemini succeeded for both bio and summaries
+      const geminiSucceeded = bioFromGemini && (repositories.length === 0 || summariesFromGemini);
+      
+      if (!geminiSucceeded) {
+        console.warn('[EnrichProfileUseCase] ⚠️  WARNING: Enrichment used mock data. Will NOT mark as completed.');
+        console.warn('[EnrichProfileUseCase] ⚠️  This allows re-enrichment when Gemini API is fixed.');
+        console.warn('[EnrichProfileUseCase] ⚠️  Bio from Gemini:', bioFromGemini, 'Summaries from Gemini:', summariesFromGemini);
+      } else {
+        console.log('[EnrichProfileUseCase] ✅ All enrichment from Gemini - will mark as completed');
+      }
+
+      // Update employee profile with enriched data
+      // Only set enrichment_completed = TRUE if Gemini succeeded
       const updatedEmployee = await this.employeeRepository.updateEnrichment(
         employeeId,
         bio,
-        projectSummaries
+        projectSummaries,
+        geminiSucceeded // Pass flag to control enrichment_completed
       );
 
       // Send skills data to Skills Engine for normalization (after enrichment)
