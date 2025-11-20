@@ -3,11 +3,11 @@
 ## Company Information
 - **Company Name:** InnovateTech Solutions
 - **Industry:** Technology
-- **Domain:** innovatetech.io
+- **Domain:** innovate.io ⚠️ **NOTE: Domain is `innovate.io` NOT `innovatetech.io`**
 - **Logo URL:** https://logo.clearbit.com/google.com
 
 ## HR Contact (Company Registrar)
-- **Email:** jennifer.martinez@innovatetech.io
+- **Email:** jennifer.martinez@innovate.io ⚠️ **NOTE: Use `@innovate.io` domain**
 - **Password:** SecurePass123
 - **Role:** HR Manager + Decision Maker
 - **Employee ID:** EMP005
@@ -16,7 +16,7 @@
 ## Test Accounts
 
 ### 1. Regular Employee (For Enrichment Testing)
-- **Email:** alex.johnson@innovatetech.io
+- **Email:** alex.johnson@innovate.io ⚠️ **NOTE: Use `@innovate.io` domain**
 - **Password:** SecurePass123
 - **Role:** Regular Employee
 - **Employee ID:** EMP001
@@ -27,7 +27,7 @@
 - **Use Case:** Test the full enrichment flow (LinkedIn + GitHub → Gemini → Skills Engine → HR Approval)
 
 ### 2. Trainer (For Trainer Features Testing)
-- **Email:** sarah.williams@innovatetech.io
+- **Email:** sarah.williams@innovate.io ⚠️ **NOTE: Use `@innovate.io` domain**
 - **Password:** SecurePass123
 - **Role:** Trainer
 - **Employee ID:** EMP002
@@ -38,7 +38,7 @@
 - **Use Case:** Test trainer-specific features (Trainer Settings, Courses Taught)
 
 ### 3. HR / Decision Maker (For Approval Testing)
-- **Email:** jennifer.martinez@innovatetech.io
+- **Email:** jennifer.martinez@innovate.io ⚠️ **NOTE: Use `@innovate.io` domain**
 - **Password:** SecurePass123
 - **Role:** HR Manager + Decision Maker
 - **Employee ID:** EMP005
@@ -76,9 +76,9 @@ The test accounts are created when you upload the CSV file. If you try to log in
 2. Fill in:
    - Company Name: `InnovateTech Solutions`
    - Industry: `Technology`
-   - Domain: `innovatetech.io`
+   - Domain: `innovate.io` ⚠️ **NOTE: Domain is `innovate.io`**
    - HR Contact Name: `Jennifer Martinez`
-   - HR Contact Email: `jennifer.martinez@innovatetech.io` ⚠️ **MUST MATCH CSV**
+   - HR Contact Email: `jennifer.martinez@innovate.io` ⚠️ **MUST MATCH CSV - Use `@innovate.io`**
    - HR Contact Role: `HR Manager`
 
 ### Step 2: CSV Upload
@@ -87,20 +87,20 @@ The test accounts are created when you upload the CSV file. If you try to log in
 3. Verify company logo appears
 
 ### Step 3: Enrichment Testing
-1. Log in as `alex.johnson@innovatetech.io`
+1. Log in as `alex.johnson@innovate.io` ⚠️ **Use `@innovate.io` domain**
 2. Should redirect to enrichment page
 3. Connect LinkedIn → Should redirect back to enrichment page
 4. Connect GitHub → Should trigger enrichment → Redirect to profile
 5. Profile should show "⏳ Waiting for HR Approval"
 
 ### Step 4: HR Approval Testing
-1. Log in as `jennifer.martinez@innovatetech.io`
+1. Log in as `jennifer.martinez@innovate.io` ⚠️ **Use `@innovate.io` domain**
 2. Go to Company Profile → "Pending Profile Approvals" tab
 3. Approve Alex Johnson's profile
 4. Log out
 
 ### Step 5: Approved Employee Testing
-1. Log in as `alex.johnson@innovatetech.io` again
+1. Log in as `alex.johnson@innovate.io` again ⚠️ **Use `@innovate.io` domain**
 2. Should see full profile with:
    - Skills section (from Skills Engine)
    - Courses section (from Course Builder)
@@ -109,7 +109,7 @@ The test accounts are created when you upload the CSV file. If you try to log in
    - Requests section
 
 ### Step 6: Trainer Testing
-1. Log in as `sarah.williams@innovatetech.io`
+1. Log in as `sarah.williams@innovate.io` ⚠️ **Use `@innovate.io` domain**
 2. Should see Trainer Profile section with:
    - Trainer Settings
    - Courses Taught
