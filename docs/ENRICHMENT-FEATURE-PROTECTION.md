@@ -142,10 +142,56 @@ Before making changes to enrichment-related code:
 2. **Never skip OAuth callback detection** - Always check URL params before redirecting
 3. **Always use boolean coercion for OAuth detection** - Use `!!errorParam`, not `errorParam` (prevents string values)
 4. **Never redirect to login during OAuth callbacks** - Including errors - show error on enrich page instead
-5. **Never remove Gemini fallback** - Always have MockDataService as backup
-6. **Never modify enrichment trigger logic** - Both OAuth must be connected
-7. **Always preserve session on OAuth errors** - Backend must return token + user even when OAuth fails
+5. **Always preserve session on OAuth errors** - Backend must return token + user even when OAuth fails
+6. **Never remove Gemini fallback** - Always have MockDataService as backup
+7. **Never modify enrichment trigger logic** - Both OAuth must be connected
 8. **Always test end-to-end** - OAuth → Enrichment → Profile → Approval
+
+## Critical Code Patterns
+
+### OAuth Callback Detection (MUST USE THIS PATTERN)
+
+```javascript
+// ✅ CORRECT - Always use boolean coercion
+const linkedinParam = searchParams.get('linkedin');
+const githubParam = searchParams.get('github');
+const errorParam = searchParams.get('error');
+const tokenParam = searchParams.get('token');
+const enrichedParam = searchParams.get('enriched');
+
+const isOAuthCallback = linkedinParam === 'connected' || 
+                        githubParam === 'connected' || 
+                        !!errorParam ||  // ✅ Boolean coercion
+                        !!tokenParam ||   // ✅ Boolean coercion
+                        enrichedParam === 'true';
+```
+
+```javascript
+// ❌ WRONG - Don't use string values directly
+const isOAuthCallback = linkedinParam === 'connected' || 
+                        githubParam === 'connected' || 
+                        errorParam ||  // ❌ Returns string, not boolean
+                        enrichedParam === 'true';
+```
+
+### Backend Error Redirects (MUST INCLUDE TOKEN + USER)
+
+```javascript
+// ✅ CORRECT - Always include token + user on errors
+catch (error) {
+  // Extract employee from state
+  // Build user object
+  // Generate dummy token
+  return res.redirect(`${frontendUrl}/enrich?error=${encodeURIComponent(errorMessage)}&token=${encodeURIComponent(dummyToken)}&user=${encodeURIComponent(userDataEncoded)}`);
+}
+```
+
+```javascript
+// ❌ WRONG - Don't redirect without token/user
+catch (error) {
+  return res.redirect(`${frontendUrl}/enrich?error=${encodeURIComponent(errorMessage)}`);
+}
+```
 
 ## Documentation Log
 
