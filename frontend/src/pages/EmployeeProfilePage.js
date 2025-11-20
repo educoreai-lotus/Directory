@@ -322,12 +322,16 @@ function EmployeeProfilePage() {
                 Professional Links
               </h2>
               <div className="flex gap-4">
-                {employee.linkedin_url && employee.linkedin_url !== 'undefined' && (
+                {employee.linkedin_url && employee.linkedin_url !== 'undefined' && employee.linkedin_url.trim() !== '' && (
                   <a
                     href={employee.linkedin_url.startsWith('http') ? employee.linkedin_url : `https://${employee.linkedin_url}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-teal-600 hover:text-teal-700 underline"
+                    onClick={(e) => {
+                      // Log the URL for debugging
+                      console.log('[EmployeeProfilePage] LinkedIn URL:', employee.linkedin_url);
+                    }}
                   >
                     LinkedIn Profile
                   </a>

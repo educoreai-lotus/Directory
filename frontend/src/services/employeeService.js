@@ -106,3 +106,16 @@ export const getEmployeeRequests = async (companyId, employeeId) => {
   }
 };
 
+export const getCompanyRequests = async (companyId, status = null) => {
+  try {
+    const url = status 
+      ? `/companies/${companyId}/requests?status=${status}`
+      : `/companies/${companyId}/requests`;
+    const response = await api.get(url);
+    return response.data;
+  } catch (error) {
+    console.error('Get company requests error:', error);
+    throw error;
+  }
+};
+

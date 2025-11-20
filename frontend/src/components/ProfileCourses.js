@@ -113,7 +113,7 @@ function ProfileCourses({ employeeId, user, employee }) {
           {isTrainer && (
             <div>
               <h3 className="text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-                Taught Courses ({taughtCourses.length})
+                Taught ({taughtCourses.length})
               </h3>
               {taughtCourses.length > 0 ? (
                 <div className="space-y-2">
@@ -142,7 +142,7 @@ function ProfileCourses({ employeeId, user, employee }) {
                 </div>
               ) : (
                 <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  No courses taught yet.
+                  No taught courses yet.
                 </p>
               )}
             </div>
