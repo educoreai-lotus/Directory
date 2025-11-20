@@ -58,6 +58,8 @@ function EnrichProfilePage() {
         // Store both token and user in localStorage
         localStorage.setItem('auth_token', tokenParam);
         localStorage.setItem('user', JSON.stringify(userData));
+        // Set OAuth callback flag to prevent AuthContext from validating immediately
+        localStorage.setItem('oauth_callback_timestamp', Date.now().toString());
         
         console.log('[EnrichProfilePage] Token and user stored successfully:', {
           token: tokenParam.substring(0, 30) + '...',
@@ -73,6 +75,8 @@ function EnrichProfilePage() {
       // Only token, no user - store token but warn
       console.warn('[EnrichProfilePage] Token received but no user data in OAuth callback');
       localStorage.setItem('auth_token', tokenParam);
+      // Set OAuth callback flag
+      localStorage.setItem('oauth_callback_timestamp', Date.now().toString());
     }
 
     if (errorParam) {
@@ -138,6 +142,12 @@ function EnrichProfilePage() {
         newUrl.searchParams.delete('github'); // Clear OAuth callback param
         newUrl.searchParams.delete('enriched'); // Clear enrichment param
         window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+        
+        // Clear OAuth flag after a short delay to allow AuthContext to see it
+        setTimeout(() => {
+          localStorage.removeItem('oauth_callback_timestamp');
+        }, 5000); // 5 seconds should be enough for AuthContext to initialize
+        
         return; // Don't call refreshUser - we already have the user
       }
       
