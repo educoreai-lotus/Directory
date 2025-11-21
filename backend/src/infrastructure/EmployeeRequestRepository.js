@@ -252,6 +252,16 @@ class EmployeeRequestRepository {
       } else if (directResult.rows.length > 0) {
         console.error(`[EmployeeRequestRepository] ⚠️ WARNING: Direct query found ${directResult.rows.length} requests but JOIN query found 0! This indicates a JOIN issue.`);
         console.error(`[EmployeeRequestRepository] This likely means the employee_id in employee_requests doesn't match any employee.id`);
+        console.error(`[EmployeeRequestRepository] Returning direct query results without employee details as fallback`);
+        
+        // Return direct query results with null employee fields (fallback)
+        return directResult.rows.map(row => ({
+          ...row,
+          employee_name: null,
+          employee_email: null,
+          employee_identifier: null,
+          reviewer_name: null
+        }));
       }
       
       return result.rows;
