@@ -1,0 +1,14 @@
+company_name,industry,logo_url,approval_policy,kpis,passing_grade,max_attempts,exercises_limited,num_of_exercises,learning_path_approval,employee_id,full_name,email,role_type,department_id,department_name,team_id,team_name,manager_id,password,current_role_in_company,target_role_in_company,preferred_language,status,ai_enabled,public_publish_enable
+INNOVATE_TECH,Software Development,https://logos-world.net/wp-content/uploads/2020/11/Innovation-Logo.png,manual,Product Quality;Customer Satisfaction;Team Performance;Code Quality,75,3,true,15,manual,,,,,,,,,,,,,
+,,,,,,,,,CEO001,David Chen,david.chen@innovatetech.com,REGULAR_EMPLOYEE + DECISION_MAKER,DEPT001,Engineering,DEPT001_TEAM001,Development Team,,SecurePass123,CEO & Founder,CEO & Founder,English,active,,,
+,,,,,,,,,HR001,Sarah Johnson,sarah.johnson@innovatetech.com,REGULAR_EMPLOYEE + HR_MANAGER,DEPT002,Human Resources,DEPT002_TEAM001,HR Team,,SecurePass123,HR Manager,HR Director,English,active,,,
+,,,,,,,,,DEV001,Michael Rodriguez,michael.rodriguez@innovatetech.com,REGULAR_EMPLOYEE + TEAM_MANAGER,DEPT001,Engineering,DEPT001_TEAM001,Frontend Team,CEO001,SecurePass123,Senior Developer,Lead Developer,English,active,,,
+,,,,,,,,,DEV002,Emily Park,emily.park@innovatetech.com,REGULAR_EMPLOYEE,DEPT001,Engineering,DEPT001_TEAM001,Frontend Team,DEV001,SecurePass123,Frontend Developer,Senior Frontend Developer,English,active,,,
+,,,,,,,,,DEV003,James Wilson,james.wilson@innovatetech.com,REGULAR_EMPLOYEE,DEPT001,Engineering,DEPT001_TEAM002,Backend Team,DEV001,SecurePass123,Backend Developer,Senior Backend Developer,English,active,,,
+,,,,,,,,,TRAINER001,Lisa Anderson,lisa.anderson@innovatetech.com,TRAINER + DEPARTMENT_MANAGER,DEPT003,Learning & Development,DEPT003_TEAM001,Training Team,CEO001,SecurePass123,Training Manager,Head of Learning,English,active,true,false
+,,,,,,,,,TRAINEE001,Alex Thompson,alex.thompson@innovatetech.com,REGULAR_EMPLOYEE,DEPT001,Engineering,DEPT001_TEAM001,Frontend Team,DEV001,SecurePass123,Junior Developer,Mid-level Developer,English,active,,,
+,,,,,,,,,TRAINEE002,Maria Garcia,maria.garcia@innovatetech.com,REGULAR_EMPLOYEE,DEPT001,Engineering,DEPT001_TEAM002,Backend Team,DEV001,SecurePass123,Junior Developer,Mid-level Developer,English,active,,,
+,,,,,,,,,QA001,Robert Kim,robert.kim@innovatetech.com,REGULAR_EMPLOYEE,DEPT001,Engineering,DEPT001_TEAM003,QA Team,DEV001,SecurePass123,QA Engineer,Senior QA Engineer,English,active,,,
+,,,,,,,,,DESIGN001,Amanda Lee,amanda.lee@innovatetech.com,REGULAR_EMPLOYEE,DEPT004,Design,DEPT004_TEAM001,UI/UX Team,CEO001,SecurePass123,UI/UX Designer,Senior UI/UX Designer,English,active,,,
+,,,,,,,,,TRAINER002,Chris Brown,chris.brown@innovatetech.com,TRAINER,DEPT003,Learning & Development,DEPT003_TEAM001,Training Team,TRAINER001,SecurePass123,Technical Trainer,Senior Technical Trainer,English,active,true,true
+
