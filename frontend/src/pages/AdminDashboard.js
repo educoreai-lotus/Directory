@@ -3,10 +3,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import { getAllCompanies } from '../services/adminService';
 
 function AdminDashboard() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,77 +59,115 @@ function AdminDashboard() {
   };
 
   return (
-    <div 
-      className="min-h-screen"
-      style={{ background: 'var(--bg-primary)' }}
-    >
-      <Header />
-
-      <div className="max-w-7xl mx-auto px-6 pb-6">
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b" style={{ borderColor: 'var(--border-default)' }}>
-          <button
-            onClick={() => setActiveTab('overview')}
-            className="px-4 py-2 text-sm font-medium transition-colors"
-            style={{
-              borderBottom: activeTab === 'overview' ? '2px solid #047857' : '2px solid transparent',
-              color: activeTab === 'overview' 
-                ? '#047857' 
-                : 'var(--text-secondary, #475569)',
-              background: 'transparent',
-              cursor: 'pointer'
-            }}
-          >
-            Directory Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('requests')}
-            className="px-4 py-2 text-sm font-medium transition-colors"
-            style={{
-              borderBottom: activeTab === 'requests' ? '2px solid #047857' : '2px solid transparent',
-              color: activeTab === 'requests' 
-                ? '#047857' 
-                : 'var(--text-secondary, #475569)',
-              background: 'transparent',
-              cursor: 'pointer'
-            }}
-          >
-            Pending Requests
-          </button>
-        </div>
-
-        {/* Directory Overview Tab */}
-        {activeTab === 'overview' && (
-          <div>
-            <div className="mb-6">
-              <h2 
-                className="text-2xl font-semibold mb-4"
-                style={{ color: 'var(--text-primary)' }}
-              >
-                Directory Overview
-              </h2>
-              <p 
-                className="text-sm mb-4"
-                style={{ color: 'var(--text-secondary)' }}
-              >
-                View all companies registered in the system. Click on a company card to view details.
-              </p>
+    <div className="min-h-screen p-6" style={{ background: 'var(--bg-primary)' }}>
+      <div className="max-w-7xl mx-auto">
+        {/* Header with Admin Name - Matching Company Profile Style */}
+        <div className="mb-6">
+          <div className="flex items-center gap-6 mb-4">
+            {/* Admin Avatar - Circular */}
+            <div
+              className="admin-avatar-placeholder"
+              style={{
+                width: 'var(--logo-size, 80px)',
+                height: 'var(--logo-size, 80px)',
+                borderRadius: 'var(--radius-avatar, 9999px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'var(--gradient-primary, linear-gradient(135deg, #065f46, #047857))',
+                color: 'var(--text-inverse, #ffffff)',
+                fontSize: 'var(--logo-font-size, 32px)',
+                fontWeight: 'var(--font-weight-semibold, 600)',
+                boxShadow: 'var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.1))',
+                border: '2px solid var(--border-default, #e2e8f0)'
+              }}
+            >
+              {(user?.fullName || 'A').charAt(0).toUpperCase()}
             </div>
-
-            {/* Management & Reporting Button */}
-            <div className="mb-6">
-              <button
-                onClick={handleManagementReporting}
-                className="px-6 py-3 rounded-lg text-base font-medium transition-colors"
-                style={{
-                  background: 'var(--gradient-primary, linear-gradient(135deg, #059669, #047857))',
-                  color: 'var(--text-inverse, #ffffff)',
-                  boxShadow: 'var(--shadow-button)'
+            <div>
+              <h1 
+                className="text-3xl font-bold mb-2" 
+                style={{ 
+                  color: 'var(--text-primary, #1e293b)',
+                  fontSize: 'var(--font-size-3xl, 30px)',
+                  fontWeight: 'var(--font-weight-bold, 700)'
                 }}
               >
-                Management & Reporting
-              </button>
+                {user?.fullName || 'Directory Admin'}
+              </h1>
+              <p 
+                className="text-lg" 
+                style={{ 
+                  color: 'var(--text-secondary, #64748b)',
+                  fontSize: 'var(--font-size-lg, 18px)'
+                }}
+              >
+                Directory Overview & Management Dashboard
+              </p>
+              <p 
+                className="text-sm mt-1" 
+                style={{ 
+                  color: 'var(--text-muted, #94a3b8)',
+                  fontSize: 'var(--font-size-sm, 14px)'
+                }}
+              >
+                Platform Administrator
+              </p>
             </div>
+          </div>
+        </div>
+
+        {/* Dashboard Content */}
+        <div className="w-full space-y-6">
+          {/* Tabs - Matching Company Dashboard Style */}
+          <div className="flex space-x-4 border-b" style={{ borderColor: 'var(--border-default)' }}>
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                activeTab === 'overview'
+                  ? 'border-b-2 border-teal-600 text-teal-600'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+              style={{
+                color: activeTab === 'overview' ? 'var(--border-focus)' : 'var(--text-secondary)',
+                borderBottomColor: activeTab === 'overview' ? 'var(--border-focus)' : 'transparent'
+              }}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('requests')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                activeTab === 'requests'
+                  ? 'border-b-2 border-teal-600 text-teal-600'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+              style={{
+                color: activeTab === 'requests' ? 'var(--border-focus)' : 'var(--text-secondary)',
+                borderBottomColor: activeTab === 'requests' ? 'var(--border-focus)' : 'transparent'
+              }}
+            >
+              Requests
+            </button>
+            <button
+              onClick={() => setActiveTab('management')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                activeTab === 'management'
+                  ? 'border-b-2 border-teal-600 text-teal-600'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+              style={{
+                color: activeTab === 'management' ? 'var(--border-focus)' : 'var(--text-secondary)',
+                borderBottomColor: activeTab === 'management' ? 'var(--border-focus)' : 'transparent'
+              }}
+            >
+              Management & Reporting
+            </button>
+          </div>
+
+          {/* Overview Tab */}
+          {activeTab === 'overview' && (
+            <div>
 
             {/* Companies Grid */}
             {loading ? (
@@ -226,31 +266,54 @@ function AdminDashboard() {
                 })}
               </div>
             )}
-          </div>
-        )}
-
-        {/* Pending Requests Tab */}
-        {activeTab === 'requests' && (
-          <div>
-            <h2 
-              className="text-2xl font-semibold mb-4"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              Pending Requests
-            </h2>
-            <div 
-              className="p-6 rounded-lg border text-center"
-              style={{
-                background: 'var(--bg-card)',
-                borderColor: 'var(--border-default)'
-              }}
-            >
-              <p style={{ color: 'var(--text-secondary)' }}>
-                Pending requests feature coming soon. This will show requests from companies for critical changes (e.g., domain changes).
-              </p>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Requests Tab */}
+          {activeTab === 'requests' && (
+            <div>
+              <div 
+                className="p-6 rounded-lg border text-center"
+                style={{
+                  background: 'var(--bg-card)',
+                  borderColor: 'var(--border-default)'
+                }}
+              >
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  Pending requests feature coming soon. This will show requests from companies for critical changes (e.g., domain changes).
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Management & Reporting Tab */}
+          {activeTab === 'management' && (
+            <div>
+              <div 
+                className="p-6 rounded-lg border text-center"
+                style={{
+                  background: 'var(--bg-card)',
+                  borderColor: 'var(--border-default)'
+                }}
+              >
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  Management & Reporting microservice integration coming soon.
+                </p>
+                <button
+                  onClick={handleManagementReporting}
+                  className="mt-4 px-6 py-3 rounded-lg text-base font-medium transition-colors"
+                  style={{
+                    background: 'var(--gradient-primary, linear-gradient(135deg, #059669, #047857))',
+                    color: 'var(--text-inverse, #ffffff)',
+                    boxShadow: 'var(--shadow-button)'
+                  }}
+                >
+                  Redirect to Management & Reporting
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
