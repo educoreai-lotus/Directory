@@ -333,9 +333,15 @@ class CSVValidator {
     }
 
     // Validate that employee-specific fields are NOT present in company row
+    // Note: normalizedCompanyRow doesn't have employee fields, so we check the raw row data
+    // But since we're using normalizedCompanyRow, employee fields won't exist, so this check is safe
+    // We only check if somehow employee fields got into the normalized company row (shouldn't happen)
     const employeeFields = ['employee_id', 'full_name', 'email', 'department_id', 'department_name', 'team_id', 'team_name'];
     employeeFields.forEach(field => {
-      if (row[field] && row[field].trim && row[field].trim().length > 0) {
+      // Check both the raw row and normalized companyRow
+      const hasEmployeeField = (row[field] && typeof row[field] === 'string' && row[field].trim().length > 0) ||
+                               (companyRow[field] && typeof companyRow[field] === 'string' && companyRow[field].trim().length > 0);
+      if (hasEmployeeField) {
         errors.push({
           type: 'invalid_field_in_company_row',
           message: `${field} should not be in row 1 (company row). Employee fields belong in rows 2+`,

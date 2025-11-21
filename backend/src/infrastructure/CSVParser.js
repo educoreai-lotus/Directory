@@ -74,7 +74,18 @@ class CSVParser {
    * @returns {Object} Normalized employee row data
    */
   normalizeEmployeeRow(row, rowNumber) {
-    return {
+    // Debug logging for first employee row
+    if (rowNumber === 3) {
+      console.log(`[CSVParser] Normalizing employee row ${rowNumber}:`);
+      console.log(`[CSVParser] Raw row keys:`, Object.keys(row));
+      console.log(`[CSVParser] Raw row employee_id:`, row.employee_id);
+      console.log(`[CSVParser] Raw row full_name:`, row.full_name);
+      console.log(`[CSVParser] Raw row email:`, row.email);
+      console.log(`[CSVParser] Raw row role_type:`, row.role_type);
+      console.log(`[CSVParser] Raw row current_role_in_company:`, row.current_role_in_company);
+    }
+
+    const normalized = {
       rowNumber,
       // Department data
       department_id: this.trimValue(row.department_id),
@@ -100,6 +111,16 @@ class CSVParser {
       ai_enabled: this.parseBoolean(row.ai_enabled),
       public_publish_enable: this.parseBoolean(row.public_publish_enable)
     };
+
+    // Debug logging for first employee row
+    if (rowNumber === 3) {
+      console.log(`[CSVParser] Normalized employee row ${rowNumber}:`);
+      console.log(`[CSVParser] Normalized email:`, normalized.email);
+      console.log(`[CSVParser] Normalized employee_id:`, normalized.employee_id);
+      console.log(`[CSVParser] Normalized role_type:`, normalized.role_type);
+    }
+
+    return normalized;
   }
 
   /**
