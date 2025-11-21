@@ -24,10 +24,25 @@ function ProfileManagement({ employeeId }) {
         console.log('[ProfileManagement] Fetching hierarchy for employee:', employeeId, 'company:', user.companyId);
         const response = await getManagerHierarchy(user.companyId, employeeId);
         console.log('[ProfileManagement] Raw response:', response);
+        console.log('[ProfileManagement] Raw response type:', typeof response);
+        console.log('[ProfileManagement] response.response:', response?.response);
+        console.log('[ProfileManagement] response.response.hierarchy:', response?.response?.hierarchy);
+        
         // Handle envelope structure: { requester_service: 'directory_service', response: { success: true, hierarchy: {...} } }
         const hierarchyData = response?.response?.hierarchy || response?.hierarchy || response;
         console.log('[ProfileManagement] Parsed hierarchy:', hierarchyData);
-        setHierarchy(hierarchyData);
+        console.log('[ProfileManagement] Parsed hierarchy type:', typeof hierarchyData);
+        console.log('[ProfileManagement] Parsed hierarchy.manager_type:', hierarchyData?.manager_type);
+        console.log('[ProfileManagement] Parsed hierarchy.team:', hierarchyData?.team);
+        console.log('[ProfileManagement] Parsed hierarchy.employees:', hierarchyData?.employees);
+        
+        if (!hierarchyData || (typeof hierarchyData === 'object' && Object.keys(hierarchyData).length === 0)) {
+          console.warn('[ProfileManagement] ⚠️ Hierarchy data is empty or invalid');
+          setError('No management hierarchy available');
+          setHierarchy(null);
+        } else {
+          setHierarchy(hierarchyData);
+        }
       } catch (err) {
         console.error('[ProfileManagement] Error fetching hierarchy:', err);
         console.error('[ProfileManagement] Error details:', err.response?.data);
