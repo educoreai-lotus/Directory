@@ -82,14 +82,8 @@ function LearningPathApprovals({ employeeId, companyId }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 
-          className="text-xl font-semibold"
-          style={{ color: 'var(--text-primary)' }}
-        >
-          Learning Paths Approvals
-        </h3>
-        {approvals.length > 0 && (
+      {approvals.length > 0 && (
+        <div className="flex justify-end mb-4">
           <span 
             className="px-3 py-1 rounded-full text-sm font-medium"
             style={{
@@ -99,8 +93,8 @@ function LearningPathApprovals({ employeeId, companyId }) {
           >
             {approvals.length} waiting approval{approvals.length !== 1 ? 's' : ''}
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       {approvals.length === 0 ? (
         <div className="p-6 rounded-lg text-center" style={{ background: 'var(--bg-card)' }}>
@@ -153,15 +147,6 @@ function LearningPathApprovals({ employeeId, companyId }) {
           ))}
         </div>
       )}
-
-      <div className="mt-4 p-4 rounded-lg" style={{ 
-        background: 'rgba(59, 130, 246, 0.1)',
-        border: '1px solid rgb(59, 130, 246)'
-      }}>
-        <p className="text-sm" style={{ color: 'rgb(59, 130, 246)' }}>
-          <strong>Note:</strong> Clicking "Review" will redirect you to the Learner AI microservice to review and approve learning path requests. This integration will be available soon.
-        </p>
-      </div>
     </div>
   );
 }
