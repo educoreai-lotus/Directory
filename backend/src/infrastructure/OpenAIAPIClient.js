@@ -316,11 +316,7 @@ class OpenAIAPIClient {
     const companyName = employeeBasicInfo?.company_name || 'the company';
     
     prompt += `CONTEXT:\n`;
-    prompt += `You are creating a professional bio for ${name}, who currently works as ${role} at ${companyName}`;
-    if (targetRole && targetRole !== role) {
-      prompt += ` with career goals to transition to ${targetRole}`;
-    }
-    prompt += `.\n\n`;
+    prompt += `You are creating a professional bio for ${name}, who currently works as ${role} at ${companyName}.\n\n`;
     
     // DATA SOURCES: LinkedIn information
     if (linkedinData) {
@@ -392,9 +388,9 @@ class OpenAIAPIClient {
     prompt += `TASK:\n`;
     prompt += `Your task is to create a professional, compelling bio that:\n`;
     prompt += `1. Synthesizes information from both LinkedIn (professional experience) and GitHub (technical expertise)\n`;
-    prompt += `2. Highlights the employee's professional background, technical skills, and career trajectory\n`;
-    prompt += `3. Connects their current role with their career goals (if target role is different)\n`;
-    prompt += `4. Showcases their technical contributions and professional achievements\n\n`;
+    prompt += `2. Highlights the employee's professional background, technical skills, and past achievements\n`;
+    prompt += `3. Describes their current role and responsibilities at ${companyName}\n`;
+    prompt += `4. Showcases their technical contributions and professional accomplishments\n\n`;
     
     // REQUIREMENTS: Output specifications
     prompt += `OUTPUT REQUIREMENTS:\n`;
@@ -427,6 +423,7 @@ class OpenAIAPIClient {
     prompt += `- Style: Use active voice, keep it general and concise - avoid excessive detail\n`;
     prompt += `- Personalization: Make it unique to this person - reference key technologies or general expertise from their GitHub data, but keep it brief\n`;
     prompt += `- Restrictions: Do NOT include personal contact information, email addresses, URLs, or social media handles\n`;
+    prompt += `- CRITICAL: Do NOT mention the employee's future goals, target role, growth steps, or what the company expects them to achieve. The Bio should ONLY describe their existing professional background, past experience, technical expertise, and current responsibilities. It should read like a professional summary of who they are — not where they are going.\n`;
     prompt += `- Format: Return ONLY the bio text, no markdown, no code blocks, no explanations, no additional formatting\n\n`;
     
     prompt += `Now generate a unique, professional bio specifically for ${name}:\n`;
@@ -640,22 +637,30 @@ class OpenAIAPIClient {
     
     prompt += `TASK:\n`;
     prompt += `Create a professional, concise value proposition statement that:\n`;
-    prompt += `1. States that ${name} currently works as ${currentRole} at ${companyName}\n`;
     if (targetRole && targetRole !== currentRole) {
+      prompt += `1. Opens with a strategic contribution statement (e.g., "${name} plays a key role in...", "In their current position at ${companyName}, ${name} contributes to...", "${name} supports the success of ${companyName} through...") - do NOT start with "currently works as"\n`;
       prompt += `2. States that ${name} will be upgraded to work as ${targetRole}\n`;
       prompt += `3. Identifies what skills, knowledge, or experience ${name} is missing to reach the target role\n`;
+      prompt += `4. Explains the value ${name} brings to ${companyName} and their potential impact in the target role\n`;
     } else {
+      prompt += `1. Opens with a strategic contribution statement (e.g., "${name} plays a key role in...", "In their current position at ${companyName}, ${name} contributes to...", "${name} supports the success of ${companyName} through...") - do NOT start with "currently works as"\n`;
       prompt += `2. Notes that ${name} is continuing in their current role\n`;
+      prompt += `3. Explains the value ${name} brings to ${companyName} in their current role and their organizational impact\n`;
     }
-    prompt += `4. Is written in a professional, encouraging tone\n`;
-    prompt += `5. Is suitable for display on an employee profile\n\n`;
+    prompt += `5. Is written in a professional, encouraging tone\n`;
+    prompt += `6. Is suitable for display on an employee profile\n\n`;
     
     prompt += `OUTPUT REQUIREMENTS:\n`;
     prompt += `- Length: 2-3 sentences, maximum 150 words\n`;
     prompt += `- Format: Plain text, no markdown, no code blocks, no bullet points\n`;
     prompt += `- Tone: Professional, clear, and motivating\n`;
-    prompt += `- Structure: Start with current role, mention target role (if different), then mention what's needed to get there\n`;
-    prompt += `- Example format: "${name} currently works as ${currentRole} at ${companyName}. ${name} will be upgraded to work as ${targetRole}. To achieve this transition, ${name} needs to develop [specific skills/knowledge/experience]."\n\n`;
+    prompt += `- Structure: Start with a strategic contribution statement (not "currently works as"), mention target role (if different), then mention what's needed to get there and the value they bring\n`;
+    if (targetRole && targetRole !== currentRole) {
+      prompt += `- Example format: "${name} plays a key role in [strategic area] at ${companyName}. ${name} will be upgraded to work as ${targetRole}. To achieve this transition, ${name} needs to develop [specific skills/knowledge/experience]."\n`;
+    } else {
+      prompt += `- Example format: "In their current position at ${companyName}, ${name} contributes to [strategic area] and brings [value/impact] to the organization."\n`;
+    }
+    prompt += `- CRITICAL: Do NOT repeat elements from the Bio such as career history, technical skills, GitHub details, or LinkedIn data. Do NOT describe the employee's background or responsibilities. The Value Proposition must focus ONLY on future potential, organizational impact, and the employee's development path — not their past. This section should describe their future trajectory inside the company and the value they bring to the organization.\n\n`;
     
     prompt += `Now generate a value proposition statement for ${name}:\n`;
     
