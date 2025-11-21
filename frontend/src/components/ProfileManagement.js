@@ -25,23 +25,46 @@ function ProfileManagement({ employeeId }) {
         const response = await getManagerHierarchy(user.companyId, employeeId);
         console.log('[ProfileManagement] Raw response:', response);
         console.log('[ProfileManagement] Raw response type:', typeof response);
+        console.log('[ProfileManagement] Raw response keys:', response ? Object.keys(response) : 'null');
         console.log('[ProfileManagement] response.response:', response?.response);
-        console.log('[ProfileManagement] response.response.hierarchy:', response?.response?.hierarchy);
+        console.log('[ProfileManagement] response.response?.hierarchy:', response?.response?.hierarchy);
+        console.log('[ProfileManagement] response.hierarchy:', response?.hierarchy);
         
         // Handle envelope structure: { requester_service: 'directory_service', response: { success: true, hierarchy: {...} } }
-        const hierarchyData = response?.response?.hierarchy || response?.hierarchy || response;
-        console.log('[ProfileManagement] Parsed hierarchy:', hierarchyData);
-        console.log('[ProfileManagement] Parsed hierarchy type:', typeof hierarchyData);
-        console.log('[ProfileManagement] Parsed hierarchy.manager_type:', hierarchyData?.manager_type);
-        console.log('[ProfileManagement] Parsed hierarchy.team:', hierarchyData?.team);
-        console.log('[ProfileManagement] Parsed hierarchy.employees:', hierarchyData?.employees);
+        let hierarchyData = null;
         
-        if (!hierarchyData || (typeof hierarchyData === 'object' && Object.keys(hierarchyData).length === 0)) {
-          console.warn('[ProfileManagement] ⚠️ Hierarchy data is empty or invalid');
-          setError('No management hierarchy available');
-          setHierarchy(null);
-        } else {
+        // Try multiple parsing strategies
+        if (response?.response?.hierarchy) {
+          hierarchyData = response.response.hierarchy;
+          console.log('[ProfileManagement] ✅ Found hierarchy in response.response.hierarchy');
+        } else if (response?.hierarchy) {
+          hierarchyData = response.hierarchy;
+          console.log('[ProfileManagement] ✅ Found hierarchy in response.hierarchy');
+        } else if (response?.response && response.response.manager_type) {
+          // If the response itself is the hierarchy
+          hierarchyData = response.response;
+          console.log('[ProfileManagement] ✅ Found hierarchy as response.response');
+        } else if (response?.manager_type) {
+          // If the response itself is the hierarchy
+          hierarchyData = response;
+          console.log('[ProfileManagement] ✅ Found hierarchy as response');
+        }
+        
+        console.log('[ProfileManagement] Final hierarchyData:', hierarchyData);
+        console.log('[ProfileManagement] hierarchyData type:', typeof hierarchyData);
+        console.log('[ProfileManagement] hierarchyData.manager_type:', hierarchyData?.manager_type);
+        console.log('[ProfileManagement] hierarchyData.team:', hierarchyData?.team);
+        console.log('[ProfileManagement] hierarchyData.employees:', hierarchyData?.employees);
+        console.log('[ProfileManagement] hierarchyData keys:', hierarchyData ? Object.keys(hierarchyData) : 'null');
+        
+        if (hierarchyData && hierarchyData.manager_type) {
+          console.log('[ProfileManagement] ✅ Valid hierarchy data found, setting state');
           setHierarchy(hierarchyData);
+        } else {
+          console.warn('[ProfileManagement] ⚠️ Invalid hierarchy data structure');
+          console.warn('[ProfileManagement] Expected hierarchy.manager_type but got:', hierarchyData);
+          setError('Invalid hierarchy data structure received');
+          setHierarchy(null);
         }
       } catch (err) {
         console.error('[ProfileManagement] Error fetching hierarchy:', err);
