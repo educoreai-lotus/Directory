@@ -8,6 +8,7 @@ const GetEmployeeSkillsUseCase = require('../application/GetEmployeeSkillsUseCas
 const GetEmployeeCoursesUseCase = require('../application/GetEmployeeCoursesUseCase');
 const GetEmployeeLearningPathUseCase = require('../application/GetEmployeeLearningPathUseCase');
 const GetEmployeeDashboardUseCase = require('../application/GetEmployeeDashboardUseCase');
+const GetManagerHierarchyUseCase = require('../application/GetManagerHierarchyUseCase');
 const EmployeeRepository = require('../infrastructure/EmployeeRepository');
 const ErrorTranslator = require('../shared/ErrorTranslator');
 
@@ -20,6 +21,7 @@ class EmployeeController {
     this.getEmployeeCoursesUseCase = new GetEmployeeCoursesUseCase();
     this.getEmployeeLearningPathUseCase = new GetEmployeeLearningPathUseCase();
     this.getEmployeeDashboardUseCase = new GetEmployeeDashboardUseCase();
+    this.getManagerHierarchyUseCase = new GetManagerHierarchyUseCase();
     this.employeeRepository = new EmployeeRepository();
   }
 
@@ -300,6 +302,42 @@ class EmployeeController {
       
       res.status(statusCode).json({
         error: error.message || 'An error occurred while fetching employee dashboard'
+      });
+    }
+  }
+
+  /**
+   * Get manager hierarchy (teams and employees they manage)
+   * GET /api/v1/companies/:id/employees/:employeeId/management-hierarchy
+   */
+  async getManagerHierarchy(req, res, next) {
+    try {
+      const { id: companyId, employeeId } = req.params;
+
+      // Verify employee exists and belongs to company
+      const employee = await this.employeeRepository.findById(employeeId);
+      if (!employee || employee.company_id !== companyId) {
+        return res.status(404).json({
+          error: 'Employee not found'
+        });
+      }
+
+      const hierarchy = await this.getManagerHierarchyUseCase.execute(employeeId);
+
+      if (!hierarchy) {
+        return res.status(404).json({
+          error: 'Employee is not a manager or has no managed teams/employees'
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        hierarchy: hierarchy
+      });
+    } catch (error) {
+      console.error('[EmployeeController] Error fetching manager hierarchy:', error);
+      res.status(500).json({
+        error: error.message || 'An error occurred while fetching manager hierarchy'
       });
     }
   }

@@ -284,6 +284,11 @@ apiRouter.get('/companies/:id/employees/:employeeId/dashboard', authMiddleware, 
   employeeController.getEmployeeDashboard(req, res, next);
 });
 
+// Get manager hierarchy
+apiRouter.get('/companies/:id/employees/:employeeId/management-hierarchy', authMiddleware, (req, res, next) => {
+  employeeController.getManagerHierarchy(req, res, next);
+});
+
 // Employee Requests
 apiRouter.post('/companies/:id/employees/:employeeId/requests', authMiddleware, (req, res, next) => {
   requestController.submitRequest(req, res, next);

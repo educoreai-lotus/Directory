@@ -9,6 +9,7 @@ import TrainerSettings from '../components/TrainerSettings';
 import ApprovedProfileTabs from '../components/ApprovedProfileTabs';
 import LearningPathApprovals from '../components/LearningPathApprovals';
 import ProfileEditForm from '../components/ProfileEditForm';
+import ProfileManagement from '../components/ProfileManagement';
 
 function EmployeeProfilePage() {
   const { employeeId } = useParams();
@@ -629,6 +630,30 @@ function EmployeeProfilePage() {
                 }}
               />
             </div>
+          </div>
+        )}
+
+        {/* Management Section - Only visible for managers when profile is approved */}
+        {profileStatus === 'approved' && 
+         employee.roles && 
+         Array.isArray(employee.roles) && 
+         (employee.roles.includes('DEPARTMENT_MANAGER') || employee.roles.includes('TEAM_MANAGER')) && (
+          <div 
+            className="rounded-lg shadow-lg border p-8 mb-6"
+            style={{
+              background: 'var(--gradient-card)',
+              borderRadius: 'var(--radius-card, 8px)',
+              boxShadow: 'var(--shadow-card)',
+              borderColor: 'var(--border-default)'
+            }}
+          >
+            <h2 
+              className="text-2xl font-semibold mb-6"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              Management
+            </h2>
+            <ProfileManagement employeeId={employeeId} />
           </div>
         )}
       </div>

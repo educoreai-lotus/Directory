@@ -123,3 +123,13 @@ export const getCompanyRequests = async (companyId, status = null) => {
   }
 };
 
+export const getManagerHierarchy = async (companyId, employeeId) => {
+  try {
+    const response = await api.get(`/companies/${companyId}/employees/${employeeId}/management-hierarchy`);
+    return response.data;
+  } catch (error) {
+    console.error('Get manager hierarchy error:', error);
+    throw error;
+  }
+};
+
