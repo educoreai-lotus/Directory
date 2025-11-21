@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { getCompanyRequests } from '../services/employeeService';
 
-function PendingRequestsSection({ companyId, onRequestsLoaded }) {
+function PendingRequestsSection({ companyId, onRequestsLoaded, isAdminView = false }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -225,20 +225,35 @@ function PendingRequestsSection({ companyId, onRequestsLoaded }) {
                   </div>
                 </div>
                 <div className="flex gap-2 mt-3">
+                  {isAdminView ? (
+                    <span 
+                      className="text-xs px-3 py-1 rounded"
+                      style={{
+                        background: 'rgba(148, 163, 184, 0.1)',
+                        color: 'rgb(148, 163, 184)',
+                        border: '1px solid rgb(148, 163, 184)'
+                      }}
+                    >
+                      Read-only (Admin View)
+                    </span>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleApprove(requestId)}
+                        className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleReject(requestId)}
+                        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
                   <button
-                    onClick={() => handleApprove(requestId)}
-                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => handleReject(requestId)}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
-                  >
-                    Reject
-                  </button>
-                  <button
-                    onClick={() => window.location.href = `/employee/${employeeId}`}
+                    onClick={() => window.location.href = `/employee/${employeeId}${isAdminView ? '?admin=true' : ''}`}
                     className="px-4 py-2 border rounded hover:bg-opacity-50 transition-colors text-sm"
                     style={{ borderColor: 'var(--border-default)', color: 'var(--text-primary)' }}
                   >

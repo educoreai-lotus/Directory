@@ -209,23 +209,71 @@ function AdminDashboard() {
                         boxShadow: 'var(--shadow-card)'
                       }}
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 
-                          className="text-lg font-semibold flex-1"
-                          style={{ color: 'var(--text-primary)' }}
-                        >
-                          {company.company_name}
-                        </h3>
-                        <span
-                          className="px-2 py-1 rounded text-xs font-medium ml-2"
+                      <div className="flex items-start gap-4 mb-3">
+                        {/* Company Logo */}
+                        {company.logo_url ? (
+                          <img
+                            src={company.logo_url}
+                            alt={company.company_name || 'Company Logo'}
+                            className="company-logo"
+                            style={{
+                              width: '60px',
+                              height: '60px',
+                              borderRadius: '9999px',
+                              objectFit: 'cover',
+                              border: '2px solid var(--border-default, #e2e8f0)',
+                              boxShadow: 'var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.1))',
+                              background: 'var(--bg-card, #ffffff)',
+                              flexShrink: 0
+                            }}
+                            onError={(e) => {
+                              // Hide image on error, show placeholder
+                              e.target.style.display = 'none';
+                              const fallback = e.target.nextSibling;
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className="company-logo-placeholder"
                           style={{
-                            background: statusStyle.bg,
-                            border: `1px solid ${statusStyle.border}`,
-                            color: statusStyle.text
+                            width: '60px',
+                            height: '60px',
+                            borderRadius: '9999px',
+                            display: company.logo_url ? 'none' : 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'var(--gradient-primary, linear-gradient(135deg, #065f46, #047857))',
+                            color: 'var(--text-inverse, #ffffff)',
+                            fontSize: '24px',
+                            fontWeight: 'var(--font-weight-semibold, 600)',
+                            boxShadow: 'var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.1))',
+                            border: '2px solid var(--border-default, #e2e8f0)',
+                            flexShrink: 0
                           }}
                         >
-                          {company.status}
-                        </span>
+                          {(company.company_name || 'C').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between">
+                            <h3 
+                              className="text-lg font-semibold flex-1"
+                              style={{ color: 'var(--text-primary)' }}
+                            >
+                              {company.company_name}
+                            </h3>
+                            <span
+                              className="px-2 py-1 rounded text-xs font-medium ml-2 flex-shrink-0"
+                              style={{
+                                background: statusStyle.bg,
+                                border: `1px solid ${statusStyle.border}`,
+                                color: statusStyle.text
+                              }}
+                            >
+                              {company.status}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                       
                       {company.industry && (
@@ -302,19 +350,17 @@ function AdminDashboard() {
                 }}
               >
                 <p style={{ color: 'var(--text-secondary)' }}>
-                  Management & Reporting microservice integration coming soon.
+                  Management & Reporting microservice integration coming soon.{' '}
+                  <button
+                    onClick={handleManagementReporting}
+                    className="text-teal-600 hover:text-teal-700 underline font-medium"
+                    style={{
+                      color: 'var(--border-focus)'
+                    }}
+                  >
+                    View System Analytics
+                  </button>
                 </p>
-                <button
-                  onClick={handleManagementReporting}
-                  className="mt-4 px-6 py-3 rounded-lg text-base font-medium transition-colors"
-                  style={{
-                    background: 'var(--gradient-primary, linear-gradient(135deg, #059669, #047857))',
-                    color: 'var(--text-inverse, #ffffff)',
-                    boxShadow: 'var(--shadow-button)'
-                  }}
-                >
-                  Redirect to Management & Reporting
-                </button>
               </div>
             </div>
           )}

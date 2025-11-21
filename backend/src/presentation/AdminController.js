@@ -23,6 +23,7 @@ class AdminController {
           company_name,
           industry,
           domain,
+          logo_url,
           verification_status,
           created_at,
           updated_at
@@ -38,6 +39,7 @@ class AdminController {
         company_name: company.company_name,
         industry: company.industry,
         domain: company.domain,
+        logo_url: company.logo_url,
         status: company.verification_status, // 'pending', 'approved', 'rejected'
         created_date: company.created_at
       }));

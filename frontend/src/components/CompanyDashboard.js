@@ -216,10 +216,25 @@ function CompanyDashboard({ company, departments, teams, employees, hierarchy, m
 
         {activeTab === 'requests' && (
           <div>
+            {isAdminView && (
+              <div 
+                className="mb-4 p-4 rounded-lg"
+                style={{
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgb(59, 130, 246)',
+                  color: 'rgb(59, 130, 246)'
+                }}
+              >
+                <p className="text-sm">
+                  <strong>Read-only mode:</strong> You are viewing this company profile as an administrator. You cannot approve or reject requests.
+                </p>
+              </div>
+            )}
             <PendingRequestsSection 
               key={`requests-${activeTab}-${refreshKey}`}
               companyId={companyId} 
               onRequestsLoaded={(count) => setPendingRequestsCount(count)}
+              isAdminView={isAdminView}
             />
           </div>
         )}
@@ -232,6 +247,20 @@ function CompanyDashboard({ company, departments, teams, employees, hierarchy, m
             <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
               Review and approve enriched employee profiles. Employees can only use the system after their profile is approved.
             </p>
+            {isAdminView && (
+              <div 
+                className="mb-4 p-4 rounded-lg"
+                style={{
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgb(59, 130, 246)',
+                  color: 'rgb(59, 130, 246)'
+                }}
+              >
+                <p className="text-sm">
+                  <strong>Read-only mode:</strong> You are viewing this company profile as an administrator. You cannot approve or reject profiles.
+                </p>
+              </div>
+            )}
             <PendingProfileApprovals
               approvals={pendingApprovals}
               companyId={companyId}
