@@ -50,12 +50,22 @@ class CSVParser {
    * @returns {Object} Normalized company data
    */
   normalizeCompanyRow(row, rowNumber) {
+    // Debug logging for approval_policy
+    const rawApprovalPolicy = this.trimValue(row.approval_policy);
+    const rawLearningPathApproval = this.trimValue(row.learning_path_approval);
+    console.log(`[CSVParser] normalizeCompanyRow - Row ${rowNumber}:`);
+    console.log(`[CSVParser]   Raw approval_policy: "${rawApprovalPolicy}"`);
+    console.log(`[CSVParser]   Raw learning_path_approval: "${rawLearningPathApproval}"`);
+    
+    const normalizedApprovalPolicy = this.normalizeApprovalPolicy(rawApprovalPolicy || rawLearningPathApproval) || 'manual';
+    console.log(`[CSVParser]   Normalized approval_policy: "${normalizedApprovalPolicy}"`);
+    
     return {
       rowNumber,
       // Company data (only from row 1)
       company_name: this.trimValue(row.company_name),
       industry: this.trimValue(row.industry),
-      approval_policy: this.normalizeApprovalPolicy(this.trimValue(row.approval_policy) || this.trimValue(row.learning_path_approval)) || 'manual',
+      approval_policy: normalizedApprovalPolicy,
       kpis: this.trimValue(row.KPIs) || this.trimValue(row.kpis), // Removed primary_kpis - only kpis
       logo_url: this.trimValue(row.logo_url) || this.trimValue(row.company_logo) || this.trimValue(row.logo),
       // Company settings for microservice integration

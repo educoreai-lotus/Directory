@@ -366,17 +366,21 @@ class ParseCSVUseCase {
 
     // Always validate and set approval_policy (even if not in CSV, use default 'manual')
     // This ensures we never send an invalid value to the database
+    console.log(`[ParseCSVUseCase] updateCompanySettings - Row approval_policy: "${row.approval_policy}", validatedSettings.approval_policy: "${validatedSettings.approval_policy}"`);
+    
     const approvalPolicy = validatedSettings.approval_policy !== undefined 
       ? validatedSettings.approval_policy 
       : this.dbConstraintValidator.validateApprovalPolicy(row.approval_policy || row.learning_path_approval || 'manual');
     
-    console.log(`[ParseCSVUseCase] Approval policy - raw: ${row.approval_policy || row.learning_path_approval || 'none'}, validated: ${approvalPolicy}`);
+    console.log(`[ParseCSVUseCase] Approval policy - final value: "${approvalPolicy}" (type: ${typeof approvalPolicy})`);
     
     // Ensure the value is exactly 'manual' or 'auto' (database constraint requirement)
     if (approvalPolicy !== 'manual' && approvalPolicy !== 'auto') {
+      console.error(`[ParseCSVUseCase] ❌ Invalid approval_policy value: "${approvalPolicy}" (type: ${typeof approvalPolicy})`);
       throw new Error(`Invalid approval_policy value: "${approvalPolicy}". Must be either "manual" or "auto".`);
     }
     
+    console.log(`[ParseCSVUseCase] ✅ Setting approval_policy to: "${approvalPolicy}"`);
     updates.push(`approval_policy = $${paramIndex++}`);
     values.push(approvalPolicy);
 
@@ -420,11 +424,32 @@ class ParseCSVUseCase {
       SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
       WHERE id = $${paramIndex}
     `;
-    const result = await client.query(query, values);
     
-    // Verify update succeeded
-    if (result.rowCount === 0) {
-      throw new Error(`Failed to update company settings. Company ${companyId} may not exist.`);
+    console.log(`[ParseCSVUseCase] Executing UPDATE query with ${updates.length} fields`);
+    console.log(`[ParseCSVUseCase] Query: ${query}`);
+    console.log(`[ParseCSVUseCase] Values:`, values.map((v, i) => `$${i+1}=${v}`).join(', '));
+    
+    try {
+      const result = await client.query(query, values);
+      
+      // Verify update succeeded
+      if (result.rowCount === 0) {
+        throw new Error(`Failed to update company settings. Company ${companyId} may not exist.`);
+      }
+      
+      console.log(`[ParseCSVUseCase] ✅ Successfully updated company settings`);
+    } catch (error) {
+      console.error(`[ParseCSVUseCase] ❌ Database error updating company settings:`, error);
+      console.error(`[ParseCSVUseCase] Error code: ${error.code}, constraint: ${error.constraint}`);
+      
+      // If it's a constraint violation for approval_policy, provide a clearer error
+      if (error.code === '23514' && (error.constraint === 'companies_approval_policy_check' || error.constraint === 'companies_learning_path_approval_check')) {
+        console.error(`[ParseCSVUseCase] Approval policy constraint violation - value sent: "${approvalPolicy}"`);
+        throw new Error(`Approval policy must be either "manual" or "auto". Received value: "${approvalPolicy}". Please check your CSV file.`);
+      }
+      
+      // Re-throw the original error
+      throw error;
     }
     
     if (row.logo_url) {
