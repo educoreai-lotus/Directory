@@ -237,7 +237,6 @@ function ProfileSkills({ employeeId }) {
 
   // Handle both flat competencies array and nested_competencies structure
   const competencies = skillsData?.competencies || skillsData?.nested_competencies || [];
-  const relevanceScore = skillsData?.relevance_score || 0;
 
   return (
     <div className="mb-6">
@@ -248,29 +247,6 @@ function ProfileSkills({ employeeId }) {
         background: 'var(--bg-secondary)',
         borderColor: 'var(--border-default)'
       }}>
-        {/* Relevance Score */}
-        {relevanceScore > 0 && (
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                Relevance Score
-              </span>
-              <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                {relevanceScore.toFixed(1)}%
-              </span>
-            </div>
-            <div className="w-full h-2 rounded-full" style={{ background: 'var(--bg-primary)' }}>
-              <div
-                className="h-2 rounded-full"
-                style={{
-                  width: `${relevanceScore}%`,
-                  background: 'var(--color-primary, #3b82f6)'
-                }}
-              />
-            </div>
-          </div>
-        )}
-
         {/* Skills Tree View */}
         {competencies.length > 0 ? (
           <div className="mb-4">
@@ -284,7 +260,7 @@ function ProfileSkills({ employeeId }) {
           </p>
         )}
 
-        {/* View More Button */}
+        {/* Verify Your Skills Button */}
         <div className="flex gap-2 mt-6 pt-4 border-t" style={{ borderColor: 'var(--border-default)' }}>
           <button
             className="px-4 py-2 rounded-md text-sm font-medium transition-colors"
@@ -299,12 +275,10 @@ function ProfileSkills({ employeeId }) {
               e.target.style.background = 'var(--bg-button-primary, #059669)';
             }}
             onClick={() => {
-              alert('You are being redirected to the Skills Engine page.');
-              // TODO: When Skills Engine frontend is available, redirect to it
-              // window.open('https://skills-engine-frontend-url', '_blank');
+              // TODO: Implement skills verification functionality
             }}
           >
-            View More
+            Verify Your Skills
           </button>
         </div>
       </div>
