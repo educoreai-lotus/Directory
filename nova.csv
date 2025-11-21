@@ -1,0 +1,15 @@
+company_name,industry,logo_url,approval_policy,kpis,passing_grade,max_attempts,exercises_limited,num_of_exercises,learning_path_approval,employee_id,full_name,email,role_type,department_id,department_name,team_id,team_name,manager_id,password,current_role_in_company,target_role_in_company,preferred_language,status,ai_enabled,public_publish_enable
+NOVA,Semiconductor,https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR1r_9eFOBX3RSdcNTujNSujQ_iD95xHMKyNg&s,manual,Product Yield;Quality Metrics;Innovation Rate;Time to Market,80,3,true,20,manual,,,,,,,,,,,,,
+,,,,,,,,,CEO001,Dr. Rachel Kim,rachel.kim@novami.com,REGULAR_EMPLOYEE + DECISION_MAKER,DEPT001,Executive,DEPT001_TEAM001,Leadership,,SecurePass123,CEO,CEO,English,active,,,
+,,,,,,,,,HR001,Jennifer Martinez,jennifer.martinez@novami.com,REGULAR_EMPLOYEE + HR_MANAGER,DEPT002,Human Resources,DEPT002_TEAM001,HR Team,,SecurePass123,HR Manager,HR Director,English,active,,,
+,,,,,,,,,ENG001,Dr. Thomas Anderson,thomas.anderson@novami.com,REGULAR_EMPLOYEE + DEPARTMENT_MANAGER,DEPT003,Engineering,DEPT003_TEAM001,Design Team,CEO001,SecurePass123,VP of Engineering,VP of Engineering,English,active,,,
+,,,,,,,,,ENG002,Sophie Chen,sophie.chen@novami.com,REGULAR_EMPLOYEE + TEAM_MANAGER,DEPT003,Engineering,DEPT003_TEAM001,Design Team,ENG001,SecurePass123,Senior Design Engineer,Lead Design Engineer,English,active,,,
+,,,,,,,,,ENG003,Michael Park,michael.park@novami.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM001,Design Team,ENG002,SecurePass123,Design Engineer,Senior Design Engineer,English,active,,,
+,,,,,,,,,ENG004,Lisa Wang,lisa.wang@novami.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM002,Process Team,ENG001,SecurePass123,Process Engineer,Senior Process Engineer,English,active,,,
+,,,,,,,,,QA001,Robert Singh,robert.singh@novami.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM003,Quality Assurance,ENG001,SecurePass123,QA Engineer,Senior QA Engineer,English,active,,,
+,,,,,,,,,TRAINER001,Amanda Foster,amanda.foster@novami.com,TRAINER + DEPARTMENT_MANAGER,DEPT004,Learning & Development,DEPT004_TEAM001,Training Team,CEO001,SecurePass123,Training Director,Head of Learning,English,active,true,false
+,,,,,,,,,TRAINEE001,Daniel Lee,daniel.lee@novami.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM001,Design Team,ENG002,SecurePass123,Junior Engineer,Mid-level Engineer,English,active,,,
+,,,,,,,,,TRAINEE002,Emma Johnson,emma.johnson@novami.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM002,Process Team,ENG001,SecurePass123,Junior Engineer,Mid-level Engineer,English,active,,,
+,,,,,,,,,OPS001,James Taylor,james.taylor@novami.com,REGULAR_EMPLOYEE,DEPT005,Operations,DEPT005_TEAM001,Manufacturing,CEO001,SecurePass123,Operations Manager,Senior Operations Manager,English,active,,,
+,,,,,,,,,TRAINER002,Patricia Brown,patricia.brown@novami.com,TRAINER,DEPT004,Learning & Development,DEPT004_TEAM001,Training Team,TRAINER001,SecurePass123,Technical Trainer,Senior Technical Trainer,English,active,true,true
+

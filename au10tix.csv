@@ -1,0 +1,16 @@
+company_name,industry,logo_url,approval_policy,kpis,passing_grade,max_attempts,exercises_limited,num_of_exercises,learning_path_approval,employee_id,full_name,email,role_type,department_id,department_name,team_id,team_name,manager_id,password,current_role_in_company,target_role_in_company,preferred_language,status,ai_enabled,public_publish_enable
+AU10TIX,Identity verification,https://upload.wikimedia.org/wikipedia/he/9/9a/AU10TIX_logo.jpeg?20220428143645,auto,Accuracy Rate;Processing Speed;Customer Satisfaction;Security Compliance,70,2,true,12,auto,,,,,,,,,,,,,
+,,,,,,,,,CEO001,Oded Keren,oded.keren@au10tix.com,REGULAR_EMPLOYEE + DECISION_MAKER,DEPT001,Executive,DEPT001_TEAM001,Leadership,,SecurePass123,CEO,CEO,English,active,,,
+,,,,,,,,,HR001,Maya Cohen,maya.cohen@au10tix.com,REGULAR_EMPLOYEE + HR_MANAGER,DEPT002,Human Resources,DEPT002_TEAM001,HR Team,,SecurePass123,HR Manager,HR Director,English,active,,,
+,,,,,,,,,DEV001,Yaron Levi,yaron.levi@au10tix.com,REGULAR_EMPLOYEE + DEPARTMENT_MANAGER,DEPT003,Engineering,DEPT003_TEAM001,Development Team,CEO001,SecurePass123,VP of Engineering,VP of Engineering,English,active,,,
+,,,,,,,,,DEV002,Noa Ben-David,noa.bendavid@au10tix.com,REGULAR_EMPLOYEE + TEAM_MANAGER,DEPT003,Engineering,DEPT003_TEAM001,Development Team,DEV001,SecurePass123,Senior Software Engineer,Lead Software Engineer,English,active,,,
+,,,,,,,,,DEV003,David Mizrahi,david.mizrahi@au10tix.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM001,Development Team,DEV002,SecurePass123,Software Engineer,Senior Software Engineer,English,active,,,
+,,,,,,,,,DEV004,Sarah Avraham,sarah.avraham@au10tix.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM002,AI/ML Team,DEV001,SecurePass123,ML Engineer,Senior ML Engineer,English,active,,,
+,,,,,,,,,QA001,Ronit Shalom,ronit.shalom@au10tix.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM003,QA Team,DEV001,SecurePass123,QA Engineer,Senior QA Engineer,English,active,,,
+,,,,,,,,,SEC001,Itay Cohen,itay.cohen@au10tix.com,REGULAR_EMPLOYEE + TEAM_MANAGER,DEPT004,Security,DEPT004_TEAM001,Security Team,CEO001,SecurePass123,Security Manager,Senior Security Manager,English,active,,,
+,,,,,,,,,TRAINER001,Tal Rosen,tal.rosen@au10tix.com,TRAINER + DEPARTMENT_MANAGER,DEPT005,Learning & Development,DEPT005_TEAM001,Training Team,CEO001,SecurePass123,Training Director,Head of Learning,English,active,true,false
+,,,,,,,,,TRAINEE001,Shira Goldberg,shira.goldberg@au10tix.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM001,Development Team,DEV002,SecurePass123,Junior Developer,Mid-level Developer,English,active,,,
+,,,,,,,,,TRAINEE002,Eitan Dor,eitan.dor@au10tix.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM002,AI/ML Team,DEV001,SecurePass123,Junior ML Engineer,Mid-level ML Engineer,English,active,,,
+,,,,,,,,,OPS001,Rina Katz,rina.katz@au10tix.com,REGULAR_EMPLOYEE,DEPT006,Operations,DEPT006_TEAM001,Operations Team,CEO001,SecurePass123,Operations Manager,Senior Operations Manager,English,active,,,
+,,,,,,,,,TRAINER002,Gal Meir,gal.meir@au10tix.com,TRAINER,DEPT005,Learning & Development,DEPT005_TEAM001,Training Team,TRAINER001,SecurePass123,Technical Trainer,Senior Technical Trainer,English,active,true,true
+
