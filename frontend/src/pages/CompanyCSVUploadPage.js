@@ -177,42 +177,18 @@ function CompanyCSVUploadPage() {
             <h4 className="font-semibold mb-2 text-base" style={{ color: 'var(--text-primary)' }}>
               3. Row 1 – Company Settings
             </h4>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
-                <tbody>
-                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
-                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>company_name</td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
-                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>industry</td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
-                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>logo_url</td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
-                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>approval_policy <span className="font-normal text-xs" style={{ color: 'var(--text-muted)' }}>(manual / auto)</span></td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
-                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>kpis <span className="font-normal text-xs" style={{ color: 'var(--text-muted)' }}>(split by ;)</span></td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
-                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>passing_grade <span className="font-normal text-xs" style={{ color: 'var(--text-muted)' }}>(0–100)</span></td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
-                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>max_attempts</td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
-                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>exercises_limited <span className="font-normal text-xs" style={{ color: 'var(--text-muted)' }}>(true/false)</span></td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
-                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>num_of_exercises <span className="font-normal text-xs" style={{ color: 'var(--text-muted)' }}>(when exercises_limited = true)</span></td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>learning_path_approval</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <ul className="text-sm ml-4 space-y-1" style={{ color: 'var(--text-secondary)' }}>
+              <li>• company_name</li>
+              <li>• industry</li>
+              <li>• logo_url</li>
+              <li>• approval_policy <span className="text-xs" style={{ color: 'var(--text-muted)' }}>(manual / auto)</span></li>
+              <li>• kpis <span className="text-xs" style={{ color: 'var(--text-muted)' }}>(split by ;)</span></li>
+              <li>• passing_grade <span className="text-xs" style={{ color: 'var(--text-muted)' }}>(0–100)</span></li>
+              <li>• max_attempts</li>
+              <li>• exercises_limited <span className="text-xs" style={{ color: 'var(--text-muted)' }}>(true/false)</span></li>
+              <li>• num_of_exercises <span className="text-xs" style={{ color: 'var(--text-muted)' }}>(when exercises_limited = true)</span></li>
+              <li>• learning_path_approval</li>
+            </ul>
             <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
               <strong>Note:</strong> if approval_policy = manual → state one DECISION_MAKER
             </p>
@@ -252,7 +228,7 @@ function CompanyCSVUploadPage() {
           {/* 5. Role Rules */}
           <div className="mb-6">
             <h4 className="font-semibold mb-2 text-base" style={{ color: 'var(--text-primary)' }}>
-              5. Role Rules (Short & Important)
+              5. Role Rules
             </h4>
             <div className="mb-3">
               <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
