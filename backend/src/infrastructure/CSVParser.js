@@ -44,19 +44,81 @@ class CSVParser {
   }
 
   /**
-   * Normalize CSV row data
+   * Normalize company row data (row 1 only)
+   * @param {Object} row - Raw CSV row
+   * @param {number} rowNumber - Row number (1-indexed, including header)
+   * @returns {Object} Normalized company data
+   */
+  normalizeCompanyRow(row, rowNumber) {
+    return {
+      rowNumber,
+      // Company data (only from row 1)
+      company_name: this.trimValue(row.company_name),
+      industry: this.trimValue(row.industry),
+      approval_policy: this.normalizeApprovalPolicy(this.trimValue(row.approval_policy) || this.trimValue(row.learning_path_approval)) || 'manual',
+      kpis: this.trimValue(row.KPIs) || this.trimValue(row.kpis), // Removed primary_kpis - only kpis
+      logo_url: this.trimValue(row.logo_url) || this.trimValue(row.company_logo) || this.trimValue(row.logo),
+      // Company settings for microservice integration
+      passing_grade: this.parseIntValue(row.passing_grade),
+      max_attempts: this.parseIntValue(row.max_attempts),
+      exercises_limited: this.parseBoolean(row.exercises_limited),
+      num_of_exercises: this.parseIntValue(row.num_of_exercises),
+      learning_path_approval: this.trimValue(row.learning_path_approval)
+    };
+  }
+
+  /**
+   * Normalize employee row data (rows 2+)
+   * @param {Object} row - Raw CSV row
+   * @param {number} rowNumber - Row number (1-indexed, including header)
+   * @returns {Object} Normalized employee row data
+   */
+  normalizeEmployeeRow(row, rowNumber) {
+    return {
+      rowNumber,
+      // Department data
+      department_id: this.trimValue(row.department_id),
+      department_name: this.trimValue(row.department_name),
+      
+      // Team data
+      team_id: this.trimValue(row.team_id),
+      team_name: this.trimValue(row.team_name),
+      
+      // Employee data
+      employee_id: this.trimValue(row.employee_id),
+      full_name: this.trimValue(row.full_name),
+      email: this.trimValue(row.email),
+      role_type: this.normalizeRoleType(this.trimValue(row.role_type)),
+      current_role_in_company: this.trimValue(row.current_role_in_company),
+      target_role_in_company: this.trimValue(row.target_role_in_company),
+      manager_id: this.trimValuePreserveEmpty(row.manager_id), // Preserve empty strings for manager_id
+      password: this.trimValuePreserveEmpty(row.password) || null, // Preserve password, but allow null if empty
+      preferred_language: this.trimValue(row.preferred_language),
+      status: this.normalizeEmployeeStatus(this.trimValue(row.status)) || 'active',
+      
+      // Trainer-specific fields
+      ai_enabled: this.parseBoolean(row.ai_enabled),
+      public_publish_enable: this.parseBoolean(row.public_publish_enable)
+    };
+  }
+
+  /**
+   * Normalize CSV row data (legacy method - kept for backward compatibility)
    * @param {Object} row - Raw CSV row
    * @param {number} rowNumber - Row number (1-indexed, including header)
    * @returns {Object} Normalized row data
+   * @deprecated Use normalizeCompanyRow or normalizeEmployeeRow instead
    */
   normalizeRow(row, rowNumber) {
+    // This method is deprecated but kept for backward compatibility
+    // It combines company and employee data (old format)
     return {
       rowNumber,
       // Company data
       company_name: this.trimValue(row.company_name),
       industry: this.trimValue(row.industry),
       approval_policy: this.normalizeApprovalPolicy(this.trimValue(row.approval_policy) || this.trimValue(row.learning_path_approval)) || 'manual',
-      kpis: this.trimValue(row.KPIs) || this.trimValue(row.kpis) || this.trimValue(row.primary_KPIs) || this.trimValue(row.primary_kpis),
+      kpis: this.trimValue(row.KPIs) || this.trimValue(row.kpis), // Removed primary_kpis
       logo_url: this.trimValue(row.logo_url) || this.trimValue(row.company_logo) || this.trimValue(row.logo),
       // Company settings for microservice integration
       passing_grade: this.parseIntValue(row.passing_grade),
@@ -79,8 +141,8 @@ class CSVParser {
       role_type: this.normalizeRoleType(this.trimValue(row.role_type)),
       current_role_in_company: this.trimValue(row.current_role_in_company),
       target_role_in_company: this.trimValue(row.target_role_in_company),
-      manager_id: this.trimValuePreserveEmpty(row.manager_id), // Preserve empty strings for manager_id
-      password: this.trimValuePreserveEmpty(row.password) || null, // Preserve password, but allow null if empty
+      manager_id: this.trimValuePreserveEmpty(row.manager_id),
+      password: this.trimValuePreserveEmpty(row.password) || null,
       preferred_language: this.trimValue(row.preferred_language),
       status: this.normalizeEmployeeStatus(this.trimValue(row.status)) || 'active',
       
@@ -199,8 +261,9 @@ class CSVParser {
   /**
    * Normalize role_type value to uppercase
    * Database constraint expects: REGULAR_EMPLOYEE, TRAINER, TEAM_MANAGER, DEPARTMENT_MANAGER, DECISION_MAKER
+   * IMPORTANT: Every role must include either REGULAR_EMPLOYEE or TRAINER as base role
    * @param {string} value - Value to normalize (can be combination like "REGULAR_EMPLOYEE + TEAM_MANAGER")
-   * @returns {string|null} Normalized value in uppercase or null
+   * @returns {string|null} Normalized value in uppercase or null if invalid
    */
   normalizeRoleType(value) {
     if (!value) {
@@ -220,8 +283,23 @@ class CSVParser {
       return validRoles.includes(trimmed) ? trimmed : null;
     }).filter(part => part !== null);
     
-    // Return joined roles or null if no valid roles
-    return parts.length > 0 ? parts.join(' + ') : null;
+    if (parts.length === 0) {
+      return null; // No valid roles
+    }
+
+    // CRITICAL: Every role must include either REGULAR_EMPLOYEE or TRAINER as base role
+    const hasBaseRole = parts.includes('REGULAR_EMPLOYEE') || parts.includes('TRAINER');
+    if (!hasBaseRole) {
+      // Invalid: missing base role - return null to trigger validation error
+      return null;
+    }
+    
+    // Return joined roles (sorted: base role first, then others)
+    const baseRoles = parts.filter(r => r === 'REGULAR_EMPLOYEE' || r === 'TRAINER');
+    const otherRoles = parts.filter(r => r !== 'REGULAR_EMPLOYEE' && r !== 'TRAINER');
+    const sortedParts = [...baseRoles, ...otherRoles];
+    
+    return sortedParts.join(' + ');
   }
 }
 

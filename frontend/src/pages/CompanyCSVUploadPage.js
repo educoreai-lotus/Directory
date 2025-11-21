@@ -151,11 +151,24 @@ function CompanyCSVUploadPage() {
             CSV File Requirements
           </h3>
           
+          <div className="mb-4 p-3 rounded" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+            <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+              📋 CSV Structure:
+            </p>
+            <ul className="text-sm mt-2 ml-4 space-y-1" style={{ color: 'var(--text-secondary)' }}>
+              <li>• <strong>Row 1</strong> = Company details + company-wide settings</li>
+              <li>• <strong>Row 2 and onward</strong> = Employees only (no company fields duplicated)</li>
+            </ul>
+          </div>
+
           {/* Company-Level Settings */}
           <div className="mb-6">
             <h4 className="font-semibold mb-2 text-base" style={{ color: 'var(--text-primary)' }}>
-              Company-Level Settings (from first row only)
+              Row 1: Company-Level Settings (ONLY in first row)
             </h4>
+            <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
+              These fields must appear ONLY in row 1. Do NOT repeat them in employee rows.
+            </p>
             <ul className="space-y-2 text-sm ml-4" style={{ color: 'var(--text-secondary)' }}>
               <li>
                 <strong style={{ color: 'var(--text-primary)' }}>approval_policy</strong> (Required)
@@ -169,12 +182,35 @@ function CompanyCSVUploadPage() {
                 </span>
               </li>
               <li>
-                <strong style={{ color: 'var(--text-primary)' }}>KPIs</strong> (Required - Mandatory)
+                <strong style={{ color: 'var(--text-primary)' }}>kpis</strong> (Required - Mandatory)
                 <br />
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                   Company's primary Key Performance Indicators (required for integration with Learning Analytics and Management & Reporting microservices).
                   <br />
                   Format: Semicolon-separated (e.g., "Employee Growth;Product Quality;Customer Satisfaction")
+                  <br />
+                  <strong>Note:</strong> Do NOT use "primary_kpis" - use only "kpis"
+                </span>
+              </li>
+              <li>
+                <strong style={{ color: 'var(--text-primary)' }}>company_name</strong> (Optional)
+                <br />
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  Company name (if different from registration)
+                </span>
+              </li>
+              <li>
+                <strong style={{ color: 'var(--text-primary)' }}>industry</strong> (Optional)
+                <br />
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  Company industry
+                </span>
+              </li>
+              <li>
+                <strong style={{ color: 'var(--text-primary)' }}>learning_path_approval</strong> (Optional)
+                <br />
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  Alternative field name for approval_policy
                 </span>
               </li>
               <li>
@@ -222,12 +258,17 @@ function CompanyCSVUploadPage() {
           {/* Employee Fields */}
           <div className="mb-4">
             <h4 className="font-semibold mb-2 text-base" style={{ color: 'var(--text-primary)' }}>
-              Required Employee Fields
+              Rows 2+: Required Employee Fields (ONLY employee fields)
             </h4>
+            <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+              Employee rows must contain ONLY employee-specific fields. Do NOT include company fields.
+            </p>
             <ul className="space-y-1 text-sm ml-4" style={{ color: 'var(--text-secondary)' }}>
-              <li>• employee_id, full_name, email, role_type, department_id, department_name, team_id, team_name</li>
-              <li>• manager_id (use empty string if no manager), password, preferred_language, status</li>
-              <li>• current_role_in_company, target_role_in_company</li>
+              <li>• <strong>employee_id</strong>, <strong>full_name</strong>, <strong>email</strong>, <strong>role_type</strong></li>
+              <li>• <strong>department_id</strong>, <strong>department_name</strong>, <strong>team_id</strong>, <strong>team_name</strong></li>
+              <li>• <strong>manager_id</strong> (use empty string "" if no manager), <strong>password</strong></li>
+              <li>• <strong>current_role_in_company</strong>, <strong>target_role_in_company</strong></li>
+              <li>• <strong>preferred_language</strong>, <strong>status</strong></li>
             </ul>
           </div>
 
@@ -242,11 +283,27 @@ function CompanyCSVUploadPage() {
 
           <div className="mb-4">
             <h4 className="font-semibold mb-2 text-base" style={{ color: 'var(--text-primary)' }}>
-              Role Types
+              Role Types (IMPORTANT)
             </h4>
+            <div className="p-3 rounded mb-2" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
+              <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                ⚠️ Base Role Requirement:
+              </p>
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                Every employee must include either <strong>REGULAR_EMPLOYEE</strong> or <strong>TRAINER</strong> as the base role.
+              </p>
+            </div>
             <ul className="space-y-1 text-sm ml-4" style={{ color: 'var(--text-secondary)' }}>
-              <li>• REGULAR_EMPLOYEE, TRAINER, TEAM_MANAGER, DEPARTMENT_MANAGER, DECISION_MAKER</li>
-              <li>• Roles can be combined (e.g., "REGULAR_EMPLOYEE + TEAM_MANAGER + DECISION_MAKER")</li>
+              <li>• <strong>Base roles:</strong> REGULAR_EMPLOYEE, TRAINER (one must be present)</li>
+              <li>• <strong>Additional roles:</strong> TEAM_MANAGER, DEPARTMENT_MANAGER, DECISION_MAKER</li>
+              <li>• <strong>Valid examples:</strong></li>
+              <li className="ml-4">- REGULAR_EMPLOYEE</li>
+              <li className="ml-4">- TRAINER</li>
+              <li className="ml-4">- REGULAR_EMPLOYEE + TEAM_MANAGER</li>
+              <li className="ml-4">- TRAINER + DEPARTMENT_MANAGER</li>
+              <li className="ml-4">- REGULAR_EMPLOYEE + DEPARTMENT_MANAGER + DECISION_MAKER</li>
+              <li className="ml-4 text-red-600">❌ Invalid: TEAM_MANAGER (missing base role)</li>
+              <li className="ml-4 text-red-600">❌ Invalid: DEPARTMENT_MANAGER + DECISION_MAKER (missing base role)</li>
             </ul>
           </div>
 

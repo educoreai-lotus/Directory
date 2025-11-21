@@ -126,7 +126,7 @@ class DatabaseConstraintValidator {
     }
     
     // KPIs is mandatory
-    const kpisValue = row.kpis || row.KPIs || row.primary_kpis || row.primary_KPIs;
+    const kpisValue = row.kpis || row.KPIs; // Removed primary_kpis - only kpis is used
     if (!kpisValue || String(kpisValue).trim() === '') {
       throw new Error('KPIs field is mandatory. Please provide company KPIs in the first row of your CSV.');
     }

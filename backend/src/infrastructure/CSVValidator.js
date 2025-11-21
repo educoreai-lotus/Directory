@@ -4,11 +4,12 @@
 class CSVValidator {
   /**
    * Validate parsed CSV data
-   * @param {Array} rows - Parsed CSV rows
+   * @param {Array} rows - Parsed CSV rows (first row is company, rest are employees)
    * @param {string} companyId - Company ID (from registration)
+   * @param {Object} companyRow - Normalized company row (row 1)
    * @returns {Object} Validation result with errors and warnings
    */
-  validate(rows, companyId) {
+  validate(rows, companyId, companyRow) {
     const errors = [];
     const warnings = [];
     const validRows = [];
@@ -23,16 +24,51 @@ class CSVValidator {
       return { errors, warnings, validRows, isValid: false };
     }
 
+    // Validate company row (row 1) - must be first row
+    const companyRowData = rows[0];
+    if (companyRowData) {
+      const companyErrors = this.validateCompanyRow(companyRowData, companyRow);
+      if (companyErrors.length > 0) {
+        errors.push(...companyErrors);
+      } else {
+        validRows.push(companyRowData);
+      }
+    }
+
+    // Validate employee rows (rows 2+)
+    const employeeRows = rows.slice(1);
+    if (employeeRows.length === 0) {
+      errors.push({
+        type: 'missing_employees',
+        message: 'CSV file must contain at least one employee row (row 2+)',
+        row: null,
+        column: null
+      });
+    }
+
     // Track unique identifiers for duplicate detection
     const employeeIds = new Set();
     const departmentIds = new Set();
     const teamIds = new Set();
     const emails = new Set();
 
-    rows.forEach((row, index) => {
-      const rowNumber = index + 2; // +2 because CSV is 1-indexed and has header row
+    employeeRows.forEach((row, index) => {
+      const rowNumber = row.rowNumber || (index + 3); // +3 because CSV is 1-indexed, has header, and company row
       const rowErrors = [];
       const rowWarnings = [];
+
+      // Validate that company fields are NOT present in employee rows
+      const companyFields = ['company_name', 'industry', 'logo_url', 'approval_policy', 'kpis', 'passing_grade', 'max_attempts', 'exercises_limited', 'num_of_exercises', 'learning_path_approval'];
+      companyFields.forEach(field => {
+        if (row[field] && String(row[field]).trim().length > 0) {
+          rowWarnings.push({
+            type: 'company_field_in_employee_row',
+            message: `${field} should not be in employee rows (rows 2+). Company fields belong only in row 1`,
+            row: rowNumber,
+            column: field
+          });
+        }
+      });
 
       // Validate mandatory employee fields
       if (!row.employee_id) {
@@ -98,6 +134,13 @@ class CSVValidator {
         rowErrors.push({
           type: 'invalid_format',
           message: `Invalid role_type: ${row.role_type}. Must be one of: REGULAR_EMPLOYEE, TRAINER, TEAM_MANAGER, DEPARTMENT_MANAGER, DECISION_MAKER, or combinations`,
+          row: rowNumber,
+          column: 'role_type'
+        });
+      } else if (!this.hasBaseRole(row.role_type)) {
+        rowErrors.push({
+          type: 'missing_base_role',
+          message: `role_type must include either REGULAR_EMPLOYEE or TRAINER as base role. Current value: ${row.role_type}`,
           row: rowNumber,
           column: 'role_type'
         });
@@ -228,9 +271,94 @@ class CSVValidator {
         warningRows: warnings.length,
         uniqueDepartments: departmentIds.size,
         uniqueTeams: teamIds.size,
-        uniqueEmployees: validRows.length
+        uniqueEmployees: validRows.filter(r => r.employee_id).length // Only count employee rows
       }
     };
+  }
+
+  /**
+   * Validate company row (row 1)
+   * @param {Object} row - Company row data
+   * @param {Object} companyRow - Normalized company row
+   * @returns {Array} Array of validation errors
+   */
+  validateCompanyRow(row, companyRow) {
+    const errors = [];
+    const rowNumber = row.rowNumber || 2; // Row 2 in CSV (after header)
+
+    // Validate required company fields
+    if (!companyRow.kpis) {
+      errors.push({
+        type: 'missing_field',
+        message: 'kpis is required in row 1 (company-level field)',
+        row: rowNumber,
+        column: 'kpis'
+      });
+    }
+
+    if (companyRow.passing_grade === null || companyRow.passing_grade === undefined) {
+      errors.push({
+        type: 'missing_field',
+        message: 'passing_grade is required in row 1 (company-level field)',
+        row: rowNumber,
+        column: 'passing_grade'
+      });
+    }
+
+    if (companyRow.max_attempts === null || companyRow.max_attempts === undefined) {
+      errors.push({
+        type: 'missing_field',
+        message: 'max_attempts is required in row 1 (company-level field)',
+        row: rowNumber,
+        column: 'max_attempts'
+      });
+    }
+
+    if (companyRow.exercises_limited === null || companyRow.exercises_limited === undefined) {
+      errors.push({
+        type: 'missing_field',
+        message: 'exercises_limited is required in row 1 (company-level field)',
+        row: rowNumber,
+        column: 'exercises_limited'
+      });
+    }
+
+    if (companyRow.exercises_limited === true && (companyRow.num_of_exercises === null || companyRow.num_of_exercises === undefined)) {
+      errors.push({
+        type: 'missing_field',
+        message: 'num_of_exercises is required in row 1 when exercises_limited is true',
+        row: rowNumber,
+        column: 'num_of_exercises'
+      });
+    }
+
+    // Validate that employee-specific fields are NOT present in company row
+    const employeeFields = ['employee_id', 'full_name', 'email', 'department_id', 'department_name', 'team_id', 'team_name'];
+    employeeFields.forEach(field => {
+      if (row[field] && row[field].trim && row[field].trim().length > 0) {
+        errors.push({
+          type: 'invalid_field_in_company_row',
+          message: `${field} should not be in row 1 (company row). Employee fields belong in rows 2+`,
+          row: rowNumber,
+          column: field
+        });
+      }
+    });
+
+    return errors;
+  }
+
+  /**
+   * Check if role_type includes base role (REGULAR_EMPLOYEE or TRAINER)
+   * @param {string} roleType - Role type to check
+   * @returns {boolean} True if has base role
+   */
+  hasBaseRole(roleType) {
+    if (!roleType) {
+      return false;
+    }
+    const roles = roleType.split('+').map(r => r.trim().toUpperCase());
+    return roles.includes('REGULAR_EMPLOYEE') || roles.includes('TRAINER');
   }
 
   /**

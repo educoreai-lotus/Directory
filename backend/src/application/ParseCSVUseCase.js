@@ -33,15 +33,34 @@ class ParseCSVUseCase {
     const rawRows = await this.csvParser.parse(fileBuffer);
     console.log(`[ParseCSVUseCase] Parsed ${rawRows.length} rows from CSV`);
 
-    // Step 2: Normalize rows (use actual CSV line number if available)
-    const normalizedRows = rawRows.map((row) => {
-      // Use the actual CSV line number if stored during parsing, otherwise fall back to index + 2
-      const rowNumber = row._csvLineNumber || (rawRows.indexOf(row) + 2);
-      return this.csvParser.normalizeRow(row, rowNumber);
-    });
+    if (rawRows.length === 0) {
+      throw new Error('CSV file is empty or contains no data rows');
+    }
 
-    // Step 3: Validate CSV data
-    const validationResult = this.csvValidator.validate(normalizedRows, companyId);
+    // Step 2: Separate company row (row 1) from employee rows (rows 2+)
+    const companyRow = rawRows[0];
+    const employeeRows = rawRows.slice(1);
+
+    if (employeeRows.length === 0) {
+      throw new Error('CSV file must contain at least one employee row (row 2+)');
+    }
+
+    // Step 3: Normalize company row (row 1)
+    const companyRowNumber = companyRow._csvLineNumber || 2; // Row 2 in CSV (after header)
+    const normalizedCompanyRow = this.csvParser.normalizeCompanyRow(companyRow, companyRowNumber);
+    console.log(`[ParseCSVUseCase] Normalized company row from CSV row ${companyRowNumber}`);
+
+    // Step 4: Normalize employee rows (rows 2+)
+    const normalizedEmployeeRows = employeeRows.map((row) => {
+      // Use the actual CSV line number if stored during parsing, otherwise fall back to index + 3
+      const rowNumber = row._csvLineNumber || (employeeRows.indexOf(row) + 3);
+      return this.csvParser.normalizeEmployeeRow(row, rowNumber);
+    });
+    console.log(`[ParseCSVUseCase] Normalized ${normalizedEmployeeRows.length} employee rows`);
+
+    // Step 5: Validate CSV data (company row + employee rows)
+    const allRows = [normalizedCompanyRow, ...normalizedEmployeeRows];
+    const validationResult = this.csvValidator.validate(allRows, companyId, normalizedCompanyRow);
     console.log(`[ParseCSVUseCase] Validation complete: ${validationResult.validRows.length} valid rows, ${validationResult.errors.length} errors, ${validationResult.warnings.length} warnings`);
     
     // Log first few errors for debugging
@@ -63,24 +82,33 @@ class ParseCSVUseCase {
       };
     }
 
-    // Step 5: Process valid rows and create database records
-    const processingResult = await this.processValidRows(validationResult.validRows, companyId);
+    // Step 6: Process valid rows and create database records
+    // Separate company row from employee rows
+    const validCompanyRow = validationResult.validRows.find(r => r.rowNumber === companyRowNumber);
+    const validEmployeeRows = validationResult.validRows.filter(r => r.rowNumber !== companyRowNumber);
+    
+    if (!validCompanyRow) {
+      throw new Error('Company row (row 1) validation failed. Please check company-level fields.');
+    }
 
-    return {
-      success: true,
-      validation: validationResult,
-      created: processingResult,
-      message: `Successfully processed ${validationResult.validRows.length} employees, ${processingResult.departments} departments, and ${processingResult.teams} teams.`
-    };
+    const processingResult = await this.processValidRows(validCompanyRow, validEmployeeRows, companyId);
+
+      return {
+        success: true,
+        validation: validationResult,
+        created: processingResult,
+        message: `Successfully processed ${validEmployeeRows.length} employees, ${processingResult.departments} departments, and ${processingResult.teams} teams.`
+      };
   }
 
   /**
    * Process valid CSV rows and create database records
-   * @param {Array} validRows - Validated CSV rows
+   * @param {Object} companyRow - Validated company row (row 1)
+   * @param {Array} employeeRows - Validated employee rows (rows 2+)
    * @param {string} companyId - Company ID
    * @returns {Promise<Object>} Processing statistics
    */
-  async processValidRows(validRows, companyId) {
+  async processValidRows(companyRow, employeeRows, companyId) {
     // Verify company exists before processing
     const company = await this.companyRepository.findById(companyId);
     if (!company) {
@@ -91,15 +119,13 @@ class ParseCSVUseCase {
     const client = await this.companyRepository.beginTransaction();
 
     try {
-      // Update company settings from first row (with validation)
-      // KPIs is mandatory, so we always update company settings
-      const firstRow = validRows[0];
-      await this.updateCompanySettings(companyId, firstRow, client);
+      // Update company settings from company row (row 1) only
+      await this.updateCompanySettings(companyId, companyRow, client);
       
       // Validate DECISION_MAKER requirement if approval_policy is "manual"
-      const approvalPolicy = firstRow.approval_policy || 'manual';
+      const approvalPolicy = companyRow.approval_policy || 'manual';
       if (approvalPolicy === 'manual') {
-        const hasDecisionMaker = validRows.some(row => {
+        const hasDecisionMaker = employeeRows.some(row => {
           const roles = this.dbConstraintValidator.validateRoleType(row.role_type);
           return roles.includes('DECISION_MAKER');
         });
@@ -117,7 +143,7 @@ class ParseCSVUseCase {
 
       // Pre-validate all emails against database to catch conflicts early
       const emailConflicts = [];
-      for (const row of validRows) {
+      for (const row of employeeRows) {
         const emailOwner = await this.employeeRepository.findEmailOwner(row.email);
         if (emailOwner && emailOwner.company_id !== companyId) {
           emailConflicts.push({
@@ -135,8 +161,8 @@ class ParseCSVUseCase {
         throw new Error(`Email conflicts detected:\n${conflictMessages.join('\n')}`);
       }
 
-      // Process rows in order
-      for (const row of validRows) {
+      // Process employee rows in order
+      for (const row of employeeRows) {
         // Validate and normalize row data against database constraints
         const validatedRow = this.dbConstraintValidator.validateEmployeeRow(row);
 
@@ -207,14 +233,14 @@ class ParseCSVUseCase {
       }
 
       // Process manager relationships (second pass, after all employees are created)
-      for (const row of validRows) {
+      for (const row of employeeRows) {
         if (row.manager_id) {
           const employeeUuid = employeeIdToUuid.get(row.employee_id);
           const managerUuid = employeeIdToUuid.get(row.manager_id);
 
           if (employeeUuid && managerUuid) {
             // Determine relationship type based on manager's roles
-            const managerRow = validRows.find(r => r.employee_id === row.manager_id);
+            const managerRow = employeeRows.find(r => r.employee_id === row.manager_id);
             if (managerRow) {
               const managerRoles = this.dbConstraintValidator.validateRoleType(managerRow.role_type);
               const relationshipType = managerRoles.includes('DEPARTMENT_MANAGER') 
