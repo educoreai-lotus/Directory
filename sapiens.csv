@@ -1,17 +1,17 @@
 company_name,industry,logo_url,approval_policy,kpis,passing_grade,max_attempts,exercises_limited,num_of_exercises,learning_path_approval,employee_id,full_name,email,role_type,department_id,department_name,team_id,team_name,manager_id,password,current_role_in_company,target_role_in_company,preferred_language,status,ai_enabled,public_publish_enable
 Sapiens,Computer software,https://cdn.vidyard.com/thumbnails/46978311/zHRdZMKi1rzl44Cr_S-_zrKDlfTwhpMd.jpg,manual,Customer Satisfaction;Product Quality;Innovation Index;Team Productivity,75,3,true,18,manual,,,,,,,,,,,,,
-,,,,,,,,,CEO001,Roni Giladi,roni.giladi@sapiens.com,REGULAR_EMPLOYEE + DECISION_MAKER,DEPT001,Executive,DEPT001_TEAM001,Leadership,,SecurePass123,CEO,CEO,English,active,,,
-,,,,,,,,,HR001,Tamar Levy,tamar.levy@sapiens.com,REGULAR_EMPLOYEE + HR_MANAGER,DEPT002,Human Resources,DEPT002_TEAM001,HR Team,,SecurePass123,HR Manager,HR Director,English,active,,,
-,,,,,,,,,DEV001,Asaf Barak,asaf.barak@sapiens.com,REGULAR_EMPLOYEE + DEPARTMENT_MANAGER,DEPT003,Engineering,DEPT003_TEAM001,Development Team,CEO001,SecurePass123,VP of Engineering,VP of Engineering,English,active,,,
-,,,,,,,,,DEV002,Lior Cohen,lior.cohen@sapiens.com,REGULAR_EMPLOYEE + TEAM_MANAGER,DEPT003,Engineering,DEPT003_TEAM001,Development Team,DEV001,SecurePass123,Senior Software Engineer,Lead Software Engineer,English,active,,,
-,,,,,,,,,DEV003,Adi Shalev,adi.shalev@sapiens.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM001,Development Team,DEV002,SecurePass123,Software Engineer,Senior Software Engineer,English,active,,,
-,,,,,,,,,DEV004,Yuval Ben-Ami,yuval.benami@sapiens.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM002,Backend Team,DEV001,SecurePass123,Backend Engineer,Senior Backend Engineer,English,active,,,
-,,,,,,,,,DEV005,Michal Rotem,michal.rotem@sapiens.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM003,Frontend Team,DEV001,SecurePass123,Frontend Engineer,Senior Frontend Engineer,English,active,,,
-,,,,,,,,,QA001,Or Tal,or.tal@sapiens.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM004,QA Team,DEV001,SecurePass123,QA Engineer,Senior QA Engineer,English,active,,,
-,,,,,,,,,PROD001,Nir Zohar,nir.zohar@sapiens.com,REGULAR_EMPLOYEE + TEAM_MANAGER,DEPT004,Product,DEPT004_TEAM001,Product Team,CEO001,SecurePass123,Product Manager,Senior Product Manager,English,active,,,
-,,,,,,,,,TRAINER001,Dana Mor,dana.mor@sapiens.com,TRAINER + DEPARTMENT_MANAGER,DEPT005,Learning & Development,DEPT005_TEAM001,Training Team,CEO001,SecurePass123,Training Director,Head of Learning,English,active,true,false
-,,,,,,,,,TRAINEE001,Ido Bar,ido.bar@sapiens.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM001,Development Team,DEV002,SecurePass123,Junior Developer,Mid-level Developer,English,active,,,
-,,,,,,,,,TRAINEE002,Shani Dror,shani.dror@sapiens.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM002,Backend Team,DEV001,SecurePass123,Junior Developer,Mid-level Developer,English,active,,,
-,,,,,,,,,DESIGN001,Mor Hazan,mor.hazan@sapiens.com,REGULAR_EMPLOYEE,DEPT006,Design,DEPT006_TEAM001,UI/UX Team,CEO001,SecurePass123,UI/UX Designer,Senior UI/UX Designer,English,active,,,
-,,,,,,,,,TRAINER002,Barak Shani,barak.shani@sapiens.com,TRAINER,DEPT005,Learning & Development,DEPT005_TEAM001,Training Team,TRAINER001,SecurePass123,Technical Trainer,Senior Technical Trainer,English,active,true,true
+,,,,,,,,,,CEO001,Roni Giladi,roni.giladi@sapiens.com,REGULAR_EMPLOYEE + DECISION_MAKER,DEPT001,Executive,DEPT001_TEAM001,Leadership,,SecurePass123,CEO,CEO,en,active,false,false
+,,,,,,,,,,HR001,Tamar Levy,tamar.levy@sapiens.com,REGULAR_EMPLOYEE + HR_MANAGER,DEPT002,Human Resources,DEPT002_TEAM001,HR Team,,SecurePass123,HR Manager,HR Director,en,active,false,false
+,,,,,,,,,,DEV001,Asaf Barak,asaf.barak@sapiens.com,REGULAR_EMPLOYEE + DEPARTMENT_MANAGER,DEPT003,Engineering,DEPT003_TEAM001,Development Team,CEO001,SecurePass123,VP of Engineering,VP of Engineering,en,active,false,false
+,,,,,,,,,,DEV002,Lior Cohen,lior.cohen@sapiens.com,REGULAR_EMPLOYEE + TEAM_MANAGER,DEPT003,Engineering,DEPT003_TEAM001,Development Team,DEV001,SecurePass123,Senior Software Engineer,Lead Software Engineer,en,active,false,false
+,,,,,,,,,,DEV003,Adi Shalev,adi.shalev@sapiens.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM001,Development Team,DEV002,SecurePass123,Software Engineer,Senior Software Engineer,en,active,false,false
+,,,,,,,,,,DEV004,Yuval Ben-Ami,yuval.benami@sapiens.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM002,Backend Team,DEV001,SecurePass123,Backend Engineer,Senior Backend Engineer,en,active,false,false
+,,,,,,,,,,DEV005,Michal Rotem,michal.rotem@sapiens.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM003,Frontend Team,DEV001,SecurePass123,Frontend Engineer,Senior Frontend Engineer,en,active,false,false
+,,,,,,,,,,QA001,Or Tal,or.tal@sapiens.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM004,QA Team,DEV001,SecurePass123,QA Engineer,Senior QA Engineer,en,active,false,false
+,,,,,,,,,,PROD001,Nir Zohar,nir.zohar@sapiens.com,REGULAR_EMPLOYEE + TEAM_MANAGER,DEPT004,Product,DEPT004_TEAM001,Product Team,CEO001,SecurePass123,Product Manager,Senior Product Manager,en,active,false,false
+,,,,,,,,,,TRAINER001,Dana Mor,dana.mor@sapiens.com,TRAINER + DEPARTMENT_MANAGER,DEPT005,Learning & Development,DEPT005_TEAM001,Training Team,CEO001,SecurePass123,Training Director,Head of Learning,en,active,true,false
+,,,,,,,,,,TRAINEE001,Ido Bar,ido.bar@sapiens.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM001,Development Team,DEV002,SecurePass123,Junior Developer,Mid-level Developer,en,active,false,false
+,,,,,,,,,,TRAINEE002,Shani Dror,shani.dror@sapiens.com,REGULAR_EMPLOYEE,DEPT003,Engineering,DEPT003_TEAM002,Backend Team,DEV001,SecurePass123,Junior Developer,Mid-level Developer,en,active,false,false
+,,,,,,,,,,DESIGN001,Mor Hazan,mor.hazan@sapiens.com,REGULAR_EMPLOYEE,DEPT006,Design,DEPT006_TEAM001,UI/UX Team,CEO001,SecurePass123,UI/UX Designer,Senior UI/UX Designer,en,active,false,false
+,,,,,,,,,,TRAINER002,Barak Shani,barak.shani@sapiens.com,TRAINER,DEPT005,Learning & Development,DEPT005_TEAM001,Training Team,TRAINER001,SecurePass123,Technical Trainer,Senior Technical Trainer,en,active,true,true
 
