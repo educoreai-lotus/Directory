@@ -19,22 +19,29 @@ class GetManagerHierarchyUseCase {
    * @returns {Promise<Object|null>} Hierarchy structure or null if not a manager
    */
   async execute(managerId, companyId) {
+    console.log(`[GetManagerHierarchyUseCase] Executing for manager ${managerId} in company ${companyId}`);
+    
     // Get employee and their roles
     const employee = await this.employeeRepository.findById(managerId);
     if (!employee) {
       throw new Error('Employee not found');
     }
 
+    console.log(`[GetManagerHierarchyUseCase] Found employee: ${employee.full_name} (${employee.email})`);
+
     // Get employee roles
     const rolesQuery = 'SELECT role_type FROM employee_roles WHERE employee_id = $1';
     const rolesResult = await this.employeeRepository.pool.query(rolesQuery, [managerId]);
     const roles = rolesResult.rows.map(row => row.role_type);
+    console.log(`[GetManagerHierarchyUseCase] Employee roles:`, roles);
 
     // Check if employee is a manager
     const isDepartmentManager = roles.includes('DEPARTMENT_MANAGER');
     const isTeamManager = roles.includes('TEAM_MANAGER');
+    console.log(`[GetManagerHierarchyUseCase] Is Department Manager: ${isDepartmentManager}, Is Team Manager: ${isTeamManager}`);
 
     if (!isDepartmentManager && !isTeamManager) {
+      console.log(`[GetManagerHierarchyUseCase] Employee is not a manager`);
       return null; // Not a manager
     }
 
