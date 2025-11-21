@@ -151,165 +151,149 @@ function CompanyCSVUploadPage() {
             CSV File Requirements
           </h3>
           
-          <div className="mb-4 p-3 rounded" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-            <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-              📋 CSV Structure:
-            </p>
-            <ul className="text-sm mt-2 ml-4 space-y-1" style={{ color: 'var(--text-secondary)' }}>
-              <li>• <strong>Row 1</strong> = Company details + company-wide settings</li>
-              <li>• <strong>Row 2 and onward</strong> = Employees only (no company fields duplicated)</li>
-            </ul>
-          </div>
-
-          {/* Company-Level Settings */}
+          {/* 1. File Structure */}
           <div className="mb-6">
             <h4 className="font-semibold mb-2 text-base" style={{ color: 'var(--text-primary)' }}>
-              Row 1: Company-Level Settings (ONLY in first row)
+              1. File Structure
             </h4>
-            <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
-              These fields must appear ONLY in row 1. Do NOT repeat them in employee rows.
+            <ul className="text-sm ml-4 space-y-1" style={{ color: 'var(--text-secondary)' }}>
+              <li>• <strong>Row 1</strong> → Company settings</li>
+              <li>• <strong>Rows 2+</strong> → Employees only</li>
+            </ul>
+          </div>
+
+          {/* 2. Column Order */}
+          <div className="mb-6">
+            <h4 className="font-semibold mb-2 text-base" style={{ color: 'var(--text-primary)' }}>
+              2. Column Order
+            </h4>
+            <div className="p-3 rounded text-xs font-mono" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', overflowX: 'auto' }}>
+              company_name, industry, logo_url, approval_policy, kpis, passing_grade, max_attempts, exercises_limited, num_of_exercises, learning_path_approval, employee_id, full_name, email, role_type, department_id, department_name, team_id, team_name, manager_id, password, current_role_in_company, target_role_in_company, preferred_language, status, ai_enabled, public_publish_enable
+            </div>
+          </div>
+
+          {/* 3. Row 1 – Company Settings */}
+          <div className="mb-6">
+            <h4 className="font-semibold mb-2 text-base" style={{ color: 'var(--text-primary)' }}>
+              3. Row 1 – Company Settings
+            </h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>company_name</td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>industry</td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>logo_url</td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>approval_policy <span className="font-normal text-xs" style={{ color: 'var(--text-muted)' }}>(manual / auto)</span></td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>kpis <span className="font-normal text-xs" style={{ color: 'var(--text-muted)' }}>(split by ;)</span></td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>passing_grade <span className="font-normal text-xs" style={{ color: 'var(--text-muted)' }}>(0–100)</span></td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>max_attempts</td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>exercises_limited <span className="font-normal text-xs" style={{ color: 'var(--text-muted)' }}>(true/false)</span></td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid var(--border-default)' }}>
+                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>num_of_exercises <span className="font-normal text-xs" style={{ color: 'var(--text-muted)' }}>(when exercises_limited = true)</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-3 font-medium" style={{ color: 'var(--text-primary)' }}>learning_path_approval</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+              <strong>Note:</strong> if approval_policy = manual → state one DECISION_MAKER
             </p>
-            <ul className="space-y-2 text-sm ml-4" style={{ color: 'var(--text-secondary)' }}>
-              <li>
-                <strong style={{ color: 'var(--text-primary)' }}>approval_policy</strong> (Required)
-                <br />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  How learning paths are approved: <code className="bg-gray-100 px-1 rounded">manual</code> or <code className="bg-gray-100 px-1 rounded">auto</code>
-                  <br />
-                  If set to <code className="bg-gray-100 px-1 rounded">manual</code>, your CSV must include at least one employee with <code className="bg-gray-100 px-1 rounded">DECISION_MAKER</code> role.
-                  <br />
-                  The DECISION_MAKER role can be combined with other roles (e.g., "REGULAR_EMPLOYEE + TRAINER + DECISION_MAKER").
-                </span>
-              </li>
-              <li>
-                <strong style={{ color: 'var(--text-primary)' }}>kpis</strong> (Required - Mandatory)
-                <br />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Company's primary Key Performance Indicators (required for integration with Learning Analytics and Management & Reporting microservices).
-                  <br />
-                  Format: Semicolon-separated (e.g., "Employee Growth;Product Quality;Customer Satisfaction")
-                  <br />
-                  <strong>Note:</strong> Do NOT use "primary_kpis" - use only "kpis"
-                </span>
-              </li>
-              <li>
-                <strong style={{ color: 'var(--text-primary)' }}>company_name</strong> (Optional)
-                <br />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Company name (if different from registration)
-                </span>
-              </li>
-              <li>
-                <strong style={{ color: 'var(--text-primary)' }}>industry</strong> (Optional)
-                <br />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Company industry
-                </span>
-              </li>
-              <li>
-                <strong style={{ color: 'var(--text-primary)' }}>learning_path_approval</strong> (Optional)
-                <br />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Alternative field name for approval_policy
-                </span>
-              </li>
-              <li>
-                <strong style={{ color: 'var(--text-primary)' }}>logo_url</strong> (Optional)
-                <br />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Company logo URL (publicly accessible image URL).
-                  <br />
-                  Example: <code className="bg-gray-100 px-1 rounded">https://logo.clearbit.com/company.com</code>
-                  <br />
-                  If not provided, a placeholder will be shown.
-                </span>
-              </li>
-              <li>
-                <strong style={{ color: 'var(--text-primary)' }}>passing_grade</strong> (Required)
-                <br />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Minimum passing grade for assessments (0-100). Example: 70
-                </span>
-              </li>
-              <li>
-                <strong style={{ color: 'var(--text-primary)' }}>max_attempts</strong> (Required)
-                <br />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Maximum number of attempts allowed for assessments. Example: 3
-                </span>
-              </li>
-              <li>
-                <strong style={{ color: 'var(--text-primary)' }}>exercises_limited</strong> (Required)
-                <br />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Whether exercises are limited (true or false). If true, num_of_exercises is also required.
-                </span>
-              </li>
-              <li>
-                <strong style={{ color: 'var(--text-primary)' }}>num_of_exercises</strong> (Required if exercises_limited is true)
-                <br />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Number of exercises allowed when exercises_limited is true. Example: 10
-                </span>
-              </li>
-            </ul>
           </div>
 
-          {/* Employee Fields */}
-          <div className="mb-4">
+          {/* 4. Rows 2+ – Employee Records */}
+          <div className="mb-6">
             <h4 className="font-semibold mb-2 text-base" style={{ color: 'var(--text-primary)' }}>
-              Rows 2+: Required Employee Fields (ONLY employee fields)
+              4. Rows 2+ – Employee Records (Mandatory per employee)
             </h4>
-            <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
-              Employee rows must contain ONLY employee-specific fields. Do NOT include company fields.
-            </p>
-            <ul className="space-y-1 text-sm ml-4" style={{ color: 'var(--text-secondary)' }}>
-              <li>• <strong>employee_id</strong>, <strong>full_name</strong>, <strong>email</strong>, <strong>role_type</strong></li>
-              <li>• <strong>department_id</strong>, <strong>department_name</strong>, <strong>team_id</strong>, <strong>team_name</strong></li>
-              <li>• <strong>manager_id</strong> (use empty string "" if no manager), <strong>password</strong></li>
-              <li>• <strong>current_role_in_company</strong>, <strong>target_role_in_company</strong></li>
-              <li>• <strong>preferred_language</strong>, <strong>status</strong></li>
-            </ul>
+            <div className="mb-3">
+              <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>Required:</p>
+              <ul className="text-sm ml-4 space-y-1" style={{ color: 'var(--text-secondary)' }}>
+                <li>• employee_id</li>
+                <li>• full_name</li>
+                <li>• email</li>
+                <li>• role_type</li>
+                <li>• department_id, department_name</li>
+                <li>• team_id, team_name</li>
+                <li>• manager_id <span className="text-xs" style={{ color: 'var(--text-muted)' }}>(could be empty)</span></li>
+                <li>• password</li>
+                <li>• current_role_in_company</li>
+                <li>• target_role_in_company</li>
+                <li>• preferred_language</li>
+                <li>• status</li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>Only for TRAINERS:</p>
+              <ul className="text-sm ml-4 space-y-1" style={{ color: 'var(--text-secondary)' }}>
+                <li>• ai_enabled</li>
+                <li>• public_publish_enable</li>
+              </ul>
+            </div>
           </div>
 
-          <div className="mb-4">
+          {/* 5. Role Rules */}
+          <div className="mb-6">
             <h4 className="font-semibold mb-2 text-base" style={{ color: 'var(--text-primary)' }}>
-              Trainer-Specific Fields (Only for TRAINER role)
+              5. Role Rules (Short & Important)
             </h4>
-            <ul className="space-y-1 text-sm ml-4" style={{ color: 'var(--text-secondary)' }}>
-              <li>• ai_enabled, public_publish_enable</li>
-            </ul>
-          </div>
-
-          <div className="mb-4">
-            <h4 className="font-semibold mb-2 text-base" style={{ color: 'var(--text-primary)' }}>
-              Role Types (IMPORTANT)
-            </h4>
-            <div className="p-3 rounded mb-2" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
-              <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-                ⚠️ Base Role Requirement:
+            <div className="mb-3">
+              <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                <strong>BASE ROLE:</strong>
               </p>
-              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                Every employee must include either <strong>REGULAR_EMPLOYEE</strong> or <strong>TRAINER</strong> as the base role.
+              <ul className="text-sm ml-4 space-y-1" style={{ color: 'var(--text-secondary)' }}>
+                <li>• REGULAR_EMPLOYEE or TRAINER</li>
+              </ul>
+              <p className="text-sm mt-2 mb-2" style={{ color: 'var(--text-secondary)' }}>
+                <strong>Addition:</strong> TEAM_MANAGER / DEPARTMENT_MANAGER / DECISION_MAKER
               </p>
             </div>
-            <ul className="space-y-1 text-sm ml-4" style={{ color: 'var(--text-secondary)' }}>
-              <li>• <strong>Base roles:</strong> REGULAR_EMPLOYEE, TRAINER (one must be present)</li>
-              <li>• <strong>Additional roles:</strong> TEAM_MANAGER, DEPARTMENT_MANAGER, DECISION_MAKER</li>
-              <li>• <strong>Valid examples:</strong></li>
-              <li className="ml-4">- REGULAR_EMPLOYEE</li>
-              <li className="ml-4">- TRAINER</li>
-              <li className="ml-4">- REGULAR_EMPLOYEE + TEAM_MANAGER</li>
-              <li className="ml-4">- TRAINER + DEPARTMENT_MANAGER</li>
-              <li className="ml-4">- REGULAR_EMPLOYEE + DEPARTMENT_MANAGER + DECISION_MAKER</li>
-              <li className="ml-4 text-red-600">❌ Invalid: TEAM_MANAGER (missing base role)</li>
-              <li className="ml-4 text-red-600">❌ Invalid: DEPARTMENT_MANAGER + DECISION_MAKER (missing base role)</li>
-            </ul>
+            <div className="mb-2">
+              <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                <strong>✅ Valid:</strong>
+              </p>
+              <ul className="text-sm ml-4 space-y-1" style={{ color: 'var(--text-secondary)' }}>
+                <li>• REGULAR_EMPLOYEE</li>
+                <li>• TRAINER</li>
+                <li>• REGULAR_EMPLOYEE + TEAM_MANAGER</li>
+                <li>• REGULAR_EMPLOYEE + DEPARTMENT_MANAGER + DECISION_MAKER</li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                <strong>❌ Not valid:</strong>
+              </p>
+              <ul className="text-sm ml-4 space-y-1" style={{ color: 'rgb(239, 68, 68)' }}>
+                <li>• TEAM_MANAGER</li>
+                <li>• DEPARTMENT_MANAGER + DECISION_MAKER</li>
+              </ul>
+            </div>
           </div>
 
+          {/* 6. File Size */}
           <div>
+            <h4 className="font-semibold mb-2 text-base" style={{ color: 'var(--text-primary)' }}>
+              6. File Size
+            </h4>
             <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              <strong style={{ color: 'var(--text-primary)' }}>Maximum file size:</strong> 10MB
+              <strong>MAX 10MB</strong>
             </p>
           </div>
         </div>
