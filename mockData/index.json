@@ -14,31 +14,20 @@
       "user_id": 1024,
       "competencies": [
         {
-          "name": "Software Development",
+          "name": "Data Analysis",
           "nested_competencies": [
             {
-              "name": "Frontend Development",
-              "nested_competencies": [
-                {
-                  "name": "JavaScript Frameworks",
-                  "skills": [
-                    { "name": "React", "verified": false },
-                    { "name": "JavaScript", "verified": false },
-                    { "name": "TypeScript", "verified": false }
-                  ]
-                }
+              "name": "Data Processing",
+              "skills": [
+                { "name": "Python", "verified": false },
+                { "name": "SQL", "verified": false }
               ]
             },
             {
-              "name": "Backend Development",
-              "nested_competencies": [
-                {
-                  "name": "Server Technologies",
-                  "skills": [
-                    { "name": "Node.js", "verified": false },
-                    { "name": "Python", "verified": false }
-                  ]
-                }
+              "name": "Data Visualization",
+              "skills": [
+                { "name": "Power BI", "verified": false },
+                { "name": "Tableau", "verified": false }
               ]
             }
           ]
