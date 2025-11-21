@@ -1,0 +1,5 @@
+warning: in the working copy of 'database/scripts/clear_all_data_clean.sql', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'docs/PROJECT-STATUS-AND-TESTING-GUIDE.md', CRLF will be replaced by LF the next time Git touches it
+database/scripts/clear_all_data_clean.sql
+docs/PROJECT-STATUS-AND-TESTING-GUIDE.md
+test_company_new.csv

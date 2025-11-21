@@ -82,3 +82,4 @@ ORDER BY table_name;
 -- Expected result: All tables should show 0 rows
 -- If any table shows > 0, there may be a foreign key constraint issue
 
+

@@ -1,5 +1,5 @@
 company_name,industry,logo_url,approval_policy,kpis,passing_grade,max_attempts,exercises_limited,num_of_exercises,learning_path_approval,employee_id,full_name,email,role_type,department_id,department_name,team_id,team_name,manager_id,password,current_role_in_company,target_role_in_company,preferred_language,status,ai_enabled,public_publish_enable
-AU10TIX,Identity verification,https://upload.wikimedia.org/wikipedia/he/9/9a/AU10TIX_logo.jpeg?20220428143645,auto,Accuracy Rate;Processing Speed;Customer Satisfaction;Security Compliance,70,2,true,12,auto,,,,,,,,,,,,,
+AU10TIX,Identity verification,https://upload.wikimedia.org/wikipedia/he/9/9a/AU10TIX_logo.jpeg?20220428143645,manual,Accuracy Rate;Processing Speed;Customer Satisfaction;Security Compliance,70,2,true,12,auto,,,,,,,,,,,,,
 ,,,,,,,,,,CEO001,Oded Keren,oded.keren@au10tix.com,REGULAR_EMPLOYEE + DECISION_MAKER,DEPT001,Executive,DEPT001_TEAM001,Leadership,,SecurePass123,CEO,CEO,en,active,false,false
 ,,,,,,,,,,HR001,Maya Cohen,maya.cohen@au10tix.com,REGULAR_EMPLOYEE + HR_MANAGER,DEPT002,Human Resources,DEPT002_TEAM001,HR Team,,SecurePass123,HR Manager,HR Director,en,active,false,false
 ,,,,,,,,,,DEV001,Yaron Levi,yaron.levi@au10tix.com,REGULAR_EMPLOYEE + DEPARTMENT_MANAGER,DEPT003,Engineering,DEPT003_TEAM001,Development Team,CEO001,SecurePass123,VP of Engineering,VP of Engineering,en,active,false,false
