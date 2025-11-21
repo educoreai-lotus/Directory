@@ -314,12 +314,15 @@ class EmployeeController {
     try {
       const { id: companyId, employeeId } = req.params;
 
-      console.log(`[EmployeeController] Fetching manager hierarchy for employee ${employeeId} in company ${companyId}`);
+      console.log(`[EmployeeController] ========== GET MANAGER HIERARCHY ==========`);
+      console.log(`[EmployeeController] Request params - companyId: ${companyId}, employeeId: ${employeeId}`);
+      console.log(`[EmployeeController] Request path: ${req.path}`);
+      console.log(`[EmployeeController] Request method: ${req.method}`);
 
       // Verify employee exists and belongs to company
       const employee = await this.employeeRepository.findById(employeeId);
       if (!employee) {
-        console.log(`[EmployeeController] Employee ${employeeId} not found`);
+        console.log(`[EmployeeController] ❌ Employee ${employeeId} not found in database`);
         return res.status(404).json({
           requester_service: 'directory_service',
           response: {
@@ -327,10 +330,15 @@ class EmployeeController {
           }
         });
       }
+
+      console.log(`[EmployeeController] ✅ Found employee: ${employee.full_name} (${employee.email})`);
+      console.log(`[EmployeeController] Employee company_id: ${employee.company_id} (type: ${typeof employee.company_id})`);
+      console.log(`[EmployeeController] Request companyId: ${companyId} (type: ${typeof companyId})`);
 
       // Compare company_id as strings to handle UUID type differences
       if (String(employee.company_id) !== String(companyId)) {
-        console.log(`[EmployeeController] Employee ${employeeId} does not belong to company ${companyId}. Employee company: ${employee.company_id}`);
+        console.log(`[EmployeeController] ❌ Employee ${employeeId} does not belong to company ${companyId}`);
+        console.log(`[EmployeeController] Employee company_id: ${employee.company_id}, Request companyId: ${companyId}`);
         return res.status(404).json({
           requester_service: 'directory_service',
           response: {
@@ -339,10 +347,15 @@ class EmployeeController {
         });
       }
 
+      console.log(`[EmployeeController] ✅ Company match verified. Calling GetManagerHierarchyUseCase...`);
       const hierarchy = await this.getManagerHierarchyUseCase.execute(employeeId, companyId);
 
       if (!hierarchy) {
-        console.log(`[EmployeeController] Employee ${employeeId} is not a manager or has no managed teams/employees`);
+        console.log(`[EmployeeController] ❌ No hierarchy returned. Employee ${employeeId} is not a manager or has no managed teams/employees`);
+        console.log(`[EmployeeController] This could mean:`);
+        console.log(`[EmployeeController]   1. Employee does not have DEPARTMENT_MANAGER or TEAM_MANAGER role`);
+        console.log(`[EmployeeController]   2. Employee has manager role but is not assigned to any team/department`);
+        console.log(`[EmployeeController]   3. Employee has manager role but team/department has no employees`);
         return res.status(404).json({
           requester_service: 'directory_service',
           response: {
@@ -351,7 +364,14 @@ class EmployeeController {
         });
       }
 
-      console.log(`[EmployeeController] ✅ Returning hierarchy for manager ${employeeId}`);
+      console.log(`[EmployeeController] ✅ Successfully retrieved hierarchy for manager ${employeeId}`);
+      console.log(`[EmployeeController] Hierarchy type: ${hierarchy.manager_type}`);
+      if (hierarchy.manager_type === 'department_manager') {
+        console.log(`[EmployeeController] Department: ${hierarchy.department?.department_name}, Teams: ${hierarchy.teams?.length || 0}`);
+      } else if (hierarchy.manager_type === 'team_manager') {
+        console.log(`[EmployeeController] Team: ${hierarchy.team?.team_name}, Employees: ${hierarchy.employees?.length || 0}`);
+      }
+      
       res.status(200).json({
         requester_service: 'directory_service',
         response: {

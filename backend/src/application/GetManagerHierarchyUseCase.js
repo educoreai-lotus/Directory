@@ -48,9 +48,9 @@ class GetManagerHierarchyUseCase {
     let hierarchy = null;
 
     if (isDepartmentManager) {
-      // Department Manager: Find which department they manage by looking at managed employees
-      // Get all employees they manage with department_manager relationship
-      const managedEmployeesQuery = `
+      // Department Manager: Find which department they manage
+      // First, try to find department from employee_managers (if they have managed employees)
+      let managedDeptQuery = `
         SELECT DISTINCT
           d.id as department_uuid,
           d.department_id as department_code,
@@ -64,13 +64,32 @@ class GetManagerHierarchyUseCase {
           AND em.relationship_type = 'department_manager'
         LIMIT 1
       `;
-      const deptResult = await this.employeeRepository.pool.query(managedEmployeesQuery, [managerId]);
+      let deptResult = await this.employeeRepository.pool.query(managedDeptQuery, [managerId]);
+      
+      // If no managed employees found, get the department the manager belongs to directly
+      if (deptResult.rows.length === 0) {
+        console.log(`[GetManagerHierarchyUseCase] No managed employees found for department manager ${managerId}, checking manager's own department assignment`);
+        const managerDeptQuery = `
+          SELECT DISTINCT
+            d.id as department_uuid,
+            d.department_id as department_code,
+            d.department_name
+          FROM employee_teams et
+          JOIN teams t ON et.team_id = t.id
+          JOIN departments d ON t.department_id = d.id
+          WHERE et.employee_id = $1
+          LIMIT 1
+        `;
+        deptResult = await this.employeeRepository.pool.query(managerDeptQuery, [managerId]);
+      }
       
       if (deptResult.rows.length === 0) {
+        console.log(`[GetManagerHierarchyUseCase] No department found for department manager ${managerId}`);
         return null; // No department found
       }
 
       const department = deptResult.rows[0];
+      console.log(`[GetManagerHierarchyUseCase] Found department for manager ${managerId}: ${department.department_name} (${department.department_code})`);
 
       // Get all teams in this department (using department UUID)
       const teamsQuery = `
