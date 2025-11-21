@@ -2,11 +2,13 @@
 // Displays the hierarchy of teams and employees managed by a manager
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getManagerHierarchy } from '../services/employeeService';
 
 function ProfileManagement({ employeeId }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hierarchy, setHierarchy] = useState(null);
@@ -174,17 +176,32 @@ function ProfileManagement({ employeeId }) {
                   borderColor: 'var(--border-default)' 
                 }}
               >
-                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                  {employee.full_name}
-                </p>
-                <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-                  {employee.email}
-                </p>
-                {employee.current_role_in_company && (
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-                    {employee.current_role_in_company}
-                  </p>
-                )}
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                      {employee.full_name}
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                      {employee.email}
+                    </p>
+                    {employee.current_role_in_company && (
+                      <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                        {employee.current_role_in_company}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => navigate(`/employee/${employee.id}`)}
+                    className="ml-3 px-3 py-1 text-xs border rounded hover:bg-opacity-50 transition-colors"
+                    style={{ 
+                      borderColor: 'var(--border-default)', 
+                      color: 'var(--text-primary)',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    View Profile
+                  </button>
+                </div>
               </div>
             ))}
           </div>
