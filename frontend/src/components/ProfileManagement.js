@@ -135,7 +135,7 @@ function ProfileManagement({ employeeId }) {
   // Department Manager View - Match CompanyHierarchy UI style
   if (hierarchy.manager_type === 'department_manager') {
     const dept = hierarchy.department;
-    const isDeptExpanded = expandedTeams[dept.id] !== undefined ? expandedTeams[dept.id] : true; // Default expanded
+    const isDeptExpanded = expandedTeams[dept.id] !== undefined ? expandedTeams[dept.id] : false; // Default collapsed
 
     return (
       <div className="w-full space-y-4">
@@ -263,7 +263,7 @@ function ProfileManagement({ employeeId }) {
   // Team Manager View - Match CompanyHierarchy UI style
   if (hierarchy.manager_type === 'team_manager') {
     const team = hierarchy.team;
-    const isTeamExpanded = expandedTeams[team.id] !== undefined ? expandedTeams[team.id] : true; // Default expanded
+    const isTeamExpanded = expandedTeams[team.id] !== undefined ? expandedTeams[team.id] : false; // Default collapsed
 
     return (
       <div className="w-full space-y-4">
