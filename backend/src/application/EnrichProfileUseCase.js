@@ -56,11 +56,34 @@ class EnrichProfileUseCase {
       let githubData = null;
       
       try {
+        console.log('[EnrichProfileUseCase] Calling mergeRawDataBeforeEnrichment...');
         mergedData = await this.mergeRawDataBeforeEnrichment(employeeId);
+        console.log('[EnrichProfileUseCase] mergeRawDataBeforeEnrichment returned:', mergedData ? 'object' : 'null');
+        
+        if (mergedData) {
+          console.log('[EnrichProfileUseCase] Merged data structure:', {
+            has_work_experience: !!mergedData.work_experience,
+            work_experience_length: mergedData.work_experience?.length || 0,
+            has_skills: !!mergedData.skills,
+            skills_length: mergedData.skills?.length || 0,
+            has_education: !!mergedData.education,
+            education_length: mergedData.education?.length || 0,
+            has_languages: !!mergedData.languages,
+            languages_length: mergedData.languages?.length || 0,
+            has_projects: !!mergedData.projects,
+            projects_length: mergedData.projects?.length || 0,
+            has_volunteer: !!mergedData.volunteer,
+            volunteer_length: mergedData.volunteer?.length || 0,
+            has_military: !!mergedData.military,
+            military_length: mergedData.military?.length || 0,
+            has_linkedin_profile: mergedData.linkedin_profile !== null,
+            has_github_profile: mergedData.github_profile !== null
+          });
+        }
         
         // SAFE FALLBACK: If merged data is empty, continue with empty fields instead of throwing
         if (!mergedData) {
-          console.warn('[EnrichProfileUseCase] ⚠️  Merged data is empty - will proceed with minimal enrichment');
+          console.warn('[EnrichProfileUseCase] ⚠️  Merged data is null - will proceed with minimal enrichment');
           mergedData = {
             work_experience: [],
             skills: [],
@@ -79,12 +102,16 @@ class EnrichProfileUseCase {
         // Extract LinkedIn and GitHub data from merged result
         if (mergedData?.linkedin_profile) {
           linkedinData = mergedData.linkedin_profile;
+          console.log('[EnrichProfileUseCase] Extracted LinkedIn data from merged result');
         }
         if (mergedData?.github_profile) {
           githubData = mergedData.github_profile;
+          console.log('[EnrichProfileUseCase] Extracted GitHub data from merged result');
         }
       } catch (error) {
-        console.warn('[EnrichProfileUseCase] ⚠️  Merge failed, falling back to existing OAuth data:', error.message);
+        console.error('[EnrichProfileUseCase] ❌ ERROR in mergeRawDataBeforeEnrichment:', error.message);
+        console.error('[EnrichProfileUseCase] Error stack:', error.stack);
+        console.warn('[EnrichProfileUseCase] ⚠️  Merge failed, falling back to existing OAuth data');
         // Fall through to existing logic below
       }
 
@@ -124,6 +151,11 @@ class EnrichProfileUseCase {
       ) : (linkedinData !== null || githubData !== null);
       
       // SAFE FALLBACK: Check if merged data is completely empty BEFORE calling OpenAI
+      console.log('[EnrichProfileUseCase] Checking if merged data is empty...');
+      console.log('[EnrichProfileUseCase] mergedData exists:', !!mergedData);
+      console.log('[EnrichProfileUseCase] linkedinData exists:', !!linkedinData);
+      console.log('[EnrichProfileUseCase] githubData exists:', !!githubData);
+      
       const mergedDataIsEmpty = mergedData ? (
         (!mergedData.work_experience || mergedData.work_experience.length === 0) &&
         (!mergedData.skills || mergedData.skills.length === 0) &&
@@ -138,29 +170,39 @@ class EnrichProfileUseCase {
         linkedinData === null && githubData === null
       );
 
+      console.log('[EnrichProfileUseCase] mergedDataIsEmpty check result:', mergedDataIsEmpty);
+
       if (mergedDataIsEmpty) {
         console.warn('[EnrichProfileUseCase] ⚠️  Merged data is completely empty - returning success with empty fields');
         
-        // Update employee to mark enrichment as completed (even with empty data)
-        await this.employeeRepository.updateEnrichment(
-          employeeId,
-          '', // Empty bio
-          [], // Empty project summaries
-          '', // Empty value proposition
-          true // Mark as completed
-        );
+        try {
+          // Update employee to mark enrichment as completed (even with empty data)
+          console.log('[EnrichProfileUseCase] Calling updateEnrichment with empty data...');
+          await this.employeeRepository.updateEnrichment(
+            employeeId,
+            '', // Empty bio
+            [], // Empty project summaries
+            '', // Empty value proposition
+            true // Mark as completed
+          );
+          console.log('[EnrichProfileUseCase] ✅ updateEnrichment completed successfully');
 
-        return {
-          success: true,
-          message: "No enrichment data available",
-          bio: "",
-          skills: [],
-          projects: [],
-          employee: {
-            id: employeeId,
-            enrichment_completed: true
-          }
-        };
+          return {
+            success: true,
+            message: "No enrichment data available",
+            bio: "",
+            skills: [],
+            projects: [],
+            employee: {
+              id: employeeId,
+              enrichment_completed: true
+            }
+          };
+        } catch (updateError) {
+          console.error('[EnrichProfileUseCase] ❌ ERROR in updateEnrichment:', updateError.message);
+          console.error('[EnrichProfileUseCase] Error stack:', updateError.stack);
+          throw updateError; // Re-throw to be caught by controller
+        }
       }
       
       console.log('[EnrichProfileUseCase] ✅ Proceeding with enrichment (with or without data)...');
@@ -339,7 +381,15 @@ class EnrichProfileUseCase {
         }
       };
     } catch (error) {
-      console.error('[EnrichProfileUseCase] Error:', error);
+      // DIAGNOSTIC: Log FULL error details
+      console.error('[EnrichProfileUseCase] ========== ENRICHMENT ERROR ==========');
+      console.error('[EnrichProfileUseCase] Error message:', error.message);
+      console.error('[EnrichProfileUseCase] Error name:', error.name);
+      console.error('[EnrichProfileUseCase] Error stack:', error.stack);
+      if (error.cause) {
+        console.error('[EnrichProfileUseCase] Error cause:', error.cause);
+      }
+      console.error('[EnrichProfileUseCase] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       throw error;
     }
   }

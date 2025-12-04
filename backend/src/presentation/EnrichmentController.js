@@ -44,7 +44,15 @@ class EnrichmentController {
         response: result
       });
     } catch (error) {
-      console.error('[EnrichmentController] Error enriching profile:', error);
+      // DIAGNOSTIC: Log FULL error details
+      console.error('[EnrichmentController] ========== ENRICHMENT ERROR ==========');
+      console.error('[EnrichmentController] Error message:', error.message);
+      console.error('[EnrichmentController] Error name:', error.name);
+      console.error('[EnrichmentController] Error stack:', error.stack);
+      if (error.cause) {
+        console.error('[EnrichmentController] Error cause:', error.cause);
+      }
+      console.error('[EnrichmentController] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       
       // Return 400 (Bad Request) for validation/insufficient data errors instead of 500
       const isValidationError = error.message?.includes('Insufficient data') ||

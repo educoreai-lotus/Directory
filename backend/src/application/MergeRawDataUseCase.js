@@ -179,6 +179,19 @@ class MergeRawDataUseCase {
       }
 
       // Check if merged data has actual content (not all empty arrays)
+      console.log('[MergeRawDataUseCase] Checking merged data content...');
+      console.log('[MergeRawDataUseCase] Merged data structure:', {
+        work_experience_length: merged.work_experience?.length || 0,
+        skills_length: merged.skills?.length || 0,
+        education_length: merged.education?.length || 0,
+        languages_length: merged.languages?.length || 0,
+        projects_length: merged.projects?.length || 0,
+        volunteer_length: merged.volunteer?.length || 0,
+        military_length: merged.military?.length || 0,
+        has_linkedin_profile: merged.linkedin_profile !== null,
+        has_github_profile: merged.github_profile !== null
+      });
+      
       const hasContent = merged.work_experience.length > 0 ||
                         merged.skills.length > 0 ||
                         merged.education.length > 0 ||
@@ -189,9 +202,13 @@ class MergeRawDataUseCase {
                         merged.linkedin_profile !== null ||
                         merged.github_profile !== null;
 
+      console.log('[MergeRawDataUseCase] hasContent check result:', hasContent);
+
       if (!hasContent) {
         console.warn('[MergeRawDataUseCase] ⚠️  Merged data is empty - no real content found');
-        return null; // Return null if no actual data exists
+        // SAFE FALLBACK: Return empty object instead of null so enrichment can proceed
+        console.log('[MergeRawDataUseCase] Returning empty merged object (not null)');
+        return merged; // Return empty object instead of null
       }
 
       // Save merged result to database
