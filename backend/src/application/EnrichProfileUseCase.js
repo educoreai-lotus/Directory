@@ -123,8 +123,44 @@ class EnrichProfileUseCase {
         mergedData.github_profile !== null
       ) : (linkedinData !== null || githubData !== null);
       
-      if (!hasContent) {
-        console.warn('[EnrichProfileUseCase] ⚠️  No content available - will proceed with minimal enrichment (empty fields)');
+      // SAFE FALLBACK: Check if merged data is completely empty BEFORE calling OpenAI
+      const mergedDataIsEmpty = mergedData ? (
+        (!mergedData.work_experience || mergedData.work_experience.length === 0) &&
+        (!mergedData.skills || mergedData.skills.length === 0) &&
+        (!mergedData.education || mergedData.education.length === 0) &&
+        (!mergedData.languages || mergedData.languages.length === 0) &&
+        (!mergedData.projects || mergedData.projects.length === 0) &&
+        (!mergedData.volunteer || mergedData.volunteer.length === 0) &&
+        (!mergedData.military || mergedData.military.length === 0) &&
+        mergedData.linkedin_profile === null &&
+        mergedData.github_profile === null
+      ) : (
+        linkedinData === null && githubData === null
+      );
+
+      if (mergedDataIsEmpty) {
+        console.warn('[EnrichProfileUseCase] ⚠️  Merged data is completely empty - returning success with empty fields');
+        
+        // Update employee to mark enrichment as completed (even with empty data)
+        await this.employeeRepository.updateEnrichment(
+          employeeId,
+          '', // Empty bio
+          [], // Empty project summaries
+          '', // Empty value proposition
+          true // Mark as completed
+        );
+
+        return {
+          success: true,
+          message: "No enrichment data available",
+          bio: "",
+          skills: [],
+          projects: [],
+          employee: {
+            id: employeeId,
+            enrichment_completed: true
+          }
+        };
       }
       
       console.log('[EnrichProfileUseCase] ✅ Proceeding with enrichment (with or without data)...');
