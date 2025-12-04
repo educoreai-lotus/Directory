@@ -25,9 +25,15 @@ export const uploadCV = async (employeeId, file) => {
     // Log response details
     console.log('[uploadCV] response status:', response.status);
     console.log('[uploadCV] response data:', response.data);
+    console.log('[uploadCV] response.data.response:', response?.data?.response);
 
-    // Backend returns { success: true } or { success: false, message: ... }
-    if (response?.data?.success === true) {
+    // PHASE_4_FIX: Backend wraps response in microservice envelope:
+    // { requester_service: "directory_service", response: { success: true } }
+    // So we need to check response.data.response.success, not response.data.success
+    const normalizedResponse = response?.data?.response || response?.data;
+    console.log('[uploadCV] normalized response:', normalizedResponse);
+    
+    if (normalizedResponse?.success === true) {
       return { success: true };
     } else {
       console.warn('[uploadCV] Unexpected response data:', response?.data);

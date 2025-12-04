@@ -62,7 +62,9 @@ function UploadCVSection({ employeeId, onUploaded }) {
       }
     } catch (err) {
       console.error('[UploadCVSection] Upload error:', err);
-      const errorMessage = err.response?.data?.message 
+      // PHASE_4_FIX: Check wrapped response format for error message
+      const errorMessage = err.response?.data?.response?.message 
+        || err.response?.data?.message 
         || err.message 
         || 'Failed to upload CV. Please try again.';
       setError(errorMessage);
