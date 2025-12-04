@@ -34,7 +34,7 @@ export const uploadCV = async (employeeId, file) => {
  * Save manual profile data
  * PHASE_4: Save manual form data to backend
  * @param {string} employeeId - Employee UUID
- * @param {Object} data - Manual form data { name, email, current_role, target_role, bio (optional), projects (optional) }
+ * @param {Object} data - Manual form data { work_experience (optional), skills (optional), education (optional) }
  * @returns {Promise<Object>} Save result
  */
 export const saveManualData = async (employeeId, data) => {

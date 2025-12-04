@@ -6,19 +6,16 @@ import React, { useState } from 'react';
 import { saveManualData } from '../services/enrichmentService';
 
 function ManualProfileForm({ employeeId, onSaved }) {
-  // PHASE_4: Form state
+  // PHASE_4: Form state - only work_experience, skills, education (all optional)
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    current_role: '',
-    target_role: '',
-    bio: '',
-    projects: ''
+    work_experience: '',
+    skills: '',
+    education: ''
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false); // Collapsed by default
 
   // PHASE_4: Handle input changes
   const handleChange = (e) => {
@@ -35,9 +32,10 @@ function ManualProfileForm({ employeeId, onSaved }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate required fields
-    if (!formData.name || !formData.email || !formData.current_role || !formData.target_role) {
-      setError('Please fill in all required fields: name, email, current role, and target role');
+    // Validate at least one field is filled
+    const hasData = Object.values(formData).some(value => value.trim().length > 0);
+    if (!hasData) {
+      setError('Please fill at least one field');
       return;
     }
 
@@ -77,256 +75,211 @@ function ManualProfileForm({ employeeId, onSaved }) {
 
   return (
     <div className="mb-6">
-      {/* PHASE_4: Section Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 
-          className="text-lg font-semibold"
-          style={{ color: 'var(--text-primary)' }}
-        >
-          Fill Details Manually
-        </h3>
-        {saved && (
-          <div className="flex items-center gap-2">
-            <span 
-              className="text-sm px-3 py-1 rounded-full flex items-center gap-2"
-              style={{
-                background: 'rgba(34, 197, 94, 0.1)',
-                color: 'rgb(34, 197, 94)'
-              }}
-            >
-              <span className="text-green-600 font-bold">✓</span>
-              Saved
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* PHASE_4: Description */}
-      <p 
-        className="text-sm mb-4"
-        style={{ color: 'var(--text-secondary)' }}
-      >
-        Fill in your profile details manually. Required: name, email, current role, target role. Optional: bio and projects.
-      </p>
-
-      {/* PHASE_4: Error Message */}
-      {error && (
-        <div 
-          className="mb-4 p-3 rounded-lg"
-          style={{
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid var(--border-error)',
-            color: 'var(--text-error)'
-          }}
-        >
-          <p className="text-sm">{error}</p>
-        </div>
-      )}
-
-      {/* PHASE_4: Expand/Collapse Button */}
+      {/* PHASE_4: Collapsed state - single line button */}
       {!isExpanded && (
         <button
           type="button"
           onClick={() => setIsExpanded(true)}
-          className="btn btn-secondary w-full mb-4"
+          className="w-full text-left p-3 rounded-lg border transition-all"
+          style={{
+            background: 'var(--bg-secondary)',
+            borderColor: 'var(--border-default)',
+            color: 'var(--text-primary)',
+            cursor: 'pointer'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border-hover, #14b8a6)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border-default)';
+          }}
         >
-          Add or Edit Details Manually
+          <span className="flex items-center justify-between">
+            <span className="text-sm font-medium">▼ Fill Manual Details (optional)</span>
+            {saved && (
+              <span 
+                className="text-xs px-2 py-1 rounded-full"
+                style={{
+                  background: 'rgba(34, 197, 94, 0.1)',
+                  color: 'rgb(34, 197, 94)'
+                }}
+              >
+                ✓ Saved
+              </span>
+            )}
+          </span>
         </button>
       )}
 
-      {/* PHASE_4: Form - Only show when expanded */}
+      {/* PHASE_4: Expanded state - form */}
       {isExpanded && (
-        <form onSubmit={handleSubmit}>
-          {/* Name - Required */}
-          <div className="mb-4">
-            <label 
-              className="block text-sm font-medium mb-2"
+        <div 
+          className="p-4 rounded-lg border"
+          style={{
+            background: 'var(--bg-secondary)',
+            borderColor: 'var(--border-default)'
+          }}
+        >
+          {/* Section Header */}
+          <div className="flex items-center justify-between mb-4">
+            <h3 
+              className="text-lg font-semibold"
               style={{ color: 'var(--text-primary)' }}
             >
-              Name <span style={{ color: 'var(--text-error)' }}>*</span>
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Your full name"
-              required
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-              style={{
-                background: 'var(--bg-secondary)',
-                borderColor: 'var(--border-default)',
-                color: 'var(--text-primary)'
-              }}
-            />
-          </div>
-
-          {/* Email - Required */}
-          <div className="mb-4">
-            <label 
-              className="block text-sm font-medium mb-2"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              Email <span style={{ color: 'var(--text-error)' }}>*</span>
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="your.email@example.com"
-              required
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-              style={{
-                background: 'var(--bg-secondary)',
-                borderColor: 'var(--border-default)',
-                color: 'var(--text-primary)'
-              }}
-            />
-          </div>
-
-          {/* Current Role - Required */}
-          <div className="mb-4">
-            <label 
-              className="block text-sm font-medium mb-2"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              Current Role <span style={{ color: 'var(--text-error)' }}>*</span>
-            </label>
-            <input
-              type="text"
-              name="current_role"
-              value={formData.current_role}
-              onChange={handleChange}
-              placeholder="e.g., Software Engineer"
-              required
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-              style={{
-                background: 'var(--bg-secondary)',
-                borderColor: 'var(--border-default)',
-                color: 'var(--text-primary)'
-              }}
-            />
-          </div>
-
-          {/* Target Role - Required */}
-          <div className="mb-4">
-            <label 
-              className="block text-sm font-medium mb-2"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              Target Role <span style={{ color: 'var(--text-error)' }}>*</span>
-            </label>
-            <input
-              type="text"
-              name="target_role"
-              value={formData.target_role}
-              onChange={handleChange}
-              placeholder="e.g., Senior Software Engineer"
-              required
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-              style={{
-                background: 'var(--bg-secondary)',
-                borderColor: 'var(--border-default)',
-                color: 'var(--text-primary)'
-              }}
-            />
-          </div>
-
-          {/* Bio - Optional */}
-          <div className="mb-4">
-            <label 
-              className="block text-sm font-medium mb-2"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              Bio (Optional)
-            </label>
-            <textarea
-              name="bio"
-              value={formData.bio}
-              onChange={handleChange}
-              placeholder="Your professional bio (will be auto-filled later if left empty)..."
-              rows={4}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-              style={{
-                background: 'var(--bg-secondary)',
-                borderColor: 'var(--border-default)',
-                color: 'var(--text-primary)'
-              }}
-            />
-          </div>
-
-          {/* Projects - Optional */}
-          <div className="mb-4">
-            <label 
-              className="block text-sm font-medium mb-2"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              Projects (Optional)
-            </label>
-            <textarea
-              name="projects"
-              value={formData.projects}
-              onChange={handleChange}
-              placeholder="List your projects (will be auto-filled later if left empty)..."
-              rows={3}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-              style={{
-                background: 'var(--bg-secondary)',
-                borderColor: 'var(--border-default)',
-                color: 'var(--text-primary)'
-              }}
-            />
-          </div>
-
-          {/* PHASE_4: Save Button */}
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={saving || saved}
-              className="btn btn-secondary flex-1"
-              style={{
-                opacity: (saving || saved) ? 0.6 : 1,
-                cursor: (saving || saved) ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {saving ? (
-                <>
-                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></span>
-                  Saving...
-                </>
-              ) : saved ? (
-                '✓ Saved'
-              ) : (
-                'Save Details'
-              )}
-            </button>
+              Fill Manual Details (optional)
+            </h3>
             <button
               type="button"
               onClick={() => setIsExpanded(false)}
-              className="btn btn-secondary"
-              style={{
-                opacity: saving ? 0.6 : 1,
-                cursor: saving ? 'not-allowed' : 'pointer'
-              }}
+              className="text-sm px-3 py-1 rounded hover:bg-gray-100"
+              style={{ color: 'var(--text-secondary)' }}
             >
-              Cancel
+              ▲ Collapse
             </button>
           </div>
-        </form>
-      )}
 
-      {/* PHASE_4: Success Message */}
-      {saved && (
-        <div 
-          className="mt-4 p-3 rounded-lg"
-          style={{
-            background: 'rgba(34, 197, 94, 0.1)',
-            border: '1px solid rgb(34, 197, 94)',
-            color: 'rgb(34, 197, 94)'
-          }}
-        >
-          <p className="text-sm">✓ Manual data saved successfully! Your profile will use this data for enrichment.</p>
+          {/* PHASE_4: Description */}
+          <p 
+            className="text-sm mb-4"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            Provide your work experience, skills, and education manually. All fields are optional.
+          </p>
+
+          {/* PHASE_4: Error Message */}
+          {error && (
+            <div 
+              className="mb-4 p-3 rounded-lg"
+              style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid var(--border-error)',
+                color: 'var(--text-error)'
+              }}
+            >
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* PHASE_4: Form */}
+          <form onSubmit={handleSubmit}>
+            {/* Work Experience */}
+            <div className="mb-4">
+              <label 
+                className="block text-sm font-medium mb-2"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                Work Experience
+              </label>
+              <textarea
+                name="work_experience"
+                value={formData.work_experience}
+                onChange={handleChange}
+                placeholder="Describe your work experience, roles, and responsibilities. You can use bullets or paragraphs."
+                rows={4}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                style={{
+                  background: 'var(--bg-input)',
+                  borderColor: 'var(--border-input)',
+                  color: 'var(--text-primary)'
+                }}
+              />
+            </div>
+
+            {/* Skills */}
+            <div className="mb-4">
+              <label 
+                className="block text-sm font-medium mb-2"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                Skills (comma-separated)
+              </label>
+              <textarea
+                name="skills"
+                value={formData.skills}
+                onChange={handleChange}
+                placeholder="e.g., JavaScript, React, Node.js, PostgreSQL"
+                rows={2}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                style={{
+                  background: 'var(--bg-input)',
+                  borderColor: 'var(--border-input)',
+                  color: 'var(--text-primary)'
+                }}
+              />
+            </div>
+
+            {/* Education */}
+            <div className="mb-4">
+              <label 
+                className="block text-sm font-medium mb-2"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                Education
+              </label>
+              <textarea
+                name="education"
+                value={formData.education}
+                onChange={handleChange}
+                placeholder="List your degrees, certifications, and educational background."
+                rows={3}
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                style={{
+                  background: 'var(--bg-input)',
+                  borderColor: 'var(--border-input)',
+                  color: 'var(--text-primary)'
+                }}
+              />
+            </div>
+
+            {/* PHASE_4: Save Button */}
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={saving || saved}
+                className="btn btn-secondary flex-1"
+                style={{
+                  opacity: (saving || saved) ? 0.6 : 1,
+                  cursor: (saving || saved) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {saving ? (
+                  <>
+                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></span>
+                    Saving...
+                  </>
+                ) : saved ? (
+                  '✓ Saved'
+                ) : (
+                  'Save Details'
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsExpanded(false)}
+                className="btn btn-secondary"
+                style={{
+                  opacity: saving ? 0.6 : 1,
+                  cursor: saving ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+
+          {/* PHASE_4: Success Message */}
+          {saved && (
+            <div 
+              className="mt-4 p-3 rounded-lg"
+              style={{
+                background: 'rgba(34, 197, 94, 0.1)',
+                border: '1px solid rgb(34, 197, 94)',
+                color: 'rgb(34, 197, 94)'
+              }}
+            >
+              <p className="text-sm">✓ Manual data saved successfully! Your profile will use this data for enrichment.</p>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -334,4 +287,3 @@ function ManualProfileForm({ employeeId, onSaved }) {
 }
 
 export default ManualProfileForm;
-
