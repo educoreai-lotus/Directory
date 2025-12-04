@@ -9,7 +9,7 @@ All commits pushed:
 - ✅ Initial commit: Foundation setup with dark emerald design system
 - ✅ Supabase credentials and GitHub setup instructions
 - ✅ Railway and Vercel environment variables reference files
-- ✅ Deployment status tracker
+- ✅ Deployment status tracker.
 
 ---
 
@@ -41,19 +41,21 @@ All commits pushed:
 PORT=3001
 NODE_ENV=production
 
-SUPABASE_URL=https://lkxqkytxijlxlxsuystm.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxreHFreXR4aWpseGx4c3V5c3RtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzMxMzQ5NCwiZXhwIjoyMDc4ODg5NDk0fQ.tlLUvyBjY3u1guN2-zzwz_ZK-qcD2pY8bRvMZBbxpbw
+# ⚠️ Replace placeholders with your actual Supabase credentials
+# Get these from: Supabase Dashboard → Settings → API & Database
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY_HERE
 
-DB_HOST=db.lkxqkytxijlxlxsuystm.supabase.co
+DB_HOST=db.YOUR_PROJECT_REF.supabase.co
 DB_PORT=5432
 DB_NAME=postgres
 DB_USER=postgres
-DB_PASSWORD=fullstack2025
+DB_PASSWORD=YOUR_DATABASE_PASSWORD_HERE
 DB_SSL=true
 
 SUPABASE_DB_NAME=postgres
 SUPABASE_USER=postgres
-SUPABASE_PASSWORD=fullstack2025
+SUPABASE_PASSWORD=YOUR_DATABASE_PASSWORD_HERE
 SUPABASE_SSL=true
 ```
 
