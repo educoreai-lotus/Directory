@@ -18,16 +18,23 @@ export const uploadCV = async (employeeId, file) => {
 
     // Frontend calls: /employees/${employeeId}/upload-cv
     // baseURL already includes /api/v1, so full URL is: /api/v1/employees/${employeeId}/upload-cv
-    const response = await api.post(`/employees/${employeeId}/upload-cv`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+    console.log('[uploadCV] Calling POST /employees/' + employeeId + '/upload-cv');
+    // Don't set Content-Type header - let browser set it automatically with boundary for FormData
+    const response = await api.post(`/employees/${employeeId}/upload-cv`, formData);
+
+    // Log response details
+    console.log('[uploadCV] response status:', response.status);
+    console.log('[uploadCV] response data:', response.data);
 
     // Backend returns { success: true } or { success: false, message: ... }
-    return response?.data || { success: false };
+    if (response?.data?.success === true) {
+      return { success: true };
+    } else {
+      console.warn('[uploadCV] Unexpected response data:', response?.data);
+      throw new Error('Upload failed - no success response');
+    }
   } catch (error) {
-    console.error('[enrichmentService] PDF upload error:', error);
+    console.error('[uploadCV] Error uploading CV:', error?.response?.status, error?.response?.data || error.message);
     throw error;
   }
 };

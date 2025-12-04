@@ -18,8 +18,9 @@ class PDFUploadController {
    */
   async uploadCV(req, res, next) {
     try {
-      console.log('[PDFUploadController] Upload endpoint reached');
-      console.log('[PDFUploadController] req.file:', req.file ? 'OK' : 'MISSING');
+      console.log('[PDFUploadController] /upload-cv endpoint reached');
+      console.log('[PDFUploadController] employeeId param:', req.params.id || req.params.employeeId);
+      console.log('[PDFUploadController] file present:', !!req.file);
       console.log('[PDFUploadController] req.params:', req.params);
       console.log('[PDFUploadController] req.method:', req.method);
       console.log('[PDFUploadController] req.url:', req.url);
@@ -99,9 +100,11 @@ class PDFUploadController {
         console.warn('[PDFUploadController] Failed to delete temporary file:', err);
       }
 
+      console.log('[PDFUploadController] Sending success response');
       return res.status(200).json({ success: true });
     } catch (error) {
-      console.error('[PDFUploadController] Error uploading CV:', error);
+      console.error('[PDFUploadController] Error in upload-cv:', error);
+      console.error('[PDFUploadController] Error stack:', error.stack);
 
       // PHASE_3: Clean up uploaded file on error
       if (req.file && req.file.path) {
