@@ -4,6 +4,8 @@
 import config from '../config';
 import axios from 'axios';
 
+console.log("[DEBUG] Loaded API Base URL =", config.apiBaseUrl);
+
 const api = axios.create({
   baseURL: config.apiBaseUrl,
   headers: {
