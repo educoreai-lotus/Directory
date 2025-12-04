@@ -22,8 +22,8 @@ export const uploadCV = async (employeeId, file) => {
       }
     });
 
-    // Handle response format (could be wrapped in response.response or direct)
-    return response?.data?.response || response?.data || response;
+    // Backend returns { success: true } or { success: false, message: ... }
+    return response?.data || { success: false };
   } catch (error) {
     console.error('[enrichmentService] PDF upload error:', error);
     throw error;

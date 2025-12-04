@@ -26,20 +26,16 @@ class PDFUploadController {
       // Verify employee ID matches authenticated user (unless HR)
       if (!isHR && authenticatedEmployeeId !== id) {
         return res.status(403).json({
-          requester_service: 'directory_service',
-          response: {
-            error: 'You can only upload CV for your own profile'
-          }
+          success: false,
+          message: 'You can only upload CV for your own profile'
         });
       }
 
       // PHASE_3: Validate file exists
       if (!req.file) {
         return res.status(400).json({
-          requester_service: 'directory_service',
-          response: {
-            error: 'No file uploaded. Please upload a PDF file.'
-          }
+          success: false,
+          message: 'No file uploaded. Please upload a PDF file.'
         });
       }
 
@@ -56,10 +52,8 @@ class PDFUploadController {
         }
 
         return res.status(400).json({
-          requester_service: 'directory_service',
-          response: {
-            error: 'Invalid file type. Only PDF files are allowed.'
-          }
+          success: false,
+          message: 'Invalid file type. Only PDF files are allowed.'
         });
       }
 
@@ -75,10 +69,8 @@ class PDFUploadController {
         }
 
         return res.status(400).json({
-          requester_service: 'directory_service',
-          response: {
-            error: 'Invalid file type. Only PDF files are allowed.'
-          }
+          success: false,
+          message: 'Invalid file type. Only PDF files are allowed.'
         });
       }
 
@@ -89,7 +81,7 @@ class PDFUploadController {
       const fileBuffer = fs.readFileSync(req.file.path);
 
       // PHASE_3: Process PDF upload
-      const result = await this.uploadCVUseCase.execute(id, fileBuffer);
+      await this.uploadCVUseCase.execute(id, fileBuffer);
 
       // PHASE_3: Clean up uploaded file after processing
       try {
@@ -99,10 +91,7 @@ class PDFUploadController {
         console.warn('[PDFUploadController] Failed to delete temporary file:', err);
       }
 
-      return res.status(200).json({
-        requester_service: 'directory_service',
-        response: result
-      });
+      return res.status(200).json({ success: true });
     } catch (error) {
       console.error('[PDFUploadController] Error uploading CV:', error);
 
@@ -115,11 +104,9 @@ class PDFUploadController {
         }
       }
 
-      return res.status(500).json({
-        requester_service: 'directory_service',
-        response: {
-          error: error.message || 'Failed to upload and process CV'
-        }
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to upload and process CV'
       });
     }
   }

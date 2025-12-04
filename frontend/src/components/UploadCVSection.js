@@ -51,19 +51,18 @@ function UploadCVSection({ employeeId, onUploaded }) {
 
       const result = await uploadCV(employeeId, selectedFile);
 
-      if (result?.success || result?.data) {
+      if (result?.success === true) {
         setUploaded(true);
         setError(null);
         if (onUploaded) {
           onUploaded(result);
         }
       } else {
-        throw new Error('Upload failed - no success response');
+        throw new Error(result?.message || 'Upload failed - no success response');
       }
     } catch (err) {
       console.error('[UploadCVSection] Upload error:', err);
-      const errorMessage = err.response?.data?.response?.error 
-        || err.response?.data?.error 
+      const errorMessage = err.response?.data?.message 
         || err.message 
         || 'Failed to upload CV. Please try again.';
       setError(errorMessage);
