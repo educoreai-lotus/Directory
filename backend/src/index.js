@@ -27,6 +27,9 @@ const EmployeeProfileApprovalController = require('./presentation/EmployeeProfil
 const RequestController = require('./presentation/RequestController');
 const UniversalEndpointController = require('./presentation/UniversalEndpointController');
 const AdminController = require('./presentation/AdminController');
+// PHASE_3: Import new controllers for extended enrichment flow
+const PDFUploadController = require('./presentation/PDFUploadController');
+const ManualDataController = require('./presentation/ManualDataController');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -144,6 +147,8 @@ app.get('/assets/:logo', (req, res) => {
 
 // Initialize controllers with error handling
 let companyRegistrationController, companyVerificationController, csvUploadController;
+// PHASE_3: Initialize new controllers for extended enrichment flow
+let pdfUploadController, manualDataController;
 let companyProfileController, employeeController, authController, oauthController;
 let enrichmentController, approvalController, trainerController, requestController;
 let universalEndpointController, adminController;
@@ -175,6 +180,9 @@ trainerController = initController('TrainerController', () => new TrainerControl
 requestController = initController('RequestController', () => new RequestController());
 universalEndpointController = initController('UniversalEndpointController', () => new UniversalEndpointController());
 adminController = initController('AdminController', () => new AdminController());
+// PHASE_3: Initialize new controllers for extended enrichment flow
+pdfUploadController = initController('PDFUploadController', () => new PDFUploadController());
+manualDataController = initController('ManualDataController', () => new ManualDataController());
 console.log('[Init] Controller initialization complete');
 
 // API Routes
@@ -316,6 +324,41 @@ apiRouter.post('/employees/:employeeId/enrich', authMiddleware, (req, res, next)
 
 apiRouter.get('/employees/:employeeId/enrichment-status', authMiddleware, (req, res, next) => {
   enrichmentController.getEnrichmentStatus(req, res, next);
+});
+
+// PHASE_3: Extended enrichment flow - PDF upload and manual data endpoints
+const multer = require('multer');
+const upload = multer({ 
+  dest: 'uploads/', // Temporary directory for file uploads
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    // Only accept PDF files
+    if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed'), false);
+    }
+  }
+});
+
+// PHASE_3: PDF CV upload endpoint
+apiRouter.post('/employees/:id/upload-cv', authMiddleware, upload.single('cv'), (req, res, next) => {
+  try {
+    checkController(pdfUploadController, 'PDFUploadController');
+    pdfUploadController.uploadCV(req, res, next);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PHASE_3: Manual profile data endpoint
+apiRouter.post('/employees/:id/manual-data', authMiddleware, (req, res, next) => {
+  try {
+    checkController(manualDataController, 'ManualDataController');
+    manualDataController.saveManualData(req, res, next);
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Profile Approval Routes (HR only)

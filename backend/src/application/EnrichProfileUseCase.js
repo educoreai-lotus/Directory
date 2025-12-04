@@ -6,6 +6,8 @@ const OpenAIAPIClient = require('../infrastructure/OpenAIAPIClient');
 const EmployeeProfileApprovalRepository = require('../infrastructure/EmployeeProfileApprovalRepository');
 const MicroserviceClient = require('../infrastructure/MicroserviceClient');
 const CompanyRepository = require('../infrastructure/CompanyRepository');
+// PHASE_2: Import MergeRawDataUseCase for extended enrichment flow
+const MergeRawDataUseCase = require('./MergeRawDataUseCase');
 
 class EnrichProfileUseCase {
   constructor() {
@@ -14,6 +16,8 @@ class EnrichProfileUseCase {
     this.approvalRepository = new EmployeeProfileApprovalRepository();
     this.microserviceClient = new MicroserviceClient();
     this.companyRepository = new CompanyRepository();
+    // PHASE_2: Initialize MergeRawDataUseCase for extended enrichment flow
+    this.mergeRawDataUseCase = new MergeRawDataUseCase();
   }
 
   /**
@@ -45,22 +49,48 @@ class EnrichProfileUseCase {
         throw new Error('Profile has already been enriched. This is a one-time process.');
       }
 
-      // Check if both LinkedIn and GitHub are connected
-      if (!employee.linkedin_data || !employee.github_data) {
-        console.error('[EnrichProfileUseCase] ❌ Missing OAuth data - LinkedIn:', !!employee.linkedin_data, 'GitHub:', !!employee.github_data);
-        throw new Error('Both LinkedIn and GitHub must be connected before enrichment');
+      // PHASE_2: Try to merge raw data from new sources (PDF, manual, LinkedIn, GitHub)
+      // This allows enrichment with PDF/manual data even without OAuth
+      let mergedData = null;
+      let linkedinData = null;
+      let githubData = null;
+      
+      try {
+        mergedData = await this.mergeRawDataBeforeEnrichment(employeeId);
+        console.log('[EnrichProfileUseCase] ✅ Merged raw data available from new sources');
+        
+        // Extract LinkedIn and GitHub data from merged result
+        if (mergedData?.linkedin_profile) {
+          linkedinData = mergedData.linkedin_profile;
+        }
+        if (mergedData?.github_profile) {
+          githubData = mergedData.github_profile;
+        }
+      } catch (error) {
+        console.warn('[EnrichProfileUseCase] ⚠️  Merge failed, falling back to existing OAuth data:', error.message);
+        // Fall through to existing logic below
+      }
+
+      // PHASE_2: Fallback to existing OAuth data if merge failed or no new sources exist
+      // This ensures backward compatibility with existing OAuth-only flow
+      if (!mergedData) {
+        // Check if both LinkedIn and GitHub are connected (existing requirement)
+        if (!employee.linkedin_data || !employee.github_data) {
+          console.error('[EnrichProfileUseCase] ❌ Missing OAuth data - LinkedIn:', !!employee.linkedin_data, 'GitHub:', !!employee.github_data);
+          throw new Error('Both LinkedIn and GitHub must be connected before enrichment, or provide PDF/manual data');
+        }
+        
+        // Parse stored data (existing logic)
+        linkedinData = typeof employee.linkedin_data === 'string' 
+          ? JSON.parse(employee.linkedin_data) 
+          : employee.linkedin_data;
+        
+        githubData = typeof employee.github_data === 'string'
+          ? JSON.parse(employee.github_data)
+          : employee.github_data;
       }
       
       console.log('[EnrichProfileUseCase] ✅ All checks passed, proceeding with enrichment...');
-
-      // Parse stored data
-      const linkedinData = typeof employee.linkedin_data === 'string' 
-        ? JSON.parse(employee.linkedin_data) 
-        : employee.linkedin_data;
-      
-      const githubData = typeof employee.github_data === 'string'
-        ? JSON.parse(employee.github_data)
-        : employee.github_data;
 
       // Get company name
       const company = await this.companyRepository.findById(employee.company_id);
@@ -181,8 +211,16 @@ class EnrichProfileUseCase {
         const isTrainer = roles.includes('TRAINER');
         const employeeType = isTrainer ? 'trainer' : 'regular_employee';
 
-        // Prepare raw data for Skills Engine
-        const rawData = {
+        // PHASE_2: Prepare raw data for Skills Engine (use merged data if available, otherwise OAuth data)
+        const rawData = mergedData ? {
+          linkedin: mergedData.linkedin_profile || linkedinData,
+          github: mergedData.github_profile || githubData,
+          work_experience: mergedData.work_experience || [],
+          skills: mergedData.skills || [],
+          education: mergedData.education || [],
+          languages: mergedData.languages || [],
+          projects: mergedData.projects || []
+        } : {
           linkedin: linkedinData,
           github: githubData
         };
@@ -243,7 +281,24 @@ class EnrichProfileUseCase {
   }
 
   /**
-   * Check if employee is ready for enrichment (both OAuth connections complete)
+   * PHASE_2: Merge raw data before enrichment
+   * Attempts to merge data from all sources (PDF, manual, LinkedIn, GitHub)
+   * Returns null if no new sources exist (allows fallback to OAuth-only flow)
+   * @param {string} employeeId - Employee UUID
+   * @returns {Promise<Object|null>} Merged data or null
+   */
+  async mergeRawDataBeforeEnrichment(employeeId) {
+    try {
+      return await this.mergeRawDataUseCase.execute(employeeId);
+    } catch (error) {
+      console.warn('[EnrichProfileUseCase] Merge failed, will use fallback:', error.message);
+      return null; // Signal to use fallback
+    }
+  }
+
+  /**
+   * Check if employee is ready for enrichment
+   * PHASE_2: Now checks for new data sources (PDF, manual) OR existing OAuth data
    * @param {string} employeeId - Employee UUID
    * @returns {Promise<boolean>} True if ready for enrichment
    */
@@ -257,16 +312,30 @@ class EnrichProfileUseCase {
       return false;
     }
 
+    // PHASE_2: Check for new data sources (PDF, manual, LinkedIn, GitHub in new table)
+    let hasNewDataSources = false;
+    try {
+      const EmployeeRawDataRepository = require('../infrastructure/EmployeeRawDataRepository');
+      const rawDataRepo = new EmployeeRawDataRepository();
+      hasNewDataSources = await rawDataRepo.hasAnyData(employeeId);
+      console.log('[EnrichProfileUseCase] Has new data sources (PDF/manual/OAuth in new table):', hasNewDataSources);
+    } catch (error) {
+      console.warn('[EnrichProfileUseCase] Could not check new data sources, using fallback:', error.message);
+      // Fall through to existing checks
+    }
+
+    // Existing OAuth checks (backward compatible)
     const hasLinkedIn = !!employee.linkedin_data;
     const hasGitHub = !!employee.github_data;
     const notCompleted = !employee.enrichment_completed;
     
     console.log('[EnrichProfileUseCase] Employee:', employee.email);
-    console.log('[EnrichProfileUseCase] Has LinkedIn data:', hasLinkedIn);
-    console.log('[EnrichProfileUseCase] Has GitHub data:', hasGitHub);
+    console.log('[EnrichProfileUseCase] Has LinkedIn data (old):', hasLinkedIn);
+    console.log('[EnrichProfileUseCase] Has GitHub data (old):', hasGitHub);
     console.log('[EnrichProfileUseCase] Enrichment not completed:', notCompleted);
     
-    const isReady = !!(hasLinkedIn && hasGitHub && notCompleted);
+    // PHASE_2: Ready if new sources exist OR both OAuth connected (backward compatible)
+    const isReady = !!(hasNewDataSources || (hasLinkedIn && hasGitHub)) && notCompleted;
     console.log('[EnrichProfileUseCase] Ready for enrichment:', isReady);
     
     return isReady;

@@ -88,6 +88,30 @@ class OAuthController {
       const result = await this.connectLinkedInUseCase.handleCallback(code, state);
       console.log('[OAuthController] LinkedIn connected successfully for employee:', result.employee.id);
 
+      // PHASE_3: Dual-write strategy - also save LinkedIn data to new employee_raw_data table
+      // This is non-critical - if it fails, OAuth flow continues normally
+      try {
+        const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+        const EmployeeRawDataRepository = require('../infrastructure/EmployeeRawDataRepository');
+        const employeeRepo = new EmployeeRepository();
+        const rawDataRepo = new EmployeeRawDataRepository();
+        
+        // Get the saved LinkedIn data from the employee record
+        const employee = await employeeRepo.findById(result.employee.id);
+        if (employee && employee.linkedin_data) {
+          const linkedinData = typeof employee.linkedin_data === 'string' 
+            ? JSON.parse(employee.linkedin_data) 
+            : employee.linkedin_data;
+          
+          await rawDataRepo.createOrUpdate(result.employee.id, 'linkedin', linkedinData);
+          console.log('[OAuthController] ✅ PHASE_3: Saved LinkedIn data to employee_raw_data table');
+        }
+      } catch (error) {
+        // PHASE_3: Non-critical - log warning but don't break OAuth flow
+        console.warn('[OAuthController] ⚠️  PHASE_3: Failed to save LinkedIn data to new table (non-critical):', error.message);
+        // Continue with existing OAuth flow
+      }
+
       // Get full employee data to build user object
       const EmployeeRepository = require('../infrastructure/EmployeeRepository');
       const CompanyRepository = require('../infrastructure/CompanyRepository');
@@ -295,6 +319,30 @@ class OAuthController {
       // Handle callback
       const result = await this.connectGitHubUseCase.handleCallback(code, state);
       console.log('[OAuthController] GitHub connected successfully for employee:', result.employee.id);
+
+      // PHASE_3: Dual-write strategy - also save GitHub data to new employee_raw_data table
+      // This is non-critical - if it fails, OAuth flow continues normally
+      try {
+        const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+        const EmployeeRawDataRepository = require('../infrastructure/EmployeeRawDataRepository');
+        const employeeRepo = new EmployeeRepository();
+        const rawDataRepo = new EmployeeRawDataRepository();
+        
+        // Get the saved GitHub data from the employee record
+        const employee = await employeeRepo.findById(result.employee.id);
+        if (employee && employee.github_data) {
+          const githubData = typeof employee.github_data === 'string' 
+            ? JSON.parse(employee.github_data) 
+            : employee.github_data;
+          
+          await rawDataRepo.createOrUpdate(result.employee.id, 'github', githubData);
+          console.log('[OAuthController] ✅ PHASE_3: Saved GitHub data to employee_raw_data table');
+        }
+      } catch (error) {
+        // PHASE_3: Non-critical - log warning but don't break OAuth flow
+        console.warn('[OAuthController] ⚠️  PHASE_3: Failed to save GitHub data to new table (non-critical):', error.message);
+        // Continue with existing OAuth flow
+      }
 
       // Get full employee data to build user object
       const EmployeeRepository = require('../infrastructure/EmployeeRepository');
