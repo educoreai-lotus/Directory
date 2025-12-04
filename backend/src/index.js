@@ -334,6 +334,7 @@ apiRouter.put('/companies/:id/requests/:requestId', authMiddleware, (req, res, n
 
 // Profile Enrichment
 apiRouter.post('/employees/:employeeId/enrich', authMiddleware, (req, res, next) => {
+  console.log("[Route] /employees/:employeeId/enrich HIT");
   console.log('[Route] POST /employees/:employeeId/enrich - Request received');
   console.log('[Route] Employee ID:', req.params.employeeId);
   console.log('[Route] Request body:', req.body);

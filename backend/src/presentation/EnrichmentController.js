@@ -15,6 +15,7 @@ class EnrichmentController {
    * Requires authentication
    */
   async enrichProfile(req, res, next) {
+    console.log("[EnrichmentController] enrichProfile START", req.params.employeeId);
     console.log('[EnrichmentController] enrichProfile called');
     console.log('[EnrichmentController] Request params:', req.params);
     console.log('[EnrichmentController] Request body:', req.body);
