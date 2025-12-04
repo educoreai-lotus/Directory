@@ -491,42 +491,6 @@ function EnrichProfilePage() {
           </p>
         </div>
 
-        {/* PHASE_4: Data Sources Summary */}
-        <div className="mb-6 p-4 rounded-lg" style={{
-          background: 'var(--bg-secondary)',
-          border: '1px solid var(--border-default)'
-        }}>
-          <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
-            Data Sources Status
-          </h4>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="flex items-center gap-2">
-              <span style={{ color: linkedinConnected ? 'rgb(34, 197, 94)' : 'var(--text-muted)' }}>
-                {linkedinConnected ? '✓' : '✗'}
-              </span>
-              <span style={{ color: 'var(--text-secondary)' }}>LinkedIn</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span style={{ color: githubConnected ? 'rgb(34, 197, 94)' : 'var(--text-muted)' }}>
-                {githubConnected ? '✓' : '✗'}
-              </span>
-              <span style={{ color: 'var(--text-secondary)' }}>GitHub</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span style={{ color: pdfUploaded ? 'rgb(34, 197, 94)' : 'var(--text-muted)' }}>
-                {pdfUploaded ? '✓' : '✗'}
-              </span>
-              <span style={{ color: 'var(--text-secondary)' }}>CV Uploaded</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span style={{ color: manualDataSaved ? 'rgb(34, 197, 94)' : 'var(--text-muted)' }}>
-                {manualDataSaved ? '✓' : '✗'}
-              </span>
-              <span style={{ color: 'var(--text-secondary)' }}>Manual Data</span>
-            </div>
-          </div>
-        </div>
-
         {/* Error Message */}
         {error && (
           <div 

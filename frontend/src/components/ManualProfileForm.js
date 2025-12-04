@@ -8,14 +8,17 @@ import { saveManualData } from '../services/enrichmentService';
 function ManualProfileForm({ employeeId, onSaved }) {
   // PHASE_4: Form state
   const [formData, setFormData] = useState({
-    work_experience: '',
-    skills: '',
-    languages: '',
-    education: ''
+    name: '',
+    email: '',
+    current_role: '',
+    target_role: '',
+    bio: '',
+    projects: ''
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // PHASE_4: Handle input changes
   const handleChange = (e) => {
@@ -32,10 +35,9 @@ function ManualProfileForm({ employeeId, onSaved }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate at least one field is filled
-    const hasData = Object.values(formData).some(value => value.trim().length > 0);
-    if (!hasData) {
-      setError('Please fill at least one field');
+    // Validate required fields
+    if (!formData.name || !formData.email || !formData.current_role || !formData.target_role) {
+      setError('Please fill in all required fields: name, email, current role, and target role');
       return;
     }
 
@@ -53,6 +55,7 @@ function ManualProfileForm({ employeeId, onSaved }) {
       if (result?.success || result?.data) {
         setSaved(true);
         setError(null);
+        setIsExpanded(false); // Collapse after save
         if (onSaved) {
           onSaved(result);
         }
@@ -103,7 +106,7 @@ function ManualProfileForm({ employeeId, onSaved }) {
         className="text-sm mb-4"
         style={{ color: 'var(--text-secondary)' }}
       >
-        Fill in your profile details manually. You can provide work experience, skills, languages, and education.
+        Fill in your profile details manually. Required: name, email, current role, target role. Optional: bio and projects.
       </p>
 
       {/* PHASE_4: Error Message */}
@@ -120,122 +123,198 @@ function ManualProfileForm({ employeeId, onSaved }) {
         </div>
       )}
 
-      {/* PHASE_4: Form */}
-      <form onSubmit={handleSubmit}>
-        {/* Work Experience */}
-        <div className="mb-4">
-          <label 
-            className="block text-sm font-medium mb-2"
-            style={{ color: 'var(--text-primary)' }}
-          >
-            Work Experience
-          </label>
-          <textarea
-            name="work_experience"
-            value={formData.work_experience}
-            onChange={handleChange}
-            placeholder="Describe your work experience, roles, and responsibilities..."
-            rows={4}
-            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-            style={{
-              background: 'var(--bg-secondary)',
-              borderColor: 'var(--border-default)',
-              color: 'var(--text-primary)'
-            }}
-          />
-        </div>
-
-        {/* Skills */}
-        <div className="mb-4">
-          <label 
-            className="block text-sm font-medium mb-2"
-            style={{ color: 'var(--text-primary)' }}
-          >
-            Skills (comma-separated)
-          </label>
-          <input
-            type="text"
-            name="skills"
-            value={formData.skills}
-            onChange={handleChange}
-            placeholder="e.g., JavaScript, Python, React, Node.js"
-            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-            style={{
-              background: 'var(--bg-secondary)',
-              borderColor: 'var(--border-default)',
-              color: 'var(--text-primary)'
-            }}
-          />
-        </div>
-
-        {/* Languages */}
-        <div className="mb-4">
-          <label 
-            className="block text-sm font-medium mb-2"
-            style={{ color: 'var(--text-primary)' }}
-          >
-            Languages (comma-separated)
-          </label>
-          <input
-            type="text"
-            name="languages"
-            value={formData.languages}
-            onChange={handleChange}
-            placeholder="e.g., English, Spanish, French"
-            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-            style={{
-              background: 'var(--bg-secondary)',
-              borderColor: 'var(--border-default)',
-              color: 'var(--text-primary)'
-            }}
-          />
-        </div>
-
-        {/* Education */}
-        <div className="mb-4">
-          <label 
-            className="block text-sm font-medium mb-2"
-            style={{ color: 'var(--text-primary)' }}
-          >
-            Education
-          </label>
-          <textarea
-            name="education"
-            value={formData.education}
-            onChange={handleChange}
-            placeholder="List your degrees, certifications, and educational background..."
-            rows={3}
-            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-            style={{
-              background: 'var(--bg-secondary)',
-              borderColor: 'var(--border-default)',
-              color: 'var(--text-primary)'
-            }}
-          />
-        </div>
-
-        {/* PHASE_4: Save Button */}
+      {/* PHASE_4: Expand/Collapse Button */}
+      {!isExpanded && (
         <button
-          type="submit"
-          disabled={saving || saved}
-          className="btn btn-secondary w-full"
-          style={{
-            opacity: (saving || saved) ? 0.6 : 1,
-            cursor: (saving || saved) ? 'not-allowed' : 'pointer'
-          }}
+          type="button"
+          onClick={() => setIsExpanded(true)}
+          className="btn btn-secondary w-full mb-4"
         >
-          {saving ? (
-            <>
-              <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></span>
-              Saving...
-            </>
-          ) : saved ? (
-            '✓ Saved'
-          ) : (
-            'Save Details'
-          )}
+          Add or Edit Details Manually
         </button>
-      </form>
+      )}
+
+      {/* PHASE_4: Form - Only show when expanded */}
+      {isExpanded && (
+        <form onSubmit={handleSubmit}>
+          {/* Name - Required */}
+          <div className="mb-4">
+            <label 
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              Name <span style={{ color: 'var(--text-error)' }}>*</span>
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Your full name"
+              required
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              style={{
+                background: 'var(--bg-secondary)',
+                borderColor: 'var(--border-default)',
+                color: 'var(--text-primary)'
+              }}
+            />
+          </div>
+
+          {/* Email - Required */}
+          <div className="mb-4">
+            <label 
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              Email <span style={{ color: 'var(--text-error)' }}>*</span>
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="your.email@example.com"
+              required
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              style={{
+                background: 'var(--bg-secondary)',
+                borderColor: 'var(--border-default)',
+                color: 'var(--text-primary)'
+              }}
+            />
+          </div>
+
+          {/* Current Role - Required */}
+          <div className="mb-4">
+            <label 
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              Current Role <span style={{ color: 'var(--text-error)' }}>*</span>
+            </label>
+            <input
+              type="text"
+              name="current_role"
+              value={formData.current_role}
+              onChange={handleChange}
+              placeholder="e.g., Software Engineer"
+              required
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              style={{
+                background: 'var(--bg-secondary)',
+                borderColor: 'var(--border-default)',
+                color: 'var(--text-primary)'
+              }}
+            />
+          </div>
+
+          {/* Target Role - Required */}
+          <div className="mb-4">
+            <label 
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              Target Role <span style={{ color: 'var(--text-error)' }}>*</span>
+            </label>
+            <input
+              type="text"
+              name="target_role"
+              value={formData.target_role}
+              onChange={handleChange}
+              placeholder="e.g., Senior Software Engineer"
+              required
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              style={{
+                background: 'var(--bg-secondary)',
+                borderColor: 'var(--border-default)',
+                color: 'var(--text-primary)'
+              }}
+            />
+          </div>
+
+          {/* Bio - Optional */}
+          <div className="mb-4">
+            <label 
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              Bio (Optional)
+            </label>
+            <textarea
+              name="bio"
+              value={formData.bio}
+              onChange={handleChange}
+              placeholder="Your professional bio (will be auto-filled later if left empty)..."
+              rows={4}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              style={{
+                background: 'var(--bg-secondary)',
+                borderColor: 'var(--border-default)',
+                color: 'var(--text-primary)'
+              }}
+            />
+          </div>
+
+          {/* Projects - Optional */}
+          <div className="mb-4">
+            <label 
+              className="block text-sm font-medium mb-2"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              Projects (Optional)
+            </label>
+            <textarea
+              name="projects"
+              value={formData.projects}
+              onChange={handleChange}
+              placeholder="List your projects (will be auto-filled later if left empty)..."
+              rows={3}
+              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              style={{
+                background: 'var(--bg-secondary)',
+                borderColor: 'var(--border-default)',
+                color: 'var(--text-primary)'
+              }}
+            />
+          </div>
+
+          {/* PHASE_4: Save Button */}
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={saving || saved}
+              className="btn btn-secondary flex-1"
+              style={{
+                opacity: (saving || saved) ? 0.6 : 1,
+                cursor: (saving || saved) ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {saving ? (
+                <>
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></span>
+                  Saving...
+                </>
+              ) : saved ? (
+                '✓ Saved'
+              ) : (
+                'Save Details'
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsExpanded(false)}
+              className="btn btn-secondary"
+              style={{
+                opacity: saving ? 0.6 : 1,
+                cursor: saving ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* PHASE_4: Success Message */}
       {saved && (

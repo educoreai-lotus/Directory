@@ -31,33 +31,36 @@ class ManualDataController {
         });
       }
 
-      // PHASE_3: Validate request body
-      const { work_experience, skills, languages, education } = req.body;
+      // PHASE_3: Validate request body - only require: name, email, current_role, target_role
+      const { name, email, current_role, target_role, bio, projects } = req.body;
 
-      // At least one field must be provided
-      if (!work_experience && !skills && !languages && !education) {
+      // Validate required fields
+      if (!name || !email || !current_role || !target_role) {
         return res.status(400).json({
-          requester_service: 'directory_service',
-          response: {
-            error: 'At least one field (work_experience, skills, languages, or education) must be provided'
-          }
+          success: false,
+          message: 'Invalid manual enrichment data',
+          details: 'Missing required fields: name, email, current_role, and target_role are required'
         });
       }
 
       console.log('[ManualDataController] Processing manual data for employee:', id);
       console.log('[ManualDataController] Data provided:', {
-        has_work_experience: !!work_experience,
-        has_skills: !!skills,
-        has_languages: !!languages,
-        has_education: !!education
+        has_name: !!name,
+        has_email: !!email,
+        has_current_role: !!current_role,
+        has_target_role: !!target_role,
+        has_bio: !!bio,
+        has_projects: !!projects
       });
 
       // PHASE_3: Process and save manual data
       const result = await this.saveManualDataUseCase.execute(id, {
-        work_experience,
-        skills,
-        languages,
-        education
+        name,
+        email,
+        current_role,
+        target_role,
+        bio: bio || null,
+        projects: projects || null
       });
 
       return res.status(200).json({
@@ -66,11 +69,11 @@ class ManualDataController {
       });
     } catch (error) {
       console.error('[ManualDataController] Error saving manual data:', error);
-      return res.status(500).json({
-        requester_service: 'directory_service',
-        response: {
-          error: error.message || 'Failed to save manual data'
-        }
+      // Return proper JSON error instead of throwing
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid manual enrichment data',
+        details: error.message || 'Failed to save manual data'
       });
     }
   }

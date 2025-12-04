@@ -104,7 +104,7 @@ function UploadCVSection({ employeeId, onUploaded }) {
         className="text-sm mb-4"
         style={{ color: 'var(--text-secondary)' }}
       >
-        Upload your CV as a PDF file. We'll extract your work experience, skills, education, and languages.
+        Upload your CV as a PDF file. We'll extract your name, email, current role, target role, and optionally bio and projects.
       </p>
 
       {/* PHASE_4: Error Message */}

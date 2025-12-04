@@ -44,10 +44,12 @@ class UploadCVUseCase {
       const parsedData = await this.pdfExtractionService.parseCVText(text);
       
       console.log('[UploadCVUseCase] Parsed data:', {
-        work_experience_count: parsedData.work_experience?.length || 0,
-        skills_count: parsedData.skills?.length || 0,
-        education_count: parsedData.education?.length || 0,
-        languages_count: parsedData.languages?.length || 0
+        has_name: !!parsedData.name,
+        has_email: !!parsedData.email,
+        has_current_role: !!parsedData.current_role,
+        has_target_role: !!parsedData.target_role,
+        has_bio: !!parsedData.bio,
+        has_projects: !!parsedData.projects
       });
 
       // Step 3: Sanitize PII (remove sensitive information)
@@ -69,10 +71,6 @@ class UploadCVUseCase {
         data: {
           id: savedData.id,
           source: savedData.source,
-          work_experience_count: sanitizedData.work_experience?.length || 0,
-          skills_count: sanitizedData.skills?.length || 0,
-          education_count: sanitizedData.education?.length || 0,
-          languages_count: sanitizedData.languages?.length || 0,
           created_at: savedData.created_at
         }
       };
