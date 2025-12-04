@@ -39,9 +39,19 @@ class EnrichmentController {
       });
     } catch (error) {
       console.error('[EnrichmentController] Error enriching profile:', error);
-      return res.status(500).json({
+      
+      // Return 400 (Bad Request) for validation/insufficient data errors instead of 500
+      const isValidationError = error.message?.includes('Insufficient data') ||
+                                error.message?.includes('Employee not found') ||
+                                error.message?.includes('already been enriched') ||
+                                error.message?.includes('must be connected');
+      
+      const statusCode = isValidationError ? 400 : 500;
+      
+      return res.status(statusCode).json({
         requester_service: 'directory_service',
         response: {
+          success: false,
           error: error.message || 'Failed to enrich profile'
         }
       });

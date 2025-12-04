@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const parseRequest = require('./shared/requestParser');
 const formatResponse = require('./shared/responseFormatter');
 
@@ -142,7 +143,21 @@ app.get('/assets/:logo', (req, res) => {
   }
 
   const filePath = path.join(__dirname, '..', fileName);
-  res.sendFile(filePath);
+  
+  // Check if file exists before trying to send it (prevent ENOENT errors)
+  if (!fs.existsSync(filePath)) {
+    console.warn(`[Assets] Logo file not found: ${filePath}`);
+    return res.status(404).json({ error: 'Logo file not found' });
+  }
+
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      console.error(`[Assets] Error sending logo file ${fileName}:`, err.message);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Error serving logo file' });
+      }
+    }
+  });
 });
 
 // Initialize controllers with error handling
