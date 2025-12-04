@@ -14,12 +14,18 @@ const buildDatabaseUrl = () => {
   
   if (usePooler) {
     const poolerHost = process.env.DB_POOLER_HOST || 'aws-1-ap-south-1.pooler.supabase.com';
-    const projectRef = process.env.SUPABASE_PROJECT_REF || 'lkxqkytxijlxlxsuystm';
+    // ⚠️ SECURITY: Project ref is public (visible in URLs), but we require it from env var for consistency
+    // Note: Project ref alone is not sensitive, but combined with password it is
+    const projectRef = process.env.SUPABASE_PROJECT_REF;
     const database = process.env.DB_NAME || process.env.SUPABASE_DB_NAME || 'postgres';
     const user = process.env.DB_USER || process.env.SUPABASE_USER || 'postgres';
     const password = process.env.DB_PASSWORD || process.env.SUPABASE_PASSWORD;
     
-    if (user && password) {
+    // If project ref is missing, fall back to direct connection (don't use pooler)
+    if (!projectRef) {
+      console.warn('⚠️  SUPABASE_PROJECT_REF not set. Falling back to direct connection instead of pooler.');
+      // Fall through to direct connection below
+    } else if (user && password) {
       return `postgresql://${user}.${projectRef}:${encodeURIComponent(password)}@${poolerHost}:5432/${database}`;
     }
   }
@@ -48,7 +54,15 @@ const config = {
   },
   databaseUrl: buildDatabaseUrl(),
   databaseSsl: process.env.DB_SSL === 'true' || process.env.SUPABASE_SSL === 'true' || true, // Default to SSL for Supabase (always true)
-  requesterService: 'directory_service',
+  requesterService: 'directory-service',
+  
+  // Coordinator Configuration (unified proxy for microservice-to-microservice communication)
+  coordinator: {
+    baseUrl: process.env.COORDINATOR_URL || 'https://coordinator-production-e0a0.up.railway.app',
+    endpoint: '/api/fill-content-metrics',
+    // Service name used when Directory makes requests to Coordinator
+    serviceName: process.env.SERVICE_NAME || 'directory-service'
+  },
   
   // Authentication Configuration
   auth: {

@@ -3,11 +3,11 @@
 
 const fetch = require('node-fetch');
 const { generateSignature, verifySignature } = require('../utils/signature');
-const { COORDINATOR_PUBLIC_KEY } = require('../security/coordinatorKey');
 
 const SERVICE_NAME = process.env.SERVICE_NAME || 'directory-service';
 const COORDINATOR_URL = process.env.COORDINATOR_URL;
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const COORDINATOR_PUBLIC_KEY = process.env.COORDINATOR_PUBLIC_KEY || null;
 
 /**
  * Post an envelope to Coordinator's unified endpoint with optional digital signature.
