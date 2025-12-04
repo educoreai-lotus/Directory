@@ -71,7 +71,7 @@ class MicroserviceClient {
 
     try {
       // Make signed request to Coordinator unified proxy
-      const { data: json } = await postToCoordinator(envelope).catch(() => ({ data: {} }));
+      const { data: json } = await postToCoordinator(envelope);
 
       // Extract filled response from Coordinator's response
       // Coordinator returns: { success: true, data: { ... } }
