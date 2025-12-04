@@ -49,6 +49,9 @@ class PDFExtractionService {
       military: []
     };
 
+    // IMPROVED: Extract all text content for fallback parsing if sections aren't found
+    const fullText = text.toLowerCase();
+
     // Helper function to extract section content
     const extractSection = (sectionName, sectionKeywords, stopKeywords = []) => {
       const items = [];
@@ -169,6 +172,84 @@ class PDFExtractionService {
     const militaryItems = extractSection('Military Service', militaryKeywords, ['volunteer', 'employment', 'work experience', 'education']);
     if (militaryItems.length > 0) {
       result.military = militaryItems;
+    }
+
+    // IMPROVED: Fallback extraction - if no structured sections found, extract from full text
+    if (result.skills.length === 0 && result.languages.length === 0 && 
+        result.education.length === 0 && result.work_experience.length === 0) {
+      console.log('[PDFExtractionService] No structured sections found, attempting fallback extraction from full text');
+      
+      // Extract skills from common patterns (e.g., "JavaScript", "Python", "React", etc.)
+      const skillPatterns = [
+        /\b(javascript|typescript|python|java|c\+\+|c#|ruby|php|go|rust|swift|kotlin)\b/gi,
+        /\b(react|vue|angular|node\.js|express|django|flask|spring|laravel)\b/gi,
+        /\b(sql|postgresql|mysql|mongodb|redis|elasticsearch)\b/gi,
+        /\b(html|css|sass|less|bootstrap|tailwind)\b/gi,
+        /\b(aws|azure|gcp|docker|kubernetes|terraform)\b/gi,
+        /\b(git|github|gitlab|jenkins|ci\/cd|agile|scrum)\b/gi
+      ];
+      
+      skillPatterns.forEach(pattern => {
+        const matches = fullText.match(pattern);
+        if (matches) {
+          matches.forEach(match => {
+            const skill = match.trim();
+            if (skill.length > 0 && !result.skills.includes(skill)) {
+              result.skills.push(skill);
+            }
+          });
+        }
+      });
+      
+      // Extract languages from common patterns
+      const languagePatterns = [
+        /\b(english|arabic|hebrew|spanish|french|german|chinese|japanese|korean)\b/gi,
+        /\b(native|fluent|proficient|basic|intermediate|advanced)\s+(english|arabic|hebrew|spanish|french|german)\b/gi
+      ];
+      
+      languagePatterns.forEach(pattern => {
+        const matches = fullText.match(pattern);
+        if (matches) {
+          matches.forEach(match => {
+            const lang = match.trim();
+            if (lang.length > 0 && !result.languages.includes(lang)) {
+              result.languages.push(lang);
+            }
+          });
+        }
+      });
+      
+      // Extract education keywords
+      const educationKeywords = ['university', 'college', 'degree', 'bachelor', 'master', 'phd', 'diploma', 'certificate'];
+      educationKeywords.forEach(keyword => {
+        if (fullText.includes(keyword)) {
+          // Find lines containing education keywords
+          lines.forEach(line => {
+            if (line.toLowerCase().includes(keyword) && line.length > 10) {
+              if (!result.education.includes(line)) {
+                result.education.push(line);
+              }
+            }
+          });
+        }
+      });
+      
+      // Extract work experience keywords
+      const experienceKeywords = ['experience', 'worked', 'position', 'role', 'job', 'employment', 'career'];
+      experienceKeywords.forEach(keyword => {
+        if (fullText.includes(keyword)) {
+          // Find lines containing experience keywords
+          lines.forEach(line => {
+            if (line.toLowerCase().includes(keyword) && line.length > 10 && 
+                !line.toLowerCase().includes('education') && 
+                !line.toLowerCase().includes('skill')) {
+              if (!result.work_experience.includes(line)) {
+                result.work_experience.push(line);
+              }
+            }
+          });
+        }
+      });
     }
 
     // Remove duplicates from arrays

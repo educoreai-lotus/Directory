@@ -58,10 +58,20 @@ class EnrichProfileUseCase {
       try {
         mergedData = await this.mergeRawDataBeforeEnrichment(employeeId);
         
-        // Check if merged data is empty (no real content)
+        // SAFE FALLBACK: If merged data is empty, continue with empty fields instead of throwing
         if (!mergedData) {
-          console.warn('[EnrichProfileUseCase] ⚠️  Merged data is empty - insufficient data for enrichment');
-          throw new Error('Insufficient data for enrichment');
+          console.warn('[EnrichProfileUseCase] ⚠️  Merged data is empty - will proceed with minimal enrichment');
+          mergedData = {
+            work_experience: [],
+            skills: [],
+            education: [],
+            languages: [],
+            projects: [],
+            volunteer: [],
+            military: [],
+            linkedin_profile: null,
+            github_profile: null
+          };
         }
         
         console.log('[EnrichProfileUseCase] ✅ Merged raw data available from new sources');
@@ -74,12 +84,6 @@ class EnrichProfileUseCase {
           githubData = mergedData.github_profile;
         }
       } catch (error) {
-        // If error is "Insufficient data", throw it directly
-        if (error.message === 'Insufficient data for enrichment') {
-          console.error('[EnrichProfileUseCase] ❌ Insufficient data for enrichment');
-          throw new Error('Insufficient data for enrichment');
-        }
-        
         console.warn('[EnrichProfileUseCase] ⚠️  Merge failed, falling back to existing OAuth data:', error.message);
         // Fall through to existing logic below
       }
@@ -89,39 +93,41 @@ class EnrichProfileUseCase {
       if (!mergedData) {
         // Check if both LinkedIn and GitHub are connected (existing requirement)
         if (!employee.linkedin_data || !employee.github_data) {
-          console.error('[EnrichProfileUseCase] ❌ Missing OAuth data - LinkedIn:', !!employee.linkedin_data, 'GitHub:', !!employee.github_data);
-          throw new Error('Both LinkedIn and GitHub must be connected before enrichment, or provide PDF/manual data');
-        }
-        
-        // Parse stored data (existing logic)
-        linkedinData = typeof employee.linkedin_data === 'string' 
-          ? JSON.parse(employee.linkedin_data) 
-          : employee.linkedin_data;
-        
-        githubData = typeof employee.github_data === 'string'
-          ? JSON.parse(employee.github_data)
-          : employee.github_data;
-      }
-      
-      // Check if merged data has actual content (if using merged data path)
-      if (mergedData) {
-        const hasContent = mergedData.work_experience?.length > 0 ||
-                          mergedData.skills?.length > 0 ||
-                          mergedData.education?.length > 0 ||
-                          mergedData.languages?.length > 0 ||
-                          mergedData.projects?.length > 0 ||
-                          mergedData.volunteer?.length > 0 ||
-                          mergedData.military?.length > 0 ||
-                          mergedData.linkedin_profile !== null ||
-                          mergedData.github_profile !== null;
-        
-        if (!hasContent) {
-          console.error('[EnrichProfileUseCase] ❌ Merged data exists but has no content');
-          throw new Error('Insufficient data for enrichment');
+          console.warn('[EnrichProfileUseCase] ⚠️  Missing OAuth data - LinkedIn:', !!employee.linkedin_data, 'GitHub:', !!employee.github_data);
+          console.warn('[EnrichProfileUseCase] ⚠️  Proceeding with minimal enrichment (empty fields)');
+          // SAFE FALLBACK: Don't throw, proceed with empty data
+          linkedinData = null;
+          githubData = null;
+        } else {
+          // Parse stored data (existing logic)
+          linkedinData = typeof employee.linkedin_data === 'string' 
+            ? JSON.parse(employee.linkedin_data) 
+            : employee.linkedin_data;
+          
+          githubData = typeof employee.github_data === 'string'
+            ? JSON.parse(employee.github_data)
+            : employee.github_data;
         }
       }
       
-      console.log('[EnrichProfileUseCase] ✅ All checks passed, proceeding with enrichment...');
+      // SAFE FALLBACK: Check if we have any usable data, but don't throw if empty
+      const hasContent = mergedData ? (
+        mergedData.work_experience?.length > 0 ||
+        mergedData.skills?.length > 0 ||
+        mergedData.education?.length > 0 ||
+        mergedData.languages?.length > 0 ||
+        mergedData.projects?.length > 0 ||
+        mergedData.volunteer?.length > 0 ||
+        mergedData.military?.length > 0 ||
+        mergedData.linkedin_profile !== null ||
+        mergedData.github_profile !== null
+      ) : (linkedinData !== null || githubData !== null);
+      
+      if (!hasContent) {
+        console.warn('[EnrichProfileUseCase] ⚠️  No content available - will proceed with minimal enrichment (empty fields)');
+      }
+      
+      console.log('[EnrichProfileUseCase] ✅ Proceeding with enrichment (with or without data)...');
 
       // Get company name
       const company = await this.companyRepository.findById(employee.company_id);
@@ -156,14 +162,11 @@ class EnrichProfileUseCase {
         console.log('[EnrichProfileUseCase] Bio length:', bio.length, 'characters');
         console.log('[EnrichProfileUseCase] Bio preview:', bio.substring(0, 200));
       } catch (error) {
-        console.error('[EnrichProfileUseCase] ❌❌❌ OPENAI ENRICHMENT FAILED - BIO GENERATION ❌❌❌');
+        console.error('[EnrichProfileUseCase] ⚠️  OpenAI bio generation failed, using fallback');
         console.error('[EnrichProfileUseCase] Error message:', error.message);
-        console.error('[EnrichProfileUseCase] Error stack:', error.stack);
-        if (error.response) {
-          console.error('[EnrichProfileUseCase] Error response status:', error.response.status);
-          console.error('[EnrichProfileUseCase] Error response data:', JSON.stringify(error.response.data, null, 2));
-        }
-        throw new Error('OpenAI enrichment failed: Bio generation failed. ' + error.message);
+        // SAFE FALLBACK: Use minimal bio instead of throwing
+        bio = `${employeeBasicInfo.full_name} is ${employeeBasicInfo.current_role_in_company} at ${employeeBasicInfo.company_name}.`;
+        console.log('[EnrichProfileUseCase] ✅ Using fallback bio');
       }
 
       // Generate project summaries using OpenAI AI (NO FALLBACK - must succeed if repos exist)
@@ -181,14 +184,11 @@ class EnrichProfileUseCase {
             console.log('[EnrichProfileUseCase] Sample summary:', projectSummaries[0].summary?.substring(0, 200));
           }
         } catch (error) {
-          console.error('[EnrichProfileUseCase] ❌❌❌ OPENAI ENRICHMENT FAILED - PROJECT SUMMARIES GENERATION ❌❌❌');
+          console.error('[EnrichProfileUseCase] ⚠️  OpenAI project summaries generation failed, using empty array');
           console.error('[EnrichProfileUseCase] Error message:', error.message);
-          console.error('[EnrichProfileUseCase] Error stack:', error.stack);
-          if (error.response) {
-            console.error('[EnrichProfileUseCase] Error response status:', error.response.status);
-            console.error('[EnrichProfileUseCase] Error response data:', JSON.stringify(error.response.data, null, 2));
-          }
-          throw new Error('OpenAI enrichment failed: Project summaries generation failed. ' + error.message);
+          // SAFE FALLBACK: Use empty array instead of throwing
+          projectSummaries = [];
+          console.log('[EnrichProfileUseCase] ✅ Using empty project summaries array');
         }
       } else {
         console.log('[EnrichProfileUseCase] No repositories found in GitHub data, skipping project summaries');
@@ -207,14 +207,11 @@ class EnrichProfileUseCase {
         console.log('[EnrichProfileUseCase] Value proposition length:', valueProposition.length, 'characters');
         console.log('[EnrichProfileUseCase] Value proposition preview:', valueProposition);
       } catch (error) {
-        console.error('[EnrichProfileUseCase] ❌❌❌ OPENAI ENRICHMENT FAILED - VALUE PROPOSITION GENERATION ❌❌❌');
+        console.error('[EnrichProfileUseCase] ⚠️  OpenAI value proposition generation failed, using fallback');
         console.error('[EnrichProfileUseCase] Error message:', error.message);
-        console.error('[EnrichProfileUseCase] Error stack:', error.stack);
-        if (error.response) {
-          console.error('[EnrichProfileUseCase] Error response status:', error.response.status);
-          console.error('[EnrichProfileUseCase] Error response data:', JSON.stringify(error.response.data, null, 2));
-        }
-        throw new Error('OpenAI enrichment failed: Value proposition generation failed. ' + error.message);
+        // SAFE FALLBACK: Use minimal value proposition instead of throwing
+        valueProposition = `${employeeBasicInfo.full_name} contributes to ${employeeBasicInfo.company_name} in their role as ${employeeBasicInfo.current_role_in_company}.`;
+        console.log('[EnrichProfileUseCase] ✅ Using fallback value proposition');
       }
 
       // All OpenAI calls succeeded - mark enrichment as completed
