@@ -3,6 +3,16 @@
 // Handles both string (before express.json) and object (after express.json) formats
 
 const parseRequest = (req, res, next) => {
+  // Skip enrichment endpoint (requires raw frontend JSON)
+  if (req.path.match(/^\/employees\/[^\/]+\/enrich$/)) {
+    return next();
+  }
+
+  // Skip PDF upload (multer handles body)
+  if (req.path.match(/^\/employees\/[^\/]+\/upload-cv$/)) {
+    return next();
+  }
+
   // Skip parsing for multipart/form-data (file uploads handled by multer)
   if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
     return next();
