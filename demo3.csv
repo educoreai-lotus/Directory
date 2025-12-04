@@ -1,0 +1,8 @@
+company_name,industry,logo_url,approval_policy,kpis,passing_grade,max_attempts,exercises_limited,num_of_exercises,learning_path_approval,employee_id,full_name,email,role_type,department_id,department_name,team_id,team_name,manager_id,password,current_role_in_company,target_role_in_company,preferred_language,status,ai_enabled,public_publish_enable
+Demo3,Software Development,https://via.placeholder.com/200x200?text=Demo3,auto,Code Quality;Delivery Speed;Customer Satisfaction;Team Performance,75,3,true,15,auto,,,,,,,,,,,,,,
+,,,,,,,,,,HR001,Sarah Johnson,sarah.johnson@demo3.com,REGULAR_EMPLOYEE + DEPARTMENT_MANAGER,DEPT001,Human Resources,TEAM001,HR Management,,SecurePass123,HR Manager,HR Director,en,active,false,false
+,,,,,,,,,,EMP001,Michael Chen,michael.chen@demo3.com,REGULAR_EMPLOYEE + DECISION_MAKER,DEPT002,Engineering,TEAM002,Backend Development,HR001,SecurePass123,Software Engineer,Senior Software Engineer,en,active,false,false
+,,,,,,,,,,EMP002,Emily Rodriguez,emily.rodriguez@demo3.com,TRAINER + TEAM_MANAGER,DEPT002,Engineering,TEAM003,Frontend Development,EMP001,SecurePass123,Frontend Developer,Frontend Lead,en,active,true,true
+,,,,,,,,,,EMP003,David Kim,david.kim@demo3.com,REGULAR_EMPLOYEE,DEPT002,Engineering,TEAM003,Frontend Development,EMP002,SecurePass123,Junior Frontend Developer,Frontend Developer,en,active,false,false
+,,,,,,,,,,EMP004,Lisa Anderson,lisa.anderson@demo3.com,REGULAR_EMPLOYEE,DEPT003,Operations,TEAM004,Project Management,HR001,SecurePass123,Project Coordinator,Project Manager,en,active,false,false
+

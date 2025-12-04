@@ -1,0 +1,9 @@
+company_name,industry,logo_url,approval_policy,kpis,passing_grade,max_attempts,exercises_limited,num_of_exercises,learning_path_approval,employee_id,full_name,email,role_type,department_id,department_name,team_id,team_name,manager_id,password,current_role_in_company,target_role_in_company,preferred_language,status,ai_enabled,public_publish_enable
+TEST_COMPANY,Technology,https://example.com/logo.png,invalid_policy,Innovation Rate;Productivity,75,3,true,15,manual,,,,,,,,,,,,,,
+,,,,,,,,,,EMP001,John Doe,john.doe@test.com,REGULAR_EMPLOYEE + DEPARTMENT_MANAGER,DEPT001,Engineering,TEAM001,Development,,SecurePass123,Software Engineer,Senior Engineer,en,active,false,false
+,,,,,,,,,,EMP002,Jane Smith,invalid-email-format,TEAM_MANAGER,DEPT001,Engineering,TEAM001,Development,EMP001,SecurePass123,Developer,Senior Developer,en,active,false,false
+,,,,,,,,,,EMP003,Bob Johnson,bob.johnson@test.com,REGULAR_EMPLOYEE,DEPT002,Operations,TEAM002,Operations,,SecurePass123,Operations Manager,Operations Manager,en,active,false,false
+,,,,,,,,,,EMP001,Duplicate ID,duplicate@test.com,REGULAR_EMPLOYEE,DEPT001,Engineering,TEAM001,Development,EMP001,SecurePass123,Developer,Senior Developer,en,active,false,false
+,,,,,,,,,,EMP004,Alice Brown,alice.brown@test.com,DEPARTMENT_MANAGER + DECISION_MAKER,DEPT003,Sales,TEAM003,Sales Team,,SecurePass123,Sales Manager,Sales Director,en,active,false,false
+,,,,,,,,,,EMP005,Charlie Wilson,charlie.wilson@test.com,REGULAR_EMPLOYEE,DEPT001,Engineering,TEAM001,Development,EMP001,SecurePass123,Software Engineer,Senior Engineer,en,active,false,false
+

@@ -1,0 +1,13 @@
+[1mdiff --git a/backend/src/infrastructure/MicroserviceClient.js b/backend/src/infrastructure/MicroserviceClient.js[m
+[1mindex 6d18da5..9388980 100644[m
+[1m--- a/backend/src/infrastructure/MicroserviceClient.js[m
+[1m+++ b/backend/src/infrastructure/MicroserviceClient.js[m
+[36m@@ -71,7 +71,7 @@[m [mclass MicroserviceClient {[m
+ [m
+     try {[m
+       // Make signed request to Coordinator unified proxy[m
+[31m-      const { data: json } = await postToCoordinator(envelope).catch(() => ({ data: {} }));[m
+[32m+[m[32m      const { data: json } = await postToCoordinator(envelope);[m
+ [m
+       // Extract filled response from Coordinator's response[m
+       // Coordinator returns: { success: true, data: { ... } }[m

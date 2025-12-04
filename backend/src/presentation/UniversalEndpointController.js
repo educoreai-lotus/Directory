@@ -25,9 +25,8 @@ class UniversalEndpointController {
       // Validate envelope structure
       if (!envelope || typeof envelope !== 'object') {
         return res.status(400).send(JSON.stringify({
-          requester_service: envelope?.requester_service || 'unknown',
-          payload: envelope?.payload || {},
-          response: {
+          success: false,
+          data: {
             error: 'Invalid request format. Expected envelope with requester_service, payload, and response fields.'
           }
         }));
@@ -38,9 +37,8 @@ class UniversalEndpointController {
       // Validate required fields
       if (!requester_service || typeof requester_service !== 'string') {
         return res.status(400).send(JSON.stringify({
-          requester_service: 'unknown',
-          payload: payload || {},
-          response: {
+          success: false,
+          data: {
             error: 'Missing or invalid requester_service field'
           }
         }));
@@ -48,9 +46,8 @@ class UniversalEndpointController {
 
       if (!payload || typeof payload !== 'object') {
         return res.status(400).send(JSON.stringify({
-          requester_service,
-          payload: {},
-          response: {
+          success: false,
+          data: {
             error: 'Missing or invalid payload field'
           }
         }));
@@ -58,9 +55,8 @@ class UniversalEndpointController {
 
       if (!response || typeof response !== 'object') {
         return res.status(400).send(JSON.stringify({
-          requester_service,
-          payload,
-          response: {
+          success: false,
+          data: {
             error: 'Missing or invalid response template field'
           }
         }));
@@ -70,6 +66,12 @@ class UniversalEndpointController {
       console.log('[UniversalEndpointController] Payload:', JSON.stringify(payload));
       console.log('[UniversalEndpointController] Response template:', JSON.stringify(response));
 
+      // Extract action from payload if present (for Coordinator routing)
+      const action = payload?.action;
+      if (action) {
+        console.log('[UniversalEndpointController] Action:', action);
+      }
+
       // Execute use case to fill response
       const filledResponse = await this.fillContentMetricsUseCase.execute(
         payload,
@@ -77,30 +79,29 @@ class UniversalEndpointController {
         requester_service
       );
 
-      // Build response envelope
-      const responseEnvelope = {
-        requester_service,
-        payload,
-        response: filledResponse
+      // Return response in Coordinator's expected format
+      // Format: { success: true, data: { ... } }
+      const coordinatorResponse = {
+        success: true,
+        data: filledResponse
       };
 
       // Return stringified JSON
       res.setHeader('Content-Type', 'application/json');
-      res.send(JSON.stringify(responseEnvelope));
+      res.send(JSON.stringify(coordinatorResponse));
 
     } catch (error) {
       console.error('[UniversalEndpointController] Error:', error);
 
-      // Return error in envelope structure
-      const errorEnvelope = {
-        requester_service: req.body?.requester_service || 'unknown',
-        payload: req.body?.payload || {},
-        response: {
+      // Return error in Coordinator's expected format
+      const errorResponse = {
+        success: false,
+        data: {
           error: error.message || 'An error occurred while processing the request'
         }
       };
 
-      res.status(500).send(JSON.stringify(errorEnvelope));
+      res.status(500).send(JSON.stringify(errorResponse));
     }
   }
 }

@@ -113,11 +113,14 @@ All credentials and configuration are saved in:
 
 ## 🔐 Your Supabase Credentials
 
-**Project URL:** `https://lkxqkytxijlxlxsuystm.supabase.co`
+⚠️ **SECURITY NOTICE:** Credentials are stored in environment variables, not in this file.
 
-**Database Password:** `fullstack2025`
+**To get your credentials:**
+1. Go to Supabase Dashboard → Settings → API
+2. Copy Project URL, API keys, and Database connection string
+3. Add them to Railway environment variables (see `SUPABASE_SETUP.md` for template)
 
-**All credentials saved in:** `SUPABASE_SETUP.md`
+**All credential templates in:** `SUPABASE_SETUP.md`
 
 ---
 

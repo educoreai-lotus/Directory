@@ -1,65 +1,81 @@
-# Supabase Configuration - Ready to Use
+# Supabase Configuration Guide
 
-## Your Supabase Credentials
+## ⚠️ SECURITY NOTICE
 
-**Project URL:** `https://lkxqkytxijlxlxsuystm.supabase.co`
+**DO NOT commit actual credentials to Git!** This file contains placeholders only.
 
-**Database Host:** `db.lkxqkytxijlxlxsuystm.supabase.co`
+All sensitive credentials must be stored in environment variables in your deployment platform (Railway, Vercel, etc.).
 
-**Database Password:** `fullstack2025`
+---
+
+## Getting Your Supabase Credentials
+
+1. Go to your Supabase project dashboard: https://supabase.com/dashboard
+2. Navigate to **Settings** → **API**
+3. Copy the following values:
+
+### Project Information
+
+**Project URL:** `https://YOUR_PROJECT_REF.supabase.co`  
+*(Replace `YOUR_PROJECT_REF` with your actual project reference)*
+
+**Database Host:** `db.YOUR_PROJECT_REF.supabase.co`
+
+**Database Password:** Get this from **Settings** → **Database** → **Connection string** → **URI**  
+*(The password is in the connection string after `postgres:`)*
 
 ### API Keys
 
-**Anon/Public Key:**
-```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxreHFreXR4aWpseGx4c3V5c3RtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzMTM0OTQsImV4cCI6MjA3ODg4OTQ5NH0.Lm4QknVN0P2FGI94kMj2B4_cru1HFDD_k1IeqhmAXcc
-```
+**Anon/Public Key:**  
+Get from **Settings** → **API** → **Project API keys** → **anon public**
 
-**Service Role Key (SECRET - Keep Safe):**
-```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxreHFreXR4aWpseGx4c3V5c3RtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzMxMzQ5NCwiZXhwIjoyMDc4ODg5NDk0fQ.tlLUvyBjY3u1guN2-zzwz_ZK-qcD2pY8bRvMZBbxpbw
-```
+**Service Role Key (SECRET - Keep Safe):**  
+Get from **Settings** → **API** → **Project API keys** → **service_role secret**  
+⚠️ **NEVER commit this to Git!**
 
 ### Connection Strings
 
 **Direct Connection:**
 ```
-postgresql://postgres:fullstack2025@db.lkxqkytxijlxlxsuystm.supabase.co:5432/postgres
+postgresql://postgres:YOUR_DB_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres
 ```
 
 **Session Pooler:**
 ```
-postgresql://postgres.lkxqkytxijlxlxsuystm:fullstack2025@aws-1-ap-south-1.pooler.supabase.com:5432/postgres
+postgresql://postgres.YOUR_PROJECT_REF:YOUR_DB_PASSWORD@aws-1-ap-south-1.pooler.supabase.com:5432/postgres
 ```
 
 ---
 
 ## Railway Environment Variables
 
-Use these values in Railway backend service:
+Add these in **Railway → Your Backend Service → Variables** tab:
 
 ```
 PORT=3001
 NODE_ENV=production
 
 # Supabase Configuration
-SUPABASE_URL=https://lkxqkytxijlxlxsuystm.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxreHFreXR4aWpseGx4c3V5c3RtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzMxMzQ5NCwiZXhwIjoyMDc4ODg5NDk0fQ.tlLUvyBjY3u1guN2-zzwz_ZK-qcD2pY8bRvMZBbxpbw
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY_HERE
 
 # Database Connection
-DB_HOST=db.lkxqkytxijlxlxsuystm.supabase.co
+DB_HOST=db.YOUR_PROJECT_REF.supabase.co
 DB_PORT=5432
 DB_NAME=postgres
 DB_USER=postgres
-DB_PASSWORD=fullstack2025
+DB_PASSWORD=YOUR_DATABASE_PASSWORD_HERE
 DB_SSL=true
 
 # Also set these for compatibility
 SUPABASE_DB_NAME=postgres
 SUPABASE_USER=postgres
-SUPABASE_PASSWORD=fullstack2025
+SUPABASE_PASSWORD=YOUR_DATABASE_PASSWORD_HERE
 SUPABASE_SSL=true
+SUPABASE_PROJECT_REF=YOUR_PROJECT_REF_HERE
 ```
+
+**Replace all placeholders with your actual values from Supabase dashboard.**
 
 ---
 

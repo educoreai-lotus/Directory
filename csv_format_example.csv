@@ -1,3 +1,0 @@
-company_name,industry,logo_url,approval_policy,kpis,passing_grade,max_attempts,exercises_limited,num_of_exercises,learning_path_approval,employee_id,full_name,email,role_type,department_id,department_name,team_id,team_name,manager_id,password,current_role_in_company,target_role_in_company,preferred_language,status,ai_enabled,public_publish_enable
-TechFlow Solutions,Technology,https://example.com/logo.png,manual,Employee Growth;Product Quality;Customer Satisfaction,70,3,true,10,manual,,,,,,,,,,,,,,
-,EMP001,John Doe,john.doe@techflow.com,REGULAR_EMPLOYEE + TEAM_MANAGER,DEPT001,Engineering,TEAM001,Backend Development,,SecurePass123,Software Engineer,Senior Software Engineer,en,active,false,false

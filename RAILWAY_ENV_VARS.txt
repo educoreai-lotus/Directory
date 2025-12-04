@@ -1,27 +1,30 @@
-# Railway Environment Variables - Copy & Paste Ready
+# Railway Environment Variables Template
+# ⚠️ SECURITY: Replace all placeholders with your actual values from Supabase
 # Add these in Railway → Your Service → Variables tab
 
 PORT=3001
 NODE_ENV=production
 
 # Supabase Configuration
-SUPABASE_URL=https://lkxqkytxijlxlxsuystm.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxreHFreXR4aWpseGx4c3V5c3RtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzMxMzQ5NCwiZXhwIjoyMDc4ODg5NDk0fQ.tlLUvyBjY3u1guN2-zzwz_ZK-qcD2pY8bRvMZBbxpbw
+# Get these from: Supabase Dashboard → Settings → API
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY_HERE
 
 # Database Connection (Direct)
-DB_HOST=db.lkxqkytxijlxlxsuystm.supabase.co
+# Get these from: Supabase Dashboard → Settings → Database → Connection string
+DB_HOST=db.YOUR_PROJECT_REF.supabase.co
 DB_PORT=5432
 DB_NAME=postgres
 DB_USER=postgres
-DB_PASSWORD=fullstack2025
+DB_PASSWORD=YOUR_DATABASE_PASSWORD_HERE
 DB_SSL=true
 
 # Supabase Database (Alternative naming)
 SUPABASE_DB_NAME=postgres
 SUPABASE_USER=postgres
-SUPABASE_PASSWORD=fullstack2025
+SUPABASE_PASSWORD=YOUR_DATABASE_PASSWORD_HERE
 SUPABASE_SSL=true
-SUPABASE_PROJECT_REF=lkxqkytxijlxlxsuystm
+SUPABASE_PROJECT_REF=YOUR_PROJECT_REF_HERE
 
 # Connection Pooler (Recommended - avoids IPv6 issues)
 # The config will use the pooler by default if DB_USE_POOLER is not set to 'false'

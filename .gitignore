@@ -11,6 +11,11 @@ yarn.lock
 .env.production.local
 .env*.local
 
+# Files containing secrets (should not be committed)
+*_ENV_VARS.txt
+*_SECRETS.txt
+*_CREDENTIALS.txt
+
 # Build outputs
 frontend/build/
 frontend/dist/

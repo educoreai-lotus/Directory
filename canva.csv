@@ -1,0 +1,5 @@
+company_name,industry,logo_url,approval_policy,kpis,passing_grade,max_attempts,exercises_limited,num_of_exercises,learning_path_approval,employee_id,full_name,email,role_type,department_id,department_name,team_id,team_name,manager_id,password,current_role_in_company,target_role_in_company,preferred_language,status,ai_enabled,public_publish_enable
+Canva,Design / Technology,https://www.imageshop.no/wp-content/uploads/2025/08/6e3d19ed7de6ab8ef4f0db3279ffe551.jpg,manual,Design Quality;User Satisfaction;Project Completion Rate;Team Collaboration,80,3,true,20,manual,,,,,,,,,,,,,,
+,,,,,,,,,,HR001,Nehad Mograby,nehad.mograby@canva.com,REGULAR_EMPLOYEE + DEPARTMENT_MANAGER,DEPT001,Human Resources,TEAM001,HR Management,,SecurePass123,HR Manager,HR Director,en,active,false,false
+,,,,,,,,,,EMP001,Yazan Mograby,yazan.mograby@canva.com,REGULAR_EMPLOYEE,DEPT002,Design,TEAM002,Product Design,HR001,SecurePass123,Product Designer,Senior Product Designer,en,active,false,false
+

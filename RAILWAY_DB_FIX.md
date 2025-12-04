@@ -15,11 +15,13 @@ PORT=3001
 NODE_ENV=production
 
 # Database Connection (Required)
-DB_HOST=db.lkxqkytxijlxlxsuystm.supabase.co
+# ⚠️ Replace placeholders with your actual Supabase credentials
+# Get these from: Supabase Dashboard → Settings → Database
+DB_HOST=db.YOUR_PROJECT_REF.supabase.co
 DB_PORT=5432
 DB_NAME=postgres
 DB_USER=postgres
-DB_PASSWORD=fullstack2025
+DB_PASSWORD=YOUR_DATABASE_PASSWORD_HERE
 DB_SSL=true
 ```
 
@@ -28,11 +30,11 @@ DB_SSL=true
 1. Go to **Railway Dashboard** → Your Backend Service
 2. Click on **Variables** tab
 3. Add/Update each variable:
-   - `DB_HOST` = `db.lkxqkytxijlxlxsuystm.supabase.co`
+   - `DB_HOST` = `db.YOUR_PROJECT_REF.supabase.co` (replace with your actual host)
    - `DB_PORT` = `5432`
    - `DB_NAME` = `postgres`
    - `DB_USER` = `postgres`
-   - `DB_PASSWORD` = `fullstack2025`
+   - `DB_PASSWORD` = `YOUR_DATABASE_PASSWORD_HERE` (get from Supabase Dashboard)
    - `DB_SSL` = `true`
 4. **Redeploy** the service after adding variables
 
@@ -41,8 +43,10 @@ DB_SSL=true
 You can also set a single `DATABASE_URL` instead:
 
 ```
-DATABASE_URL=postgresql://postgres:fullstack2025@db.lkxqkytxijlxlxsuystm.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres
 ```
+
+⚠️ **Replace `YOUR_PASSWORD` and `YOUR_PROJECT_REF` with your actual values from Supabase.**
 
 ## Verification
 
@@ -52,9 +56,9 @@ After setting the variables and redeploying, check the Railway logs. You should 
 
 ## Connection String Format
 
-The config will automatically build:
+The config will automatically build the connection string from individual variables:
 ```
-postgresql://postgres:fullstack2025@db.lkxqkytxijlxlxsuystm.supabase.co:5432/postgres
+postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres
 ```
 
 From the individual `DB_*` variables.
