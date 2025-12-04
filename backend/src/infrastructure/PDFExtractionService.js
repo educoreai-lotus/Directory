@@ -22,164 +22,167 @@ class PDFExtractionService {
 
   /**
    * Parse CV text into structured JSON
+   * Extracts: Skills, Languages, Education, Employment/Work Experience, Volunteer, Military Service
    * @param {string} text - Raw text from PDF
-   * @returns {Object} Structured CV data
+   * @returns {Object} Structured CV data with arrays
    */
   async parseCVText(text) {
     if (!text || text.trim().length === 0) {
       return {
-        name: '',
-        email: '',
-        current_role: '',
-        target_role: '',
-        bio: null,
-        projects: null
+        skills: [],
+        languages: [],
+        education: [],
+        work_experience: [],
+        volunteer: [],
+        military: []
       };
     }
 
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     
     const result = {
-      name: '',
-      email: '',
-      current_role: '',
-      target_role: '',
-      bio: null,
-      projects: null
+      skills: [],
+      languages: [],
+      education: [],
+      work_experience: [],
+      volunteer: [],
+      military: []
     };
 
-    // Extract email (common pattern)
-    const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
-    const emailMatch = text.match(emailPattern);
-    if (emailMatch) {
-      result.email = emailMatch[0];
-    }
+    // Helper function to extract section content
+    const extractSection = (sectionName, sectionKeywords, stopKeywords = []) => {
+      const items = [];
+      let inSection = false;
+      let sectionStartIndex = -1;
 
-    // Extract name (usually first line or after "Name:" header)
-    let nameFound = false;
-    for (let i = 0; i < Math.min(5, lines.length); i++) {
-      const line = lines[i];
-      // Skip if it's an email
-      if (emailPattern.test(line)) continue;
-      // Skip if it's a phone number
-      if (/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/.test(line)) continue;
-      // Skip if it's a URL
-      if (/https?:\/\//.test(line)) continue;
-      
-      // If line looks like a name (2-4 words, no special chars except spaces/hyphens)
-      if (/^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3}$/.test(line) && line.length < 50) {
-        result.name = line;
-        nameFound = true;
-        break;
-      }
-    }
-    
-    // If name not found in first lines, use first non-empty line
-    if (!nameFound && lines.length > 0) {
-      const firstLine = lines[0];
-      if (!emailPattern.test(firstLine) && !/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/.test(firstLine)) {
-        result.name = firstLine.substring(0, 100); // Limit length
-      }
-    }
-
-    // Extract current role (look for "Current Role:", "Position:", "Title:", or in work experience)
-    const roleKeywords = ['current role', 'position', 'title', 'role', 'job title', 'current position'];
-    let currentRoleFound = false;
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].toLowerCase();
-      for (const keyword of roleKeywords) {
-        if (line.includes(keyword + ':') || line.includes(keyword + ':')) {
-          const roleLine = lines[i];
-          const colonIndex = roleLine.toLowerCase().indexOf(keyword + ':');
-          if (colonIndex !== -1) {
-            result.current_role = roleLine.substring(colonIndex + keyword.length + 1).trim();
-            currentRoleFound = true;
+      // Find section start
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].toLowerCase();
+        for (const keyword of sectionKeywords) {
+          if (line === keyword.toLowerCase() || line.startsWith(keyword.toLowerCase() + ':')) {
+            sectionStartIndex = i + 1;
+            inSection = true;
             break;
           }
         }
+        if (inSection) break;
       }
-      if (currentRoleFound) break;
-    }
 
-    // Extract target role (look for "Target Role:", "Desired Role:", "Goal:", "Objective:")
-    const targetRoleKeywords = ['target role', 'desired role', 'goal', 'objective', 'aspiring'];
-    let targetRoleFound = false;
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].toLowerCase();
-      for (const keyword of targetRoleKeywords) {
-        if (line.includes(keyword + ':') || line.includes(keyword + ':')) {
-          const roleLine = lines[i];
-          const colonIndex = roleLine.toLowerCase().indexOf(keyword + ':');
-          if (colonIndex !== -1) {
-            result.target_role = roleLine.substring(colonIndex + keyword.length + 1).trim();
-            targetRoleFound = true;
-            break;
-          }
-        }
+      if (!inSection || sectionStartIndex < 0) {
+        return items;
       }
-      if (targetRoleFound) break;
-    }
 
-    // Extract bio (usually in "Summary:", "About:", "Profile:" section)
-    const bioKeywords = ['summary', 'about', 'profile', 'overview', 'introduction'];
-    let bioStartIndex = -1;
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].toLowerCase();
-      for (const keyword of bioKeywords) {
-        if (line.includes(keyword + ':') || line === keyword) {
-          bioStartIndex = i + 1;
+      // Extract content until next section or stop keyword
+      for (let i = sectionStartIndex; i < lines.length; i++) {
+        const line = lines[i].toLowerCase();
+        
+        // Check if we hit a stop keyword (next section)
+        const hitStopKeyword = stopKeywords.some(stop => 
+          line === stop.toLowerCase() || line.startsWith(stop.toLowerCase() + ':')
+        );
+        
+        if (hitStopKeyword) {
           break;
         }
-      }
-      if (bioStartIndex !== -1) break;
-    }
 
-    if (bioStartIndex !== -1 && bioStartIndex < lines.length) {
-      // Collect bio text until next major section
-      const bioLines = [];
-      const sectionKeywords = ['experience', 'education', 'skills', 'projects', 'contact'];
-      for (let i = bioStartIndex; i < lines.length; i++) {
-        const line = lines[i].toLowerCase();
-        if (sectionKeywords.some(keyword => line.includes(keyword) && line.length < 30)) {
-          break; // Hit next section
-        }
-        bioLines.push(lines[i]);
-      }
-      if (bioLines.length > 0) {
-        result.bio = bioLines.join(' ').substring(0, 500); // Limit length
-      }
-    }
-
-    // Extract projects (look for "Projects:", "Portfolio:", "Work:" section)
-    const projectKeywords = ['projects', 'portfolio', 'work', 'repositories', 'github'];
-    let projectsStartIndex = -1;
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].toLowerCase();
-      for (const keyword of projectKeywords) {
-        if (line.includes(keyword + ':') || line === keyword) {
-          projectsStartIndex = i + 1;
+        // Check if we hit another major section
+        const majorSections = ['skills', 'languages', 'education', 'employment', 'work experience', 
+                              'volunteer', 'military', 'military service', 'projects', 'contact', 
+                              'references', 'certifications'];
+        const hitMajorSection = majorSections.some(section => 
+          line === section.toLowerCase() || line.startsWith(section.toLowerCase() + ':')
+        );
+        
+        if (hitMajorSection && line.length < 50) {
           break;
         }
-      }
-      if (projectsStartIndex !== -1) break;
-    }
 
-    if (projectsStartIndex !== -1 && projectsStartIndex < lines.length) {
-      const projectLines = [];
-      const sectionKeywords = ['education', 'skills', 'contact', 'references'];
-      for (let i = projectsStartIndex; i < Math.min(projectsStartIndex + 20, lines.length); i++) {
-        const line = lines[i].toLowerCase();
-        if (sectionKeywords.some(keyword => line.includes(keyword) && line.length < 30)) {
-          break; // Hit next section
-        }
+        // Add non-empty lines to items
         if (lines[i].trim().length > 0) {
-          projectLines.push(lines[i]);
+          items.push(lines[i].trim());
         }
       }
-      if (projectLines.length > 0) {
-        result.projects = projectLines;
-      }
+
+      return items;
+    };
+
+    // Extract Skills section
+    const skillsKeywords = ['skills', 'skill', 'competencies', 'expertise'];
+    const skillsItems = extractSection('Skills', skillsKeywords, ['languages', 'education', 'employment', 'work experience']);
+    if (skillsItems.length > 0) {
+      // Parse comma-separated or line-separated skills
+      skillsItems.forEach(item => {
+        if (item.includes(',')) {
+          item.split(',').forEach(skill => {
+            const trimmed = skill.trim();
+            if (trimmed.length > 0) {
+              result.skills.push(trimmed);
+            }
+          });
+        } else {
+          result.skills.push(item);
+        }
+      });
     }
+
+    // Extract Languages section
+    const languagesKeywords = ['languages', 'language', 'language proficiency'];
+    const languagesItems = extractSection('Languages', languagesKeywords, ['education', 'employment', 'work experience', 'skills']);
+    if (languagesItems.length > 0) {
+      languagesItems.forEach(item => {
+        if (item.includes(',')) {
+          item.split(',').forEach(lang => {
+            const trimmed = lang.trim();
+            if (trimmed.length > 0) {
+              result.languages.push(trimmed);
+            }
+          });
+        } else {
+          result.languages.push(item);
+        }
+      });
+    }
+
+    // Extract Education section
+    const educationKeywords = ['education', 'academic', 'qualifications', 'degrees', 'university', 'college'];
+    const educationItems = extractSection('Education', educationKeywords, ['employment', 'work experience', 'skills', 'languages', 'volunteer', 'military']);
+    if (educationItems.length > 0) {
+      result.education = educationItems;
+    }
+
+    // Extract Employment / Work Experience section
+    const employmentKeywords = ['employment', 'work experience', 'work history', 'experience', 'professional experience', 'career'];
+    const employmentItems = extractSection('Employment', employmentKeywords, ['volunteer', 'military', 'education', 'skills', 'languages']);
+    if (employmentItems.length > 0) {
+      result.work_experience = employmentItems;
+    }
+
+    // Extract Volunteer section
+    const volunteerKeywords = ['volunteer', 'volunteering', 'volunteer work', 'community service'];
+    const volunteerItems = extractSection('Volunteer', volunteerKeywords, ['military', 'military service', 'employment', 'work experience']);
+    if (volunteerItems.length > 0) {
+      result.volunteer = volunteerItems;
+    }
+
+    // Extract Military Service section
+    const militaryKeywords = ['military service', 'military', 'army', 'navy', 'air force', 'service'];
+    const militaryItems = extractSection('Military Service', militaryKeywords, ['volunteer', 'employment', 'work experience', 'education']);
+    if (militaryItems.length > 0) {
+      result.military = militaryItems;
+    }
+
+    // Remove duplicates from arrays
+    result.skills = [...new Set(result.skills)];
+    result.languages = [...new Set(result.languages)];
+
+    console.log('[PDFExtractionService] Parsed CV data:', {
+      skills_count: result.skills.length,
+      languages_count: result.languages.length,
+      education_count: result.education.length,
+      work_experience_count: result.work_experience.length,
+      volunteer_count: result.volunteer.length,
+      military_count: result.military.length
+    });
 
     return result;
   }

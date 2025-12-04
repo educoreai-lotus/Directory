@@ -57,6 +57,13 @@ class EnrichProfileUseCase {
       
       try {
         mergedData = await this.mergeRawDataBeforeEnrichment(employeeId);
+        
+        // Check if merged data is empty (no real content)
+        if (!mergedData) {
+          console.warn('[EnrichProfileUseCase] ⚠️  Merged data is empty - insufficient data for enrichment');
+          throw new Error('Insufficient data for enrichment');
+        }
+        
         console.log('[EnrichProfileUseCase] ✅ Merged raw data available from new sources');
         
         // Extract LinkedIn and GitHub data from merged result
@@ -67,6 +74,12 @@ class EnrichProfileUseCase {
           githubData = mergedData.github_profile;
         }
       } catch (error) {
+        // If error is "Insufficient data", throw it directly
+        if (error.message === 'Insufficient data for enrichment') {
+          console.error('[EnrichProfileUseCase] ❌ Insufficient data for enrichment');
+          throw new Error('Insufficient data for enrichment');
+        }
+        
         console.warn('[EnrichProfileUseCase] ⚠️  Merge failed, falling back to existing OAuth data:', error.message);
         // Fall through to existing logic below
       }
@@ -88,6 +101,24 @@ class EnrichProfileUseCase {
         githubData = typeof employee.github_data === 'string'
           ? JSON.parse(employee.github_data)
           : employee.github_data;
+      }
+      
+      // Check if merged data has actual content (if using merged data path)
+      if (mergedData) {
+        const hasContent = mergedData.work_experience?.length > 0 ||
+                          mergedData.skills?.length > 0 ||
+                          mergedData.education?.length > 0 ||
+                          mergedData.languages?.length > 0 ||
+                          mergedData.projects?.length > 0 ||
+                          mergedData.volunteer?.length > 0 ||
+                          mergedData.military?.length > 0 ||
+                          mergedData.linkedin_profile !== null ||
+                          mergedData.github_profile !== null;
+        
+        if (!hasContent) {
+          console.error('[EnrichProfileUseCase] ❌ Merged data exists but has no content');
+          throw new Error('Insufficient data for enrichment');
+        }
       }
       
       console.log('[EnrichProfileUseCase] ✅ All checks passed, proceeding with enrichment...');

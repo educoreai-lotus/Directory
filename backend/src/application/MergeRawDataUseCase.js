@@ -41,6 +41,8 @@ class MergeRawDataUseCase {
         education: [],
         languages: [],
         projects: [],
+        volunteer: [],
+        military: [],
         linkedin_profile: null,
         github_profile: null
       };
@@ -142,12 +144,54 @@ class MergeRawDataUseCase {
           : [githubData.repositories];
       }
 
+      // Merge volunteer (from PDF, Manual)
+      if (pdfData?.volunteer) {
+        merged.volunteer = Array.isArray(pdfData.volunteer) 
+          ? [...pdfData.volunteer] 
+          : [pdfData.volunteer];
+      }
+      if (manualData?.volunteer) {
+        const manualVol = Array.isArray(manualData.volunteer) 
+          ? manualData.volunteer 
+          : [manualData.volunteer];
+        merged.volunteer = [...manualVol, ...merged.volunteer];
+      }
+
+      // Merge military (from PDF, Manual)
+      if (pdfData?.military) {
+        merged.military = Array.isArray(pdfData.military) 
+          ? [...pdfData.military] 
+          : [pdfData.military];
+      }
+      if (manualData?.military) {
+        const manualMil = Array.isArray(manualData.military) 
+          ? manualData.military 
+          : [manualData.military];
+        merged.military = [...manualMil, ...merged.military];
+      }
+
       // Store full LinkedIn and GitHub profiles for reference
       if (linkedinData) {
         merged.linkedin_profile = linkedinData;
       }
       if (githubData) {
         merged.github_profile = githubData;
+      }
+
+      // Check if merged data has actual content (not all empty arrays)
+      const hasContent = merged.work_experience.length > 0 ||
+                        merged.skills.length > 0 ||
+                        merged.education.length > 0 ||
+                        merged.languages.length > 0 ||
+                        merged.projects.length > 0 ||
+                        merged.volunteer?.length > 0 ||
+                        merged.military?.length > 0 ||
+                        merged.linkedin_profile !== null ||
+                        merged.github_profile !== null;
+
+      if (!hasContent) {
+        console.warn('[MergeRawDataUseCase] ⚠️  Merged data is empty - no real content found');
+        return null; // Return null if no actual data exists
       }
 
       // Save merged result to database
@@ -158,7 +202,9 @@ class MergeRawDataUseCase {
         skills_count: merged.skills.length,
         education_count: merged.education.length,
         languages_count: merged.languages.length,
-        projects_count: merged.projects.length
+        projects_count: merged.projects.length,
+        volunteer_count: merged.volunteer?.length || 0,
+        military_count: merged.military?.length || 0
       });
 
       return merged;
