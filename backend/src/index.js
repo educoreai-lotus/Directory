@@ -350,31 +350,7 @@ apiRouter.post('/employees/:employeeId/enrich', authMiddleware, (req, res, next)
     });
   }
   
-  try {
-    // DIAGNOSTIC: Await the async controller method
-    await enrichmentController.enrichProfile(req, res, next);
-  } catch (error) {
-    // DIAGNOSTIC: Log FULL error details
-    console.error('[Route] ========== ROUTE HANDLER ERROR ==========');
-    console.error('[Route] Error calling enrichmentController.enrichProfile:', error);
-    console.error('[Route] Error message:', error.message);
-    console.error('[Route] Error name:', error.name);
-    console.error('[Route] Error stack:', error.stack);
-    if (error.cause) {
-      console.error('[Route] Error cause:', error.cause);
-    }
-    
-    // Ensure response hasn't been sent
-    if (!res.headersSent) {
-      return res.status(500).json({
-        requester_service: 'directory_service',
-        response: {
-          success: false,
-          error: error.message || 'Failed to process enrichment request'
-        }
-      });
-    }
-  }
+  enrichmentController.enrichProfile(req, res, next);
 });
 
 apiRouter.get('/employees/:employeeId/enrichment-status', authMiddleware, (req, res, next) => {
