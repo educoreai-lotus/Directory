@@ -6,6 +6,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import LinkedInConnectButton from '../components/LinkedInConnectButton';
 import GitHubConnectButton from '../components/GitHubConnectButton';
+// PHASE_4: Import new components for extended enrichment flow
+import UploadCVSection from '../components/UploadCVSection';
+import ManualProfileForm from '../components/ManualProfileForm';
+import { triggerEnrichment, getEnrichmentStatus } from '../services/enrichmentService';
 
 function EnrichProfilePage() {
   const { user, refreshUser, loading: authLoading } = useAuth();
@@ -16,6 +20,10 @@ function EnrichProfilePage() {
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
+  // PHASE_4: State for new enrichment sources
+  const [pdfUploaded, setPdfUploaded] = useState(false);
+  const [manualDataSaved, setManualDataSaved] = useState(false);
+  const [enriching, setEnriching] = useState(false);
 
   // Initialize connection status from user object (only on initial load, not after OAuth)
   // This ensures we show the correct state when the page first loads
@@ -392,11 +400,56 @@ function EnrichProfilePage() {
     );
   }
 
-  const handleContinue = () => {
-    // Once both LinkedIn and GitHub are connected, proceed to enrichment
-    // For now, just redirect to employee profile
-    // In F009A, this will trigger Gemini AI enrichment
-    navigate(`/employee/${user.id}`);
+  // PHASE_4: Handle Continue button - trigger enrichment
+  const handleContinue = async () => {
+    if (!user?.id) {
+      setError('User ID is missing');
+      return;
+    }
+
+    // Check if at least one source is available
+    const hasAnySource = linkedinConnected || githubConnected || pdfUploaded || manualDataSaved;
+    if (!hasAnySource) {
+      setError('Please connect at least one data source (LinkedIn, GitHub, upload CV, or fill manual form)');
+      return;
+    }
+
+    try {
+      setEnriching(true);
+      setError(null);
+      setSuccessMessage('Enriching your profile... This may take a moment.');
+
+      // PHASE_4: Trigger enrichment via backend
+      const result = await triggerEnrichment(user.id);
+
+      if (result?.success || result?.employee) {
+        setSuccessMessage('✓ Profile enriched successfully! Redirecting to your profile...');
+        
+        // Redirect after short delay
+        setTimeout(() => {
+          navigate(`/employee/${user.id}?enrichment=complete`);
+        }, 2000);
+      } else {
+        throw new Error('Enrichment failed - no success response');
+      }
+    } catch (err) {
+      console.error('[EnrichProfilePage] Enrichment error:', err);
+      const errorMessage = err.response?.data?.response?.error 
+        || err.response?.data?.error 
+        || err.message 
+        || 'Failed to enrich profile. Please try again.';
+      setError(errorMessage);
+      setSuccessMessage(null);
+    } finally {
+      setEnriching(false);
+    }
+  };
+
+  // PHASE_4: Handle skip - navigate to profile without enrichment
+  const handleSkip = () => {
+    if (user?.id) {
+      navigate(`/employee/${user.id}`);
+    }
   };
 
   return (
@@ -434,8 +487,44 @@ function EnrichProfilePage() {
             className="text-sm"
             style={{ color: 'var(--text-secondary)' }}
           >
-            Connect your LinkedIn and GitHub accounts to enhance your profile
+            Connect your LinkedIn and GitHub accounts, upload your CV, or fill details manually to enhance your profile
           </p>
+        </div>
+
+        {/* PHASE_4: Data Sources Summary */}
+        <div className="mb-6 p-4 rounded-lg" style={{
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-default)'
+        }}>
+          <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
+            Data Sources Status
+          </h4>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="flex items-center gap-2">
+              <span style={{ color: linkedinConnected ? 'rgb(34, 197, 94)' : 'var(--text-muted)' }}>
+                {linkedinConnected ? '✓' : '✗'}
+              </span>
+              <span style={{ color: 'var(--text-secondary)' }}>LinkedIn</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span style={{ color: githubConnected ? 'rgb(34, 197, 94)' : 'var(--text-muted)' }}>
+                {githubConnected ? '✓' : '✗'}
+              </span>
+              <span style={{ color: 'var(--text-secondary)' }}>GitHub</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span style={{ color: pdfUploaded ? 'rgb(34, 197, 94)' : 'var(--text-muted)' }}>
+                {pdfUploaded ? '✓' : '✗'}
+              </span>
+              <span style={{ color: 'var(--text-secondary)' }}>CV Uploaded</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span style={{ color: manualDataSaved ? 'rgb(34, 197, 94)' : 'var(--text-muted)' }}>
+                {manualDataSaved ? '✓' : '✗'}
+              </span>
+              <span style={{ color: 'var(--text-secondary)' }}>Manual Data</span>
+            </div>
+          </div>
         </div>
 
         {/* Error Message */}
@@ -543,45 +632,89 @@ function EnrichProfilePage() {
           />
         </div>
 
+        {/* PHASE_4: PDF CV Upload Section */}
+        <div className="mb-6">
+          <UploadCVSection 
+            employeeId={user?.id}
+            onUploaded={(result) => {
+              setPdfUploaded(true);
+              setSuccessMessage('✓ CV uploaded successfully!');
+              setTimeout(() => setSuccessMessage(null), 3000);
+            }}
+          />
+        </div>
+
+        {/* PHASE_4: Manual Profile Form Section */}
+        <div className="mb-6">
+          <ManualProfileForm 
+            employeeId={user?.id}
+            onSaved={(result) => {
+              setManualDataSaved(true);
+              setSuccessMessage('✓ Manual data saved successfully!');
+              setTimeout(() => setSuccessMessage(null), 3000);
+            }}
+          />
+        </div>
+
         {/* Continue Button */}
-        {linkedinConnected && githubConnected && (
+        {/* PHASE_4: Updated to check for any source, not just both OAuth */}
+        {(linkedinConnected || githubConnected || pdfUploaded || manualDataSaved) && (
           <div className="mt-8">
             <button
               onClick={handleContinue}
+              disabled={enriching}
               className="btn btn-primary w-full"
+              style={{
+                opacity: enriching ? 0.6 : 1,
+                cursor: enriching ? 'not-allowed' : 'pointer'
+              }}
             >
-              Continue to Profile
+              {enriching ? (
+                <>
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></span>
+                  Enriching Profile...
+                </>
+              ) : (
+                'Continue to Your Profile'
+              )}
             </button>
             <p 
               className="text-xs text-center mt-4"
               style={{ color: 'var(--text-muted)' }}
             >
-              Both LinkedIn and GitHub are connected. Your profile will be enriched with AI-generated content.
+              {linkedinConnected && githubConnected 
+                ? 'Both LinkedIn and GitHub are connected. Your profile will be enriched with AI-generated content.'
+                : 'Your profile will be enriched with AI-generated content using the data you provided.'
+              }
             </p>
           </div>
         )}
         
-        {linkedinConnected && !githubConnected && (
+        {/* PHASE_4: Show message if no sources connected yet */}
+        {!linkedinConnected && !githubConnected && !pdfUploaded && !manualDataSaved && (
           <div className="mt-8">
             <p 
               className="text-sm text-center mb-4"
               style={{ color: 'var(--text-secondary)' }}
             >
-              Please connect your GitHub account to complete profile enrichment.
+              Please connect at least one data source (LinkedIn, GitHub, upload CV, or fill manual form) to continue.
             </p>
           </div>
         )}
 
-        {githubConnected && !linkedinConnected && (
-          <div className="mt-8">
-            <p 
-              className="text-sm text-center mb-4"
-              style={{ color: 'var(--text-secondary)' }}
-            >
-              Please connect your LinkedIn account to complete profile enrichment.
-            </p>
-          </div>
-        )}
+        {/* PHASE_4: Skip for now link */}
+        <div className="mt-6 text-center">
+          <button
+            onClick={handleSkip}
+            className="text-sm underline"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            Skip for now
+          </button>
+          <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+            You can complete enrichment later from your profile page
+          </p>
+        </div>
       </div>
     </div>
   );
