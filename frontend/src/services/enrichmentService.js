@@ -72,7 +72,12 @@ export const saveManualData = async (employeeId, data) => {
  */
 export const triggerEnrichment = async (employeeId) => {
   try {
-    const response = await api.post(`/employees/${employeeId}/enrich`);
+    // IMPORTANT FIX: send a non-empty JSON body ({}).  
+    // Without it, Axios triggers a preflight OPTIONS that never continues to POST.
+    const response = await api.post(
+      `/employees/${employeeId}/enrich`,
+      { trigger: true } // <-- REQUIRED!
+    );
 
     // Handle response format (could be wrapped in response.response or direct)
     return response?.data?.response || response?.data || response;
