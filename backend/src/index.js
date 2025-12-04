@@ -342,7 +342,11 @@ const upload = multer({
 });
 
 // PHASE_3: PDF CV upload endpoint
+// Route: POST /api/v1/employees/:id/upload-cv
 apiRouter.post('/employees/:id/upload-cv', authMiddleware, upload.single('cv'), (req, res, next) => {
+  console.log('[index.js] PDF upload route hit - POST /api/v1/employees/:id/upload-cv');
+  console.log('[index.js] req.params:', req.params);
+  console.log('[index.js] req.file:', req.file ? 'OK' : 'MISSING');
   try {
     checkController(pdfUploadController, 'PDFUploadController');
     pdfUploadController.uploadCV(req, res, next);

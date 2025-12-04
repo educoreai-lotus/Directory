@@ -16,6 +16,8 @@ export const uploadCV = async (employeeId, file) => {
     const formData = new FormData();
     formData.append('cv', file); // Backend expects field name 'cv'
 
+    // Frontend calls: /employees/${employeeId}/upload-cv
+    // baseURL already includes /api/v1, so full URL is: /api/v1/employees/${employeeId}/upload-cv
     const response = await api.post(`/employees/${employeeId}/upload-cv`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'

@@ -18,6 +18,12 @@ class PDFUploadController {
    */
   async uploadCV(req, res, next) {
     try {
+      console.log('[PDFUploadController] Upload endpoint reached');
+      console.log('[PDFUploadController] req.file:', req.file ? 'OK' : 'MISSING');
+      console.log('[PDFUploadController] req.params:', req.params);
+      console.log('[PDFUploadController] req.method:', req.method);
+      console.log('[PDFUploadController] req.url:', req.url);
+      
       // PHASE_3: Get employee ID from params and verify authentication
       const { id } = req.params;
       const authenticatedEmployeeId = req.user?.id || req.user?.employeeId;
@@ -82,6 +88,8 @@ class PDFUploadController {
 
       // PHASE_3: Process PDF upload
       await this.uploadCVUseCase.execute(id, fileBuffer);
+      
+      console.log('[PDFUploadController] Saved raw data successfully');
 
       // PHASE_3: Clean up uploaded file after processing
       try {
