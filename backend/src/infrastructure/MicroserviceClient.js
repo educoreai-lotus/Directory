@@ -1,17 +1,49 @@
 // Infrastructure Layer - Microservice Client
-// Generic client for calling other microservices with envelope structure and fallback
+// Generic client for calling other microservices via Coordinator unified proxy
 
-const axios = require('axios');
 const config = require('../config');
 const MockDataService = require('./MockDataService');
+const { postToCoordinator } = require('./CoordinatorClient');
 
 class MicroserviceClient {
   constructor() {
     this.mockDataService = new MockDataService();
+    
+    // Map microservice names to target service names and actions
+    this.microserviceMapping = {
+      'skillsEngine': {
+        targetService: 'skills-engine',
+        action: 'get_employee_skills_for_directory_profile'
+      },
+      'courseBuilder': {
+        targetService: 'course-builder',
+        action: 'fetch_employee_courses_for_directory'
+      },
+      'learnerAI': {
+        targetService: 'learner-ai',
+        action: 'get_learning_path_for_employee_dashboard'
+      },
+      'learningAnalytics': {
+        targetService: 'learning-analytics',
+        action: 'fetch_learning_progress_for_employee_dashboard'
+      },
+      'contentStudio': {
+        targetService: 'content-studio',
+        action: 'get_content_data_for_directory'
+      },
+      'assessment': {
+        targetService: 'assessment-service',
+        action: 'get_assessment_data_for_directory'
+      },
+      'managementReporting': {
+        targetService: 'management-reporting',
+        action: 'get_management_data_for_directory'
+      }
+    };
   }
 
   /**
-   * Call a microservice using the universal envelope structure
+   * Call a microservice via Coordinator unified proxy
    * @param {string} microserviceName - Name of the microservice (e.g., 'skillsEngine', 'learnerAI')
    * @param {Object} payload - Data to send in the payload
    * @param {Object} responseTemplate - Template for the response structure (fields we want back)
@@ -19,51 +51,37 @@ class MicroserviceClient {
    * @returns {Promise<Object>} Filled response object
    */
   async callMicroservice(microserviceName, payload, responseTemplate, operation = null) {
-    const microservice = config.microservices[microserviceName];
-    
-    if (!microservice) {
-      throw new Error(`Microservice ${microserviceName} not configured`);
+    // Get mapping for this microservice
+    const mapping = this.microserviceMapping[microserviceName];
+    if (!mapping) {
+      throw new Error(`Microservice ${microserviceName} not mapped to Coordinator target service`);
     }
 
-    // Build envelope
+    // Build envelope for Coordinator
     const envelope = {
-      requester_service: 'directory',
-      payload: payload || {},
+      requester_service: config.coordinator.serviceName,
+      payload: {
+        action: mapping.action,
+        target_service: mapping.targetService,
+        // Include all original request parameters
+        ...payload
+      },
       response: responseTemplate || {}
     };
 
-    // Stringify envelope
-    const requestBody = JSON.stringify(envelope);
-
     try {
-      // Make request
-      const response = await axios.post(
-        `${microservice.baseUrl}${microservice.endpoint}`,
-        requestBody,
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          timeout: 30000 // 30 second timeout
-        }
-      );
+      // Make signed request to Coordinator unified proxy
+      const { data: json } = await postToCoordinator(envelope).catch(() => ({ data: {} }));
 
-      // Parse response (should be stringified)
-      let responseData;
-      if (typeof response.data === 'string') {
-        responseData = JSON.parse(response.data);
-      } else {
-        responseData = response.data;
-      }
-
-      // Extract filled response
-      const filledResponse = responseData?.response || responseData;
+      // Extract filled response from Coordinator's response
+      // Coordinator returns: { success: true, data: { ... } }
+      const filledResponse = json?.data?.response || json?.response || json?.data || json;
       
-      console.log(`[MicroserviceClient] ✅ Successfully called ${microserviceName}`);
+      console.log(`[MicroserviceClient] ✅ Successfully called ${mapping.targetService} via Coordinator`);
       return filledResponse;
 
     } catch (error) {
-      console.warn(`[MicroserviceClient] ⚠️  Failed to call ${microserviceName}:`, error.message);
+      console.warn(`[MicroserviceClient] ⚠️  Failed to call ${mapping.targetService} via Coordinator:`, error.message);
       console.warn(`[MicroserviceClient] Using fallback mock data for ${microserviceName}/${operation || 'default'}`);
 
       // Fallback to mock data
@@ -166,7 +184,7 @@ class MicroserviceClient {
   }
 
   /**
-   * Get learning path from Learner AI
+   * Get learning path from Learner AI via Coordinator
    * @param {string} employeeId - Employee ID
    * @param {string} companyId - Company ID
    * @returns {Promise<Object>} Learning path data
@@ -184,39 +202,8 @@ class MicroserviceClient {
       recommendations: []
     };
 
-    // Learner AI uses a different endpoint
-    const microservice = config.microservices.learnerAI;
-    const envelope = {
-      requester_service: 'directory',
-      payload: payload,
-      response: responseTemplate
-    };
-
-    try {
-      const response = await axios.post(
-        `${microservice.baseUrl}${microservice.endpoint}`,
-        JSON.stringify(envelope),
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          timeout: 30000
-        }
-      );
-
-      let responseData;
-      if (typeof response.data === 'string') {
-        responseData = JSON.parse(response.data);
-      } else {
-        responseData = response.data;
-      }
-
-      return responseData?.response || responseTemplate;
-    } catch (error) {
-      console.warn('[MicroserviceClient] Failed to get learning path, using fallback');
-      const mockData = this.mockDataService.getMockData('learner-ai', 'learning-path');
-      return mockData || responseTemplate;
-    }
+    // Use the unified callMicroservice method which routes through Coordinator
+    return await this.callMicroservice('learnerAI', payload, responseTemplate, 'learning-path');
   }
 
   /**
