@@ -15,8 +15,14 @@ class EnrichmentController {
    * Requires authentication
    */
   async enrichProfile(req, res, next) {
+    console.log('[EnrichmentController] enrichProfile called');
+    console.log('[EnrichmentController] Request params:', req.params);
+    console.log('[EnrichmentController] Request body:', req.body);
+    console.log('[EnrichmentController] Request user:', req.user ? { id: req.user.id, email: req.user.email, isHR: req.user.isHR } : 'null');
+    
     try {
       const { employeeId } = req.params;
+      console.log('[EnrichmentController] Processing enrichment for employee:', employeeId);
       
       // Verify employee ID matches authenticated user (unless HR)
       const authenticatedEmployeeId = req.user?.id || req.user?.employeeId;

@@ -334,7 +334,35 @@ apiRouter.put('/companies/:id/requests/:requestId', authMiddleware, (req, res, n
 
 // Profile Enrichment
 apiRouter.post('/employees/:employeeId/enrich', authMiddleware, (req, res, next) => {
-  enrichmentController.enrichProfile(req, res, next);
+  console.log('[Route] POST /employees/:employeeId/enrich - Request received');
+  console.log('[Route] Employee ID:', req.params.employeeId);
+  console.log('[Route] Request body:', req.body);
+  console.log('[Route] EnrichmentController initialized:', !!enrichmentController);
+  
+  if (!enrichmentController) {
+    console.error('[Route] EnrichmentController is not initialized!');
+    return res.status(503).json({
+      requester_service: 'directory_service',
+      response: {
+        success: false,
+        error: 'Enrichment service is not available. Controller initialization failed.'
+      }
+    });
+  }
+  
+  try {
+    enrichmentController.enrichProfile(req, res, next);
+  } catch (error) {
+    console.error('[Route] Error calling enrichmentController.enrichProfile:', error);
+    console.error('[Route] Error stack:', error.stack);
+    return res.status(500).json({
+      requester_service: 'directory_service',
+      response: {
+        success: false,
+        error: error.message || 'Failed to process enrichment request'
+      }
+    });
+  }
 });
 
 apiRouter.get('/employees/:employeeId/enrichment-status', authMiddleware, (req, res, next) => {
