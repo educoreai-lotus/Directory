@@ -75,12 +75,13 @@ class ManualDataController {
       });
 
       // Return success with updated: true
+      // Ensure success: true is always set, even if result has a different success value
       return res.status(200).json({
         requester_service: "directory_service",
         response: {
+          ...result,
           success: true,
-          updated: true,
-          ...result
+          updated: true
         }
       });
     } catch (error) {
