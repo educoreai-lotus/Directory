@@ -25,32 +25,23 @@ function ManualProfileForm({ employeeId, onSaved, isRequired = false, onFormData
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only on mount - we don't want to re-trigger on every formData change
 
-  // PHASE_4: Handle input changes
+  // PHASE_4: Handle input changes - directly update state
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    // Ensure value is always a string (never undefined or null)
-    const stringValue = (value !== null && value !== undefined) ? String(value) : '';
-    
-    const newFormData = {
+    // Directly update the specific field in formData
+    const updatedFormData = {
       ...formData,
-      [name]: stringValue
+      [name]: value || '' // Ensure value is always a string
     };
     
-    // Ensure all keys exist (defensive programming)
-    const safeFormData = {
-      skills: newFormData.skills || '',
-      education: newFormData.education || '',
-      work_experience: newFormData.work_experience || ''
-    };
-    
-    setFormData(safeFormData);
+    setFormData(updatedFormData);
     setSaved(false);
     setError(null);
     
     // Notify parent of form data changes for validation
     if (onFormDataChange) {
-      onFormDataChange(safeFormData);
+      onFormDataChange(updatedFormData);
     }
   };
 
@@ -80,18 +71,18 @@ function ManualProfileForm({ employeeId, onSaved, isRequired = false, onFormData
       setSaving(true);
       setError(null);
 
-      // CRITICAL: Ensure all fields are explicitly strings (never undefined, null, or missing)
-      // Always send all three keys, even if empty strings
-      const normalizedFormData = {
-        skills: (formData.skills && typeof formData.skills === 'string') ? formData.skills : '',
-        education: (formData.education && typeof formData.education === 'string') ? formData.education : '',
-        work_experience: (formData.work_experience && typeof formData.work_experience === 'string') ? formData.work_experience : ''
+      // CRITICAL: Send exact formData values (always strings, never undefined/null)
+      // Ensure all three keys are present as strings
+      const dataToSend = {
+        skills: formData.skills || '',
+        education: formData.education || '',
+        work_experience: formData.work_experience || ''
       };
 
       // Log what we're sending for debugging
-      console.log('[ManualProfileForm] Sending manual data:', normalizedFormData);
+      console.log('Sending manual data:', dataToSend);
 
-      const result = await saveManualData(employeeId, normalizedFormData);
+      const result = await saveManualData(employeeId, dataToSend);
 
       if (result?.success || result?.data) {
         setSaved(true);

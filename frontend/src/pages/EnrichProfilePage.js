@@ -9,7 +9,7 @@ import GitHubConnectButton from '../components/GitHubConnectButton';
 // PHASE_4: Import new components for extended enrichment flow
 import UploadCVSection from '../components/UploadCVSection';
 import ManualProfileForm from '../components/ManualProfileForm';
-import { triggerEnrichment, getEnrichmentStatus } from '../services/enrichmentService';
+import { triggerEnrichment, getEnrichmentStatus, saveManualData } from '../services/enrichmentService';
 
 function EnrichProfilePage() {
   const { user, refreshUser, loading: authLoading } = useAuth();
@@ -431,6 +431,22 @@ function EnrichProfilePage() {
       setEnriching(true);
       setError(null);
       setSuccessMessage('Enriching your profile... This may take a moment.');
+
+      // CRITICAL: Save manual form data before enrichment (if form has data)
+      // Ensure manual data is saved to backend before triggering enrichment
+      if (!isManualFormEmpty) {
+        // Normalize form data to ensure all keys are strings
+        const formDataToSave = {
+          skills: (manualFormData?.skills && typeof manualFormData.skills === 'string') ? manualFormData.skills : '',
+          education: (manualFormData?.education && typeof manualFormData.education === 'string') ? manualFormData.education : '',
+          work_experience: (manualFormData?.work_experience && typeof manualFormData.work_experience === 'string') ? manualFormData.work_experience : ''
+        };
+
+        console.log('Sending manual data:', formDataToSave);
+        
+        await saveManualData(user.id, formDataToSave);
+        setManualDataSaved(true);
+      }
 
       // PHASE_4: Trigger enrichment via backend
       const result = await triggerEnrichment(user.id);
