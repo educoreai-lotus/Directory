@@ -28,23 +28,40 @@ function ManualProfileForm({ employeeId, onSaved, isRequired = false, onFormData
   // PHASE_4: Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Ensure value is always a string (never undefined or null)
+    const stringValue = (value !== null && value !== undefined) ? String(value) : '';
+    
     const newFormData = {
       ...formData,
-      [name]: value
+      [name]: stringValue
     };
-    setFormData(newFormData);
+    
+    // Ensure all keys exist (defensive programming)
+    const safeFormData = {
+      skills: newFormData.skills || '',
+      education: newFormData.education || '',
+      work_experience: newFormData.work_experience || ''
+    };
+    
+    setFormData(safeFormData);
     setSaved(false);
     setError(null);
     
     // Notify parent of form data changes for validation
     if (onFormDataChange) {
-      onFormDataChange(newFormData);
+      onFormDataChange(safeFormData);
     }
   };
 
   // PHASE_4: Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!employeeId) {
+      setError('Employee ID is missing');
+      return;
+    }
 
     // Validate based on isRequired prop
     // If form is required (no GitHub/PDF), at least one field must be filled
@@ -59,21 +76,20 @@ function ManualProfileForm({ employeeId, onSaved, isRequired = false, onFormData
       return;
     }
 
-    if (!employeeId) {
-      setError('Employee ID is missing');
-      return;
-    }
-
     try {
       setSaving(true);
       setError(null);
 
-      // Ensure all fields are strings (empty strings, not undefined)
+      // CRITICAL: Ensure all fields are explicitly strings (never undefined, null, or missing)
+      // Always send all three keys, even if empty strings
       const normalizedFormData = {
-        skills: formData.skills || '',
-        education: formData.education || '',
-        work_experience: formData.work_experience || ''
+        skills: (formData.skills && typeof formData.skills === 'string') ? formData.skills : '',
+        education: (formData.education && typeof formData.education === 'string') ? formData.education : '',
+        work_experience: (formData.work_experience && typeof formData.work_experience === 'string') ? formData.work_experience : ''
       };
+
+      // Log what we're sending for debugging
+      console.log('[ManualProfileForm] Sending manual data:', normalizedFormData);
 
       const result = await saveManualData(employeeId, normalizedFormData);
 

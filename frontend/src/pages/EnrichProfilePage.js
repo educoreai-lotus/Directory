@@ -415,11 +415,11 @@ function EnrichProfilePage() {
     // Determine if user has ANY real enrichment source (GitHub or PDF, NOT LinkedIn)
     const hasRealDataSource = githubConnected || pdfUploaded;
 
-    // Check if manual form is empty
+    // Check if manual form is empty (safely handle undefined/null values)
     const isManualFormEmpty = 
-      (!manualFormData.skills || manualFormData.skills.trim() === "") &&
-      (!manualFormData.education || manualFormData.education.trim() === "") &&
-      (!manualFormData.work_experience || manualFormData.work_experience.trim() === "");
+      (!manualFormData?.skills || (typeof manualFormData.skills === 'string' && manualFormData.skills.trim() === "")) &&
+      (!manualFormData?.education || (typeof manualFormData.education === 'string' && manualFormData.education.trim() === "")) &&
+      (!manualFormData?.work_experience || (typeof manualFormData.work_experience === 'string' && manualFormData.work_experience.trim() === ""));
 
     // If user has no real data source, manual form becomes required
     if (!hasRealDataSource && isManualFormEmpty) {
@@ -645,13 +645,20 @@ function EnrichProfilePage() {
             }}
             onFormDataChange={(formData) => {
               // Track manual form data state for validation
-              setManualFormData(formData);
+              // Ensure formData always has all required keys with string values
+              const safeFormData = {
+                skills: (formData?.skills && typeof formData.skills === 'string') ? formData.skills : '',
+                education: (formData?.education && typeof formData.education === 'string') ? formData.education : '',
+                work_experience: (formData?.work_experience && typeof formData.work_experience === 'string') ? formData.work_experience : ''
+              };
+              
+              setManualFormData(safeFormData);
               
               // Update manualDataSaved based on whether form has data
               const isManualFormEmpty = 
-                (!formData.skills || formData.skills.trim() === "") &&
-                (!formData.education || formData.education.trim() === "") &&
-                (!formData.work_experience || formData.work_experience.trim() === "");
+                (!safeFormData.skills || safeFormData.skills.trim() === "") &&
+                (!safeFormData.education || safeFormData.education.trim() === "") &&
+                (!safeFormData.work_experience || safeFormData.work_experience.trim() === "");
               
               setManualDataSaved(!isManualFormEmpty);
             }}

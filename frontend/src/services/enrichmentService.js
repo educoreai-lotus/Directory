@@ -54,7 +54,17 @@ export const uploadCV = async (employeeId, file) => {
  */
 export const saveManualData = async (employeeId, data) => {
   try {
-    const response = await api.post(`/employees/${employeeId}/manual-data`, data);
+    // CRITICAL: Ensure data always has all required keys as strings (never undefined, null, or missing)
+    // Backend expects: { skills: string, education: string, work_experience: string }
+    const normalizedData = {
+      skills: (data?.skills && typeof data.skills === 'string') ? data.skills : '',
+      education: (data?.education && typeof data.education === 'string') ? data.education : '',
+      work_experience: (data?.work_experience && typeof data.work_experience === 'string') ? data.work_experience : ''
+    };
+
+    console.log('[saveManualData] Sending normalized data:', normalizedData);
+
+    const response = await api.post(`/employees/${employeeId}/manual-data`, normalizedData);
 
     // Handle response format (could be wrapped in response.response or direct)
     return response?.data?.response || response?.data || response;
