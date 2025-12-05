@@ -44,11 +44,11 @@ class ManualDataController {
 
       if (noDataProvided) {
         return res.status(400).json({
-          requester_service: 'directory_service',
+          requester_service: "directory_service",
           response: {
             success: false,
-            message: 'Invalid manual enrichment data',
-            details: 'At least one field (work_experience, skills, or education) must be provided'
+            error: "Invalid manual enrichment data",
+            details: "At least one field (work_experience, skills, or education) must be provided"
           }
         });
       }
@@ -75,9 +75,12 @@ class ManualDataController {
       console.error('[ManualDataController] Error saving manual data:', error);
       // Return proper JSON error instead of throwing
       return res.status(400).json({
-        success: false,
-        message: 'Invalid manual enrichment data',
-        details: error.message || 'Failed to save manual data'
+        requester_service: "directory_service",
+        response: {
+          success: false,
+          error: "Invalid manual enrichment data",
+          details: error.message || "Failed to save manual data"
+        }
       });
     }
   }
