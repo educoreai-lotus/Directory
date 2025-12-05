@@ -230,7 +230,7 @@ class EnrichProfileUseCase {
       }
       if (githubData) {
         console.log('[EnrichProfileUseCase] GitHub data keys:', Object.keys(githubData).join(', '));
-        console.log('[EnrichProfileUseCase] GitHub repositories count:', githubData.repositories?.length || 0);
+        console.log('[EnrichProfileUseCase] GitHub repositories count:', githubData?.repositories?.length || 0);
       }
       
       let bio;
@@ -249,7 +249,7 @@ class EnrichProfileUseCase {
 
       // Generate project summaries using OpenAI AI (NO FALLBACK - must succeed if repos exist)
       let projectSummaries = [];
-      const repositories = githubData.repositories || [];
+      const repositories = githubData?.repositories || [];
       
       if (repositories.length > 0) {
         console.log('[EnrichProfileUseCase] ========== GENERATING PROJECT SUMMARIES ==========');
@@ -320,15 +320,15 @@ class EnrichProfileUseCase {
         // PHASE_2: Prepare raw data for Skills Engine (use merged data if available, otherwise OAuth data)
         const rawData = mergedData ? {
           linkedin: mergedData.linkedin_profile || linkedinData,
-          github: mergedData.github_profile || githubData,
+          github: mergedData.github_profile || githubData || {},
           work_experience: mergedData.work_experience || [],
           skills: mergedData.skills || [],
           education: mergedData.education || [],
           languages: mergedData.languages || [],
           projects: mergedData.projects || []
         } : {
-          linkedin: linkedinData,
-          github: githubData
+          linkedin: linkedinData || {},
+          github: githubData || {}
         };
 
         console.log('[EnrichProfileUseCase] Sending skills data to Skills Engine...');
