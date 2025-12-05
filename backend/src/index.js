@@ -390,6 +390,7 @@ apiRouter.post('/employees/:id/upload-cv', authMiddleware, upload.single('cv'), 
 // PHASE_3: Manual profile data endpoint
 apiRouter.post(
   '/employees/:id/manual-data',
+  express.json(),         // IMPORTANT: ensures correct body parsing
   authMiddleware,
 
   // DEBUG MIDDLEWARE (do not modify anything else)
