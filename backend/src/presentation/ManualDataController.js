@@ -34,12 +34,22 @@ class ManualDataController {
       // PHASE_3: Validate request body - all fields are optional
       const { work_experience, skills, education } = req.body;
 
-      // At least one field must be provided
-      if (!work_experience && !skills && !education) {
+      // NEW SAFE VALIDATION:
+      // Empty strings ("") must count as "provided", because frontend always sends them.
+      // Only undefined or null should count as "not provided".
+      const noDataProvided =
+        (work_experience === undefined || work_experience === null) &&
+        (skills === undefined || skills === null) &&
+        (education === undefined || education === null);
+
+      if (noDataProvided) {
         return res.status(400).json({
-          success: false,
-          message: 'Invalid manual enrichment data',
-          details: 'At least one field (work_experience, skills, or education) must be provided'
+          requester_service: 'directory_service',
+          response: {
+            success: false,
+            message: 'Invalid manual enrichment data',
+            details: 'At least one field (work_experience, skills, or education) must be provided'
+          }
         });
       }
 
