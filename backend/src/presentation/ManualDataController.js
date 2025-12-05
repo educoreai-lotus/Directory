@@ -53,15 +53,33 @@ class ManualDataController {
         all_empty: allEmpty
       });
 
-      // IF allEmpty === true → return 200 success (NO-OP)
+      // Check if all fields are undefined/null (not provided at all)
+      const noDataProvided =
+        (work_experience === undefined || work_experience === null) &&
+        (skills === undefined || skills === null) &&
+        (education === undefined || education === null);
+
+      // On invalid manual data (all fields undefined/null) → return 400
+      if (noDataProvided) {
+        return res.status(400).json({
+          requester_service: 'directory_service',
+          response: {
+            success: false,
+            message: 'Invalid manual enrichment data',
+            details: 'At least one field (work_experience, skills, or education) must be provided'
+          }
+        });
+      }
+
+      // IF allEmpty === true (all fields are empty strings) → return 200 success (NO-OP)
       if (allEmpty) {
         console.log("[ManualDataController] No manual data provided - treating as no-op success");
         return res.status(200).json({
           requester_service: "directory_service",
           response: {
             success: true,
-            updated: false,
-            message: "No manual data provided; nothing to update"
+            message: "No manual data provided; nothing to update",
+            data: {}
           }
         });
       }
@@ -74,25 +92,24 @@ class ManualDataController {
         education: hasEducation ? rawEducation : null
       });
 
-      // Return success with updated: true
-      // Ensure success: true is always set, even if result has a different success value
+      // Return success with proper envelope format
       return res.status(200).json({
-        requester_service: "directory_service",
+        requester_service: 'directory_service',
         response: {
-          ...result,
           success: true,
-          updated: true
+          message: 'Manual data saved',
+          data: result || {}
         }
       });
     } catch (error) {
       console.error('[ManualDataController] Error saving manual data:', error);
       // Return proper JSON error instead of throwing
       return res.status(400).json({
-        requester_service: "directory_service",
+        requester_service: 'directory_service',
         response: {
           success: false,
-          error: "Failed to save manual data",
-          details: error.message || "Failed to save manual data"
+          message: 'Invalid manual enrichment data',
+          details: error.message || 'Failed to save manual data'
         }
       });
     }
