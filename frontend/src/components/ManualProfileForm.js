@@ -2,10 +2,10 @@
 // Handles manual profile data entry for extended enrichment flow
 // PHASE_4: This component is part of the extended enrichment flow
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { saveManualData } from '../services/enrichmentService';
 
-function ManualProfileForm({ employeeId, onSaved }) {
+function ManualProfileForm({ employeeId, onSaved, isRequired = false, onFormDataChange }) {
   // PHASE_4: Form state - only work_experience, skills, education (all optional)
   const [formData, setFormData] = useState({
     work_experience: '',
@@ -17,25 +17,45 @@ function ManualProfileForm({ employeeId, onSaved }) {
   const [error, setError] = useState(null);
   const [isExpanded, setIsExpanded] = useState(false); // Collapsed by default
 
+  // Notify parent of initial form state on mount
+  useEffect(() => {
+    if (onFormDataChange) {
+      onFormDataChange(formData);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only on mount - we don't want to re-trigger on every formData change
+
   // PHASE_4: Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
+    const newFormData = {
+      ...formData,
       [name]: value
-    }));
+    };
+    setFormData(newFormData);
     setSaved(false);
     setError(null);
+    
+    // Notify parent of form data changes for validation
+    if (onFormDataChange) {
+      onFormDataChange(newFormData);
+    }
   };
 
   // PHASE_4: Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate at least one field is filled
-    const hasData = Object.values(formData).some(value => value.trim().length > 0);
-    if (!hasData) {
-      setError('Please fill at least one field');
+    // Validate based on isRequired prop
+    // If form is required (no GitHub/PDF), at least one field must be filled
+    // If form is optional (has GitHub/PDF), allow empty submission
+    const isManualFormEmpty = 
+      (!formData.skills || formData.skills.trim() === "") &&
+      (!formData.education || formData.education.trim() === "") &&
+      (!formData.work_experience || formData.work_experience.trim() === "");
+
+    if (isRequired && isManualFormEmpty) {
+      setError('To enrich your profile without GitHub or CV, please fill at least one field (skills, education, or work experience).');
       return;
     }
 
@@ -48,7 +68,14 @@ function ManualProfileForm({ employeeId, onSaved }) {
       setSaving(true);
       setError(null);
 
-      const result = await saveManualData(employeeId, formData);
+      // Ensure all fields are strings (empty strings, not undefined)
+      const normalizedFormData = {
+        skills: formData.skills || '',
+        education: formData.education || '',
+        work_experience: formData.work_experience || ''
+      };
+
+      const result = await saveManualData(employeeId, normalizedFormData);
 
       if (result?.success || result?.data) {
         setSaved(true);
@@ -94,8 +121,10 @@ function ManualProfileForm({ employeeId, onSaved }) {
             e.currentTarget.style.borderColor = 'var(--border-default)';
           }}
         >
-          <span className="flex items-center justify-between">
-            <span className="text-sm font-medium">▼ Fill Manual Details (optional)</span>
+            <span className="flex items-center justify-between">
+            <span className="text-sm font-medium">
+              ▼ Fill Manual Details {isRequired ? '(required)' : '(optional)'}
+            </span>
             {saved && (
               <span 
                 className="text-xs px-2 py-1 rounded-full"
@@ -126,7 +155,7 @@ function ManualProfileForm({ employeeId, onSaved }) {
               className="text-lg font-semibold"
               style={{ color: 'var(--text-primary)' }}
             >
-              Fill Manual Details (optional)
+              Fill Manual Details {isRequired ? '(required)' : '(optional)'}
             </h3>
             <button
               type="button"
@@ -143,7 +172,9 @@ function ManualProfileForm({ employeeId, onSaved }) {
             className="text-sm mb-4"
             style={{ color: 'var(--text-secondary)' }}
           >
-            Provide your work experience, skills, and education manually. All fields are optional.
+            {isRequired 
+              ? 'Provide your work experience, skills, and education manually. At least one field is required since you don\'t have GitHub or CV uploaded.'
+              : 'Provide your work experience, skills, and education manually. All fields are optional.'}
           </p>
 
           {/* PHASE_4: Error Message */}

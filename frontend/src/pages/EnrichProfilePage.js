@@ -23,6 +23,11 @@ function EnrichProfilePage() {
   // PHASE_4: State for new enrichment sources
   const [pdfUploaded, setPdfUploaded] = useState(false);
   const [manualDataSaved, setManualDataSaved] = useState(false);
+  const [manualFormData, setManualFormData] = useState({
+    skills: '',
+    education: '',
+    work_experience: ''
+  });
   const [enriching, setEnriching] = useState(false);
 
   // Initialize connection status from user object (only on initial load, not after OAuth)
@@ -407,10 +412,18 @@ function EnrichProfilePage() {
       return;
     }
 
-    // Check if at least one source is available
-    const hasAnySource = linkedinConnected || githubConnected || pdfUploaded || manualDataSaved;
-    if (!hasAnySource) {
-      setError('Please connect at least one data source (LinkedIn, GitHub, upload CV, or fill manual form)');
+    // Determine if user has ANY real enrichment source (GitHub or PDF, NOT LinkedIn)
+    const hasRealDataSource = githubConnected || pdfUploaded;
+
+    // Check if manual form is empty
+    const isManualFormEmpty = 
+      (!manualFormData.skills || manualFormData.skills.trim() === "") &&
+      (!manualFormData.education || manualFormData.education.trim() === "") &&
+      (!manualFormData.work_experience || manualFormData.work_experience.trim() === "");
+
+    // If user has no real data source, manual form becomes required
+    if (!hasRealDataSource && isManualFormEmpty) {
+      setError('To enrich your profile without GitHub or CV, you must fill at least one field in the form.');
       return;
     }
 
@@ -624,10 +637,23 @@ function EnrichProfilePage() {
         <div className="mb-6">
           <ManualProfileForm 
             employeeId={user?.id}
+            isRequired={!githubConnected && !pdfUploaded}
             onSaved={(result) => {
               setManualDataSaved(true);
               setSuccessMessage('✓ Manual data saved successfully!');
               setTimeout(() => setSuccessMessage(null), 3000);
+            }}
+            onFormDataChange={(formData) => {
+              // Track manual form data state for validation
+              setManualFormData(formData);
+              
+              // Update manualDataSaved based on whether form has data
+              const isManualFormEmpty = 
+                (!formData.skills || formData.skills.trim() === "") &&
+                (!formData.education || formData.education.trim() === "") &&
+                (!formData.work_experience || formData.work_experience.trim() === "");
+              
+              setManualDataSaved(!isManualFormEmpty);
             }}
           />
         </div>
