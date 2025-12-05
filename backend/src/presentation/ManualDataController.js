@@ -34,42 +34,54 @@ class ManualDataController {
       // PHASE_3: Validate request body - all fields are optional
       const { work_experience, skills, education } = req.body;
 
-      // NEW SAFE VALIDATION:
-      // Empty strings ("") must count as "provided", because frontend always sends them.
-      // Only undefined or null should count as "not provided".
-      const noDataProvided =
-        (work_experience === undefined || work_experience === null) &&
-        (skills === undefined || skills === null) &&
-        (education === undefined || education === null);
+      // Normalize body fields to strings
+      const rawWork = typeof work_experience === 'string' ? work_experience : '';
+      const rawSkills = typeof skills === 'string' ? skills : '';
+      const rawEducation = typeof education === 'string' ? education : '';
 
-      if (noDataProvided) {
-        return res.status(400).json({
+      // Compute trimmed checks
+      const hasWork = rawWork.trim().length > 0;
+      const hasSkills = rawSkills.trim().length > 0;
+      const hasEducation = rawEducation.trim().length > 0;
+      const allEmpty = !hasWork && !hasSkills && !hasEducation;
+
+      console.log('[ManualDataController] Processing manual data for employee:', id);
+      console.log('[ManualDataController] Field status:', {
+        has_work_experience: hasWork,
+        has_skills: hasSkills,
+        has_education: hasEducation,
+        all_empty: allEmpty
+      });
+
+      // IF allEmpty === true → return 200 success (NO-OP)
+      if (allEmpty) {
+        console.log("[ManualDataController] No manual data provided - treating as no-op success");
+        return res.status(200).json({
           requester_service: "directory_service",
           response: {
-            success: false,
-            error: "Invalid manual enrichment data",
-            details: "At least one field (work_experience, skills, or education) must be provided"
+            success: true,
+            updated: false,
+            message: "No manual data provided; nothing to update"
           }
         });
       }
 
-      console.log('[ManualDataController] Processing manual data for employee:', id);
-      console.log('[ManualDataController] Data provided:', {
-        has_work_experience: !!work_experience,
-        has_skills: !!skills,
-        has_education: !!education
-      });
-
-      // PHASE_3: Process and save manual data
+      // Otherwise → call the UseCase as before
+      console.log("[ManualDataController] Manual data provided - calling UseCase to save");
       const result = await this.saveManualDataUseCase.execute(id, {
-        work_experience: work_experience || null,
-        skills: skills || null,
-        education: education || null
+        work_experience: hasWork ? rawWork : null,
+        skills: hasSkills ? rawSkills : null,
+        education: hasEducation ? rawEducation : null
       });
 
+      // Return success with updated: true
       return res.status(200).json({
-        requester_service: 'directory_service',
-        response: result
+        requester_service: "directory_service",
+        response: {
+          success: true,
+          updated: true,
+          ...result
+        }
       });
     } catch (error) {
       console.error('[ManualDataController] Error saving manual data:', error);
@@ -78,7 +90,7 @@ class ManualDataController {
         requester_service: "directory_service",
         response: {
           success: false,
-          error: "Invalid manual enrichment data",
+          error: "Failed to save manual data",
           details: error.message || "Failed to save manual data"
         }
       });
