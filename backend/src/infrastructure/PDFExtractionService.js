@@ -3,6 +3,7 @@
 // PHASE_2: This file is part of the extended enrichment flow
 
 const pdf = require('pdf-parse');
+const PDFCleaner = require('../utils/PDFCleaner');
 
 class PDFExtractionService {
   /**
@@ -321,6 +322,13 @@ class PDFExtractionService {
         result.work_experience = [text.substring(0, 1000)]; // Limit to 1000 chars
       }
     }
+
+    // Clean sensitive data from arrays before returning
+    result.skills = PDFCleaner.cleanArray(result.skills);
+    result.education = PDFCleaner.cleanArray(result.education);
+    result.work_experience = PDFCleaner.cleanArray(result.work_experience);
+    result.volunteer = PDFCleaner.cleanArray(result.volunteer);
+    result.military = PDFCleaner.cleanArray(result.military);
 
     console.log('[PDFExtractionService] Parsed CV data:', {
       skills_count: result.skills.length,
