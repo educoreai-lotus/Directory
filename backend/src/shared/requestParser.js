@@ -1,11 +1,5 @@
 module.exports = function parseRequest(req, res, next) {
   try {
-    // Skip parseRequest for manual-data route (user-submitted free text, not microservice envelope)
-    if (req.path && req.path.match(/^\/employees\/[^\/]+\/manual-data$/)) {
-      req.parsedBody = req.body; // Use the body as-is from express.json()
-      return next();
-    }
-
     // If there is no body, or express already parsed an empty object → skip parsing
     if (
       req.body === undefined ||

@@ -47,7 +47,18 @@ app.use(cors({
 // But multer (file uploads) needs to be handled separately in the route
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(parseRequest);
+
+// Conditional parseRequest middleware - skip for user-facing routes
+app.use((req, res, next) => {
+  if (
+    req.path.includes('/manual-data') ||
+    req.path.includes('/upload-cv')
+  ) {
+    return next();
+  }
+  return parseRequest(req, res, next);
+});
+
 app.use(formatResponse);
 
 // Health check endpoint (must respond quickly for Railway)
