@@ -388,14 +388,39 @@ apiRouter.post('/employees/:id/upload-cv', authMiddleware, upload.single('cv'), 
 });
 
 // PHASE_3: Manual profile data endpoint
-apiRouter.post('/employees/:id/manual-data', authMiddleware, (req, res, next) => {
-  try {
-    checkController(manualDataController, 'ManualDataController');
-    manualDataController.saveManualData(req, res, next);
-  } catch (error) {
-    next(error);
+apiRouter.post(
+  '/employees/:id/manual-data',
+  authMiddleware,
+
+  // DEBUG MIDDLEWARE (do not modify anything else)
+  (req, res, next) => {
+    console.log('==============================');
+    console.log('[DEBUG] Manual Data Route HIT');
+    console.log('Timestamp:', new Date().toISOString());
+
+    console.log('Method:', req.method);
+    console.log('Path:', req.originalUrl);
+
+    console.log('Headers Received:', JSON.stringify(req.headers, null, 2));
+
+    console.log('Body Received:', JSON.stringify(req.body, null, 2));
+
+    console.log('Authenticated user object (req.user):', req.user);
+
+    console.log('==============================');
+
+    next(); // Continue to controller
+  },
+
+  (req, res, next) => {
+    try {
+      checkController(manualDataController, 'ManualDataController');
+      manualDataController.saveManualData(req, res, next);
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 // Profile Approval Routes (HR only)
 apiRouter.get('/companies/:id/profile-approvals', authMiddleware, (req, res, next) => {
