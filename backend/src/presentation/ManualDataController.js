@@ -32,7 +32,19 @@ class ManualDataController {
       }
 
       // PHASE_3: Validate request body - all fields are optional
-      const { work_experience, skills, education } = req.body;
+      // Handle both plain JSON and microservice envelope formats
+      // If parseRequest created req.parsedBody with payload, use that; otherwise use req.body
+      const bodyData = (req.parsedBody && req.parsedBody.payload) 
+        ? req.parsedBody.payload 
+        : (req.parsedBody || req.body);
+      
+      console.log('[ManualDataController] Body source:', {
+        has_parsedBody: !!req.parsedBody,
+        has_payload: !!(req.parsedBody && req.parsedBody.payload),
+        bodyData_keys: Object.keys(bodyData || {})
+      });
+      
+      const { work_experience, skills, education } = bodyData;
 
       // Normalize body fields to strings
       const rawWork = typeof work_experience === 'string' ? work_experience : '';
