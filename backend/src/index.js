@@ -399,31 +399,32 @@ apiRouter.post('/employees/:id/upload-cv', authMiddleware, upload.single('cv'), 
 });
 
 // PHASE_3: Manual profile data endpoint
+// Custom middleware to extract unwrapped body (bypass parseRequest wrapper)
+const extractUnwrappedBody = (req, res, next) => {
+  // parseRequest may have wrapped the body in { requester_service, payload }
+  // Extract the actual data from payload if it exists
+  if (req.body && req.body.payload && req.body.requester_service) {
+    // Body was wrapped by parseRequest - extract payload
+    req.body = req.body.payload;
+  } else if (req.parsedBody && typeof req.parsedBody === 'object') {
+    // If parseRequest set parsedBody, check if it has payload
+    if (req.parsedBody.payload) {
+      req.body = req.parsedBody.payload;
+    } else {
+      // parsedBody is the actual data (not wrapped)
+      req.body = req.parsedBody;
+    }
+  }
+  // Otherwise req.body is already correct (not wrapped)
+  
+  console.log("[INDEX] RAW manual-data req.body =", JSON.stringify(req.body, null, 2));
+  next();
+};
+
 apiRouter.post(
   '/employees/:id/manual-data',
-  express.json(),         // IMPORTANT: ensures correct body parsing
   authMiddleware,
-
-  // DEBUG MIDDLEWARE (do not modify anything else)
-  (req, res, next) => {
-    console.log('==============================');
-    console.log('[DEBUG] Manual Data Route HIT');
-    console.log('Timestamp:', new Date().toISOString());
-
-    console.log('Method:', req.method);
-    console.log('Path:', req.originalUrl);
-
-    console.log('Headers Received:', JSON.stringify(req.headers, null, 2));
-
-    console.log('Body Received:', JSON.stringify(req.body, null, 2));
-
-    console.log('Authenticated user object (req.user):', req.user);
-
-    console.log('==============================');
-
-    next(); // Continue to controller
-  },
-
+  extractUnwrappedBody, // Extract unwrapped body before controller
   (req, res, next) => {
     try {
       checkController(manualDataController, 'ManualDataController');
