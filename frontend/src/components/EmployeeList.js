@@ -78,6 +78,52 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
     }
   };
 
+  // Define handlers before they're used in JSX (must be before early returns)
+  const handleAddEmployee = async (employeeData) => {
+    try {
+      const { addEmployee } = await import('../services/employeeService');
+      await addEmployee(companyId, employeeData);
+      // Show success message briefly before reload
+      alert('Employee added successfully!');
+      setShowAddForm(false);
+      // Refresh the employee list
+      window.location.reload();
+    } catch (error) {
+      console.error('Error adding employee:', error);
+      const errorMessage = error.response?.data?.error 
+        || error.response?.data?.response?.error 
+        || error.message 
+        || 'Failed to add employee';
+      alert(errorMessage);
+    }
+  };
+
+  const handleEditEmployee = async (employeeId, employeeData) => {
+    try {
+      const { updateEmployee } = await import('../services/employeeService');
+      await updateEmployee(companyId, employeeId, employeeData);
+      setEditingEmployee(null);
+      window.location.reload();
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      alert(error.response?.data?.response?.error || error.message || 'Failed to update employee');
+    }
+  };
+
+  const handleDeleteEmployee = async (employeeId) => {
+    if (!window.confirm('Are you sure you want to delete this employee? This will mark them as inactive.')) {
+      return;
+    }
+    try {
+      const { deleteEmployee } = await import('../services/employeeService');
+      await deleteEmployee(companyId, employeeId);
+      window.location.reload();
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+      alert(error.response?.data?.response?.error || error.message || 'Failed to delete employee');
+    }
+  };
+
   if (showCSVUpload) {
     return (
       <div className="space-y-4">
@@ -165,51 +211,6 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
       </div>
     );
   }
-
-  const handleAddEmployee = async (employeeData) => {
-    try {
-      const { addEmployee } = await import('../services/employeeService');
-      await addEmployee(companyId, employeeData);
-      // Show success message briefly before reload
-      alert('Employee added successfully!');
-      setShowAddForm(false);
-      // Refresh the employee list
-      window.location.reload();
-    } catch (error) {
-      console.error('Error adding employee:', error);
-      const errorMessage = error.response?.data?.error 
-        || error.response?.data?.response?.error 
-        || error.message 
-        || 'Failed to add employee';
-      alert(errorMessage);
-    }
-  };
-
-  const handleEditEmployee = async (employeeId, employeeData) => {
-    try {
-      const { updateEmployee } = await import('../services/employeeService');
-      await updateEmployee(companyId, employeeId, employeeData);
-      setEditingEmployee(null);
-      window.location.reload();
-    } catch (error) {
-      console.error('Error updating employee:', error);
-      alert(error.response?.data?.response?.error || error.message || 'Failed to update employee');
-    }
-  };
-
-  const handleDeleteEmployee = async (employeeId) => {
-    if (!window.confirm('Are you sure you want to delete this employee? This will mark them as inactive.')) {
-      return;
-    }
-    try {
-      const { deleteEmployee } = await import('../services/employeeService');
-      await deleteEmployee(companyId, employeeId);
-      window.location.reload();
-    } catch (error) {
-      console.error('Error deleting employee:', error);
-      alert(error.response?.data?.response?.error || error.message || 'Failed to delete employee');
-    }
-  };
 
   if (!employees || employees.length === 0) {
     return (
