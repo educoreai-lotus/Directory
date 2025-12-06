@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useDesignSystem } from '../context/DesignSystemContext';
 import { useAuth } from '../context/AuthContext';
-import { getLogoUrl } from '../services/designTokenService';
 import './Header.css';
 
 const blurMap = {
@@ -28,7 +27,7 @@ function Header() {
   const logoSources = useMemo(() => {
     const logoVariant = mode === 'light' ? 'logo2' : 'logo1';
     return {
-      src: getLogoUrl(logoVariant),
+      src: `/${logoVariant}.png`,
       alt: 'EDUCORE Directory'
     };
   }, [mode]);
