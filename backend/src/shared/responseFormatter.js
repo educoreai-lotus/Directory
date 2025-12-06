@@ -7,14 +7,18 @@ const formatResponse = (req, res, next) => {
   res.json = function(data) {
     // Check if response is already wrapped in microservice envelope format
     // If it has both requester_service and response keys, it's already wrapped
+    // Must check for both keys explicitly to avoid false positives
     const isAlreadyWrapped = 
-      data &&
+      data !== null &&
+      data !== undefined &&
       typeof data === 'object' &&
-      data.requester_service !== undefined &&
-      data.response !== undefined;
+      !Array.isArray(data) &&
+      'requester_service' in data &&
+      'response' in data &&
+      Object.keys(data).length >= 2; // Ensure it's actually the envelope structure
     
     if (isAlreadyWrapped) {
-      // Response is already wrapped, return as-is
+      // Response is already wrapped, return as-is (no double-wrapping)
       return originalJson.call(this, JSON.stringify(data));
     }
     
