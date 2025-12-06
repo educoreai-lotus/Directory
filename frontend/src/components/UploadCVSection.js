@@ -12,29 +12,63 @@ function UploadCVSection({ employeeId, onUploaded }) {
   const [uploaded, setUploaded] = useState(false);
   const [error, setError] = useState(null);
   const [fileName, setFileName] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
 
-  // PHASE_4: Handle file selection
+  // PHASE_4: Handle file selection (reusable for both file input and drag & drop)
+  const handleFileSelected = (file) => {
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setError('Please select a PDF file');
+      setSelectedFile(null);
+      return;
+    }
+
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File size must be less than 10MB');
+      setSelectedFile(null);
+      return;
+    }
+
+    setSelectedFile(file);
+    setFileName(file.name);
+    setError(null);
+    setUploaded(false);
+  };
+
+  // PHASE_4: Handle file input change
   const handleFileChange = (e) => {
     const file = e.target.files[0];
+    handleFileSelected(file);
+  };
+
+  // Drag & Drop handlers
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!uploading && !uploaded) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (uploading || uploaded) return;
+
+    const file = e.dataTransfer.files?.[0];
     if (file) {
-      // Validate file type
-      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-        setError('Please select a PDF file');
-        setSelectedFile(null);
-        return;
-      }
-
-      // Validate file size (10MB limit)
-      if (file.size > 10 * 1024 * 1024) {
-        setError('File size must be less than 10MB');
-        setSelectedFile(null);
-        return;
-      }
-
-      setSelectedFile(file);
-      setFileName(file.name);
-      setError(null);
-      setUploaded(false);
+      handleFileSelected(file);
     }
   };
 
@@ -75,7 +109,17 @@ function UploadCVSection({ employeeId, onUploaded }) {
   };
 
   return (
-    <div>
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      style={{
+        border: isDragging ? '2px dashed var(--primary-color, #14b8a6)' : '2px dashed transparent',
+        borderRadius: '8px',
+        transition: 'border 0.2s ease',
+        padding: isDragging ? '2px' : '0'
+      }}
+    >
       {/* PHASE_4: Error Message */}
       {error && (
         <div 
