@@ -5,10 +5,9 @@ import api from '../utils/api';
 
 export const addEmployee = async (companyId, employeeData) => {
   try {
-    const response = await api.post(`/companies/${companyId}/employees`, {
-      requester_service: 'directory_service',
-      payload: employeeData
-    });
+    // Send employee data directly (not wrapped in microservice envelope)
+    // The backend EmployeeController expects req.body to be the employee data directly
+    const response = await api.post(`/companies/${companyId}/employees`, employeeData);
     return response.data;
   } catch (error) {
     console.error('Add employee error:', error);

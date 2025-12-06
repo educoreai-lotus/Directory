@@ -170,11 +170,18 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
     try {
       const { addEmployee } = await import('../services/employeeService');
       await addEmployee(companyId, employeeData);
+      // Show success message briefly before reload
+      alert('Employee added successfully!');
       setShowAddForm(false);
+      // Refresh the employee list
       window.location.reload();
     } catch (error) {
       console.error('Error adding employee:', error);
-      alert(error.response?.data?.response?.error || error.message || 'Failed to add employee');
+      const errorMessage = error.response?.data?.error 
+        || error.response?.data?.response?.error 
+        || error.message 
+        || 'Failed to add employee';
+      alert(errorMessage);
     }
   };
 
