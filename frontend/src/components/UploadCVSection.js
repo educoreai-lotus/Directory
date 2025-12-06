@@ -75,31 +75,7 @@ function UploadCVSection({ employeeId, onUploaded }) {
   };
 
   return (
-    <div className="mb-6">
-      {/* PHASE_4: Section Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 
-          className="text-lg font-semibold"
-          style={{ color: 'var(--text-primary)' }}
-        >
-          Upload Your CV (PDF)
-        </h3>
-        {uploaded && (
-          <div className="flex items-center gap-2">
-            <span 
-              className="text-sm px-3 py-1 rounded-full flex items-center gap-2"
-              style={{
-                background: 'rgba(34, 197, 94, 0.1)',
-                color: 'rgb(34, 197, 94)'
-              }}
-            >
-              <span className="text-green-600 font-bold">✓</span>
-              CV uploaded
-            </span>
-          </div>
-        )}
-      </div>
-
+    <div>
       {/* PHASE_4: Description */}
       <p 
         className="text-sm mb-4"

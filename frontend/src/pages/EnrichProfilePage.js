@@ -528,7 +528,7 @@ function EnrichProfilePage() {
             className="text-sm"
             style={{ color: 'var(--text-secondary)' }}
           >
-            Connect your LinkedIn and GitHub accounts, upload your CV, or fill details manually to enhance your profile
+            Choose any enrichment method to enhance your profile
           </p>
         </div>
 
@@ -560,8 +560,16 @@ function EnrichProfilePage() {
           </div>
         )}
 
-        {/* LinkedIn Connection */}
-        <div className="mb-6">
+        {/* Card 1: LinkedIn Connection */}
+        <div 
+          className="mb-4 rounded-lg border p-6"
+          style={{
+            background: 'var(--gradient-card)',
+            borderRadius: 'var(--radius-card, 8px)',
+            boxShadow: 'var(--shadow-card)',
+            borderColor: 'var(--border-default)'
+          }}
+        >
           <div className="flex items-center justify-between mb-3">
             <h3 
               className="text-lg font-semibold"
@@ -579,7 +587,7 @@ function EnrichProfilePage() {
                   }}
                 >
                   <span className="text-green-600 font-bold">✓</span>
-                  LinkedIn enrichment completed
+                  Connected
                 </span>
               </div>
             )}
@@ -597,8 +605,16 @@ function EnrichProfilePage() {
           />
         </div>
 
-        {/* GitHub Connection */}
-        <div className="mb-6">
+        {/* Card 2: GitHub Connection */}
+        <div 
+          className="mb-4 rounded-lg border p-6"
+          style={{
+            background: 'var(--gradient-card)',
+            borderRadius: 'var(--radius-card, 8px)',
+            boxShadow: 'var(--shadow-card)',
+            borderColor: 'var(--border-default)'
+          }}
+        >
           <div className="flex items-center justify-between mb-3">
             <h3 
               className="text-lg font-semibold"
@@ -616,7 +632,7 @@ function EnrichProfilePage() {
                   }}
                 >
                   <span className="text-green-600 font-bold">✓</span>
-                  GitHub enrichment completed
+                  Connected
                 </span>
               </div>
             )}
@@ -637,8 +653,38 @@ function EnrichProfilePage() {
           />
         </div>
 
-        {/* PHASE_4: PDF CV Upload Section */}
-        <div className="mb-6">
+        {/* Card 3: PDF CV Upload Section */}
+        <div 
+          className="mb-4 rounded-lg border p-6"
+          style={{
+            background: 'var(--gradient-card)',
+            borderRadius: 'var(--radius-card, 8px)',
+            boxShadow: 'var(--shadow-card)',
+            borderColor: 'var(--border-default)'
+          }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h3 
+              className="text-lg font-semibold"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              Upload Your CV (PDF)
+            </h3>
+            {pdfUploaded && (
+              <div className="flex items-center gap-2">
+                <span 
+                  className="text-sm px-3 py-1 rounded-full flex items-center gap-2"
+                  style={{
+                    background: 'rgba(34, 197, 94, 0.1)',
+                    color: 'rgb(34, 197, 94)'
+                  }}
+                >
+                  <span className="text-green-600 font-bold">✓</span>
+                  Uploaded
+                </span>
+              </div>
+            )}
+          </div>
           <UploadCVSection 
             employeeId={user?.id}
             onUploaded={(result) => {
@@ -649,8 +695,30 @@ function EnrichProfilePage() {
           />
         </div>
 
-        {/* PHASE_4: Manual Profile Form Section */}
-        <div className="mb-6">
+        {/* Card 4: Manual Profile Form Section */}
+        <div 
+          className="mb-4 rounded-lg border p-6"
+          style={{
+            background: 'var(--gradient-card)',
+            borderRadius: 'var(--radius-card, 8px)',
+            boxShadow: 'var(--shadow-card)',
+            borderColor: 'var(--border-default)'
+          }}
+        >
+          <div className="mb-3">
+            <h3 
+              className="text-lg font-semibold"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              Manual Details
+            </h3>
+            <p 
+              className="text-sm mt-1"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              Fill in your work experience, skills, and education manually
+            </p>
+          </div>
           <ManualProfileForm 
             employeeId={user?.id}
             isRequired={!githubConnected && !pdfUploaded}
