@@ -108,7 +108,7 @@ function ManualProfileForm({ employeeId, onSaved, isRequired = false, onFormData
   };
 
   return (
-    <div className="mb-6">
+    <div>
       {/* PHASE_4: Collapsed state - single line button */}
       {!isExpanded && (
         <button
