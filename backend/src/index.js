@@ -31,6 +31,8 @@ const AdminController = require('./presentation/AdminController');
 // PHASE_3: Import new controllers for extended enrichment flow
 const PDFUploadController = require('./presentation/PDFUploadController');
 const ManualDataController = require('./presentation/ManualDataController');
+// Enrollment controller
+const EnrollmentController = require('./presentation/EnrollmentController');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -174,7 +176,7 @@ app.get('/assets/:logo', (req, res) => {
 // Initialize controllers with error handling
 let companyRegistrationController, companyVerificationController, csvUploadController;
 // PHASE_3: Initialize new controllers for extended enrichment flow
-let pdfUploadController, manualDataController;
+let pdfUploadController, manualDataController, enrollmentController;
 let companyProfileController, employeeController, authController, oauthController;
 let enrichmentController, approvalController, trainerController, requestController;
 let universalEndpointController, adminController;
@@ -209,6 +211,7 @@ adminController = initController('AdminController', () => new AdminController())
 // PHASE_3: Initialize new controllers for extended enrichment flow
 pdfUploadController = initController('PDFUploadController', () => new PDFUploadController());
 manualDataController = initController('ManualDataController', () => new ManualDataController());
+enrollmentController = initController('EnrollmentController', () => new EnrollmentController());
 console.log('[Init] Controller initialization complete');
 
 // API Routes
@@ -493,6 +496,28 @@ apiRouter.get('/admin/employees/:employeeId', authMiddleware, adminOnlyMiddlewar
   }
 });
 
+// Enrollment Routes
+apiRouter.post(
+  '/companies/:companyId/enrollments/career-path',
+  authMiddleware,
+  (req, res, next) => {
+    console.log('[DEBUG] Career-Path enrollment route HIT');
+    console.log('[index.js] Enrollment route hit - POST /companies/:companyId/enrollments/career-path');
+    console.log('[index.js] req.params:', req.params);
+    console.log('[index.js] req.body:', req.body);
+    console.log('[index.js] EnrollmentController initialized:', !!enrollmentController);
+    
+    try {
+      checkController(enrollmentController, 'EnrollmentController');
+      console.log('[index.js] Calling enrollmentController.enrollCareerPath');
+      enrollmentController.enrollCareerPath(req, res, next);
+    } catch (error) {
+      console.error('[index.js] Error in enrollment route:', error);
+      next(error);
+    }
+  }
+);
+
 // Universal Endpoint for other microservices (no auth required - internal service-to-service)
 // This must be BEFORE /api/v1 to avoid conflicts
 app.post('/api/fill-content-metrics', (req, res) => {
@@ -512,6 +537,10 @@ app.post('/api/fill-content-metrics', (req, res) => {
 });
 
 app.use('/api/v1', apiRouter);
+
+// Log enrollment route registration
+console.log('[index.js] ✅ Enrollment route registered: POST /api/v1/companies/:companyId/enrollments/career-path');
+console.log('[index.js] ✅ EnrollmentController initialized:', !!enrollmentController);
 
 // 404 handler for undefined routes
 app.use((req, res) => {
