@@ -28,10 +28,17 @@ export const enrollCareerPath = async (companyId, employeeIds) => {
     const url = `/companies/${companyId}/enrollments/career-path`;
     const requestBody = { employeeIds };
     
+    // Log the final resolved URL that Axios will send
+    const finalUrl = api.defaults.baseURL + url;
+    console.log('[DEBUG] Final Axios URL =', finalUrl);
+    console.log('[DEBUG] api.defaults.baseURL =', api.defaults.baseURL);
+    console.log('[DEBUG] Relative URL =', url);
     console.log('[enrollmentService] About to call api.post with:', {
       url,
       requestBody,
-      requestBodyType: typeof requestBody
+      requestBodyType: typeof requestBody,
+      baseURL: api.defaults.baseURL,
+      finalResolvedURL: finalUrl
     });
 
     // api.js interceptor will wrap this in envelope format

@@ -22,6 +22,13 @@ api.interceptors.request.use(
     console.log('[api] Request interceptor - config.data BEFORE modifications:', config.data);
     console.log('[api] Request interceptor - typeof config.data:', typeof config.data);
     
+    // Log the final resolved URL (baseURL + relative URL)
+    const finalResolvedURL = (config.baseURL || api.defaults.baseURL || '') + (config.url || '');
+    console.log('[api] Final resolved URL =', finalResolvedURL);
+    console.log('[api] config.baseURL =', config.baseURL);
+    console.log('[api] api.defaults.baseURL =', api.defaults.baseURL);
+    console.log('[api] config.url =', config.url);
+    
     // Add Authorization header if token exists
     const token = localStorage.getItem('auth_token');
     console.log('[api] Request interceptor - Token in localStorage:', token ? `${token.substring(0, 30)}...` : 'null');
@@ -106,13 +113,25 @@ api.interceptors.request.use(
     }
     
     // RULE D: After all interceptor logic, log final config
+    // Calculate final resolved URL again (in case baseURL was modified, though it shouldn't be)
+    const finalURLAfterInterceptor = (config.baseURL || api.defaults.baseURL || '') + (config.url || '');
     console.log("[api] FINAL outgoing config:", {
       url: config.url,
+      baseURL: config.baseURL || api.defaults.baseURL,
+      finalResolvedURL: finalURLAfterInterceptor,
       method: config.method,
       body: config.data,
       headers: config.headers,
       envelopeWrappingApplied: envelopeWrappingApplied
     });
+    
+    // Verify baseURL was not modified
+    if (config.baseURL && config.baseURL !== api.defaults.baseURL) {
+      console.warn('[api] WARNING: config.baseURL was modified in interceptor!', {
+        original: api.defaults.baseURL,
+        modified: config.baseURL
+      });
+    }
     
     return config;
   },
