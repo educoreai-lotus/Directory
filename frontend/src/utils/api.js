@@ -13,12 +13,17 @@ const api = axios.create({
   }
 });
 
-// Request interceptor: Add auth token and stringify request body
+// Request interceptor: Add auth token and wrap request body
 api.interceptors.request.use(
   (config) => {
+    // Log initial state
+    console.log('[api] Request interceptor START - URL:', config.url);
+    console.log('[api] Request interceptor - Method:', config.method);
+    console.log('[api] Request interceptor - config.data BEFORE modifications:', config.data);
+    console.log('[api] Request interceptor - typeof config.data:', typeof config.data);
+    
     // Add Authorization header if token exists
     const token = localStorage.getItem('auth_token');
-    console.log('[api] Request interceptor - URL:', config.url);
     console.log('[api] Request interceptor - Token in localStorage:', token ? `${token.substring(0, 30)}...` : 'null');
     
     if (token) {
@@ -30,14 +35,20 @@ api.interceptors.request.use(
       console.warn('[api] Request interceptor - No token found in localStorage for URL:', config.url);
     }
     
-    // Skip stringification for FormData (file uploads)
+    // RULE 5: Skip stringification for FormData (file uploads)
     // Also remove Content-Type header to let browser set it with boundary
     if (config.data instanceof FormData) {
       delete config.headers['Content-Type'];
+      console.log("[api] FINAL outgoing config (FormData):", {
+        url: config.url,
+        method: config.method,
+        body: '[FormData]',
+        headers: config.headers
+      });
       return config;
     }
     
-    // Skip envelope structure for auth endpoints (login, logout, me)
+    // RULE 5: Skip envelope structure for auth endpoints (login, logout, me)
     // These endpoints don't use the microservice envelope format
     const authEndpoints = ['/auth/login', '/auth/logout', '/auth/me'];
     const isAuthEndpoint = authEndpoints.some(endpoint => config.url?.includes(endpoint));
@@ -47,36 +58,66 @@ api.interceptors.request.use(
       if (config.data && typeof config.data === 'object') {
         config.data = JSON.stringify(config.data);
       }
-      console.log("[api] FINAL outgoing body:", config.data);
+      console.log("[api] FINAL outgoing config (auth endpoint):", {
+        url: config.url,
+        method: config.method,
+        body: config.data,
+        headers: config.headers
+      });
       return config;
     }
     
-    // RULE 1: NEVER overwrite config.data when it is undefined/null
-    if (!config.data) {
-      console.warn("[api] WARNING: config.data was empty, skipping envelope wrapping.");
-      console.log("[api] FINAL outgoing body:", config.data);
-      return config;
-    }
+    // RULE A: Never replace config.data with undefined
+    // If config.data is undefined/null, do NOT wrap it and do NOT return early
+    // Allow axios to send undefined bodies for GET requests
+    // For POST requests, we should have data, but we won't block the request
     
-    // RULE 2: Envelope wrapping must ONLY occur when config.data is a plain object
-    // that does NOT already contain requester_service or payload
+    let envelopeWrappingApplied = false;
+    
+    // RULE B: Wrap the body ONLY IF:
+    // - the request is NOT an auth endpoint (already handled above)
+    // - the request is NOT FormData (already handled above)
+    // - config.data is a plain object
+    // - config.data does NOT already contain requester_service or payload
     if (
+      config.data !== undefined &&
+      config.data !== null &&
       typeof config.data === 'object' &&
       !Array.isArray(config.data) &&
+      !(config.data instanceof FormData) &&
       !config.data.requester_service &&
       !config.data.payload
     ) {
+      console.log('[api] Applying envelope wrapping to config.data');
       config.data = {
         requester_service: "directory-service",
         payload: config.data
       };
+      envelopeWrappingApplied = true;
+    } else {
+      console.log('[api] Skipping envelope wrapping:', {
+        isUndefined: config.data === undefined,
+        isNull: config.data === null,
+        type: typeof config.data,
+        isArray: Array.isArray(config.data),
+        hasRequesterService: config.data?.requester_service,
+        hasPayload: config.data?.payload
+      });
     }
     
-    // RULE 4: Log final body to confirm correct output
-    console.log("[api] FINAL outgoing body:", config.data);
+    // RULE D: After all interceptor logic, log final config
+    console.log("[api] FINAL outgoing config:", {
+      url: config.url,
+      method: config.method,
+      body: config.data,
+      headers: config.headers,
+      envelopeWrappingApplied: envelopeWrappingApplied
+    });
+    
     return config;
   },
   (error) => {
+    console.error('[api] Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
