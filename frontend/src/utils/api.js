@@ -56,7 +56,7 @@ api.interceptors.request.use(
         requester_service: config.data.requester_service || 'directory_service',
         payload: config.data.payload || config.data
       };
-      config.data = JSON.stringify(requestBody);
+      config.data = requestBody;
     }
     return config;
   },
