@@ -1,9 +1,9 @@
 // Frontend Service - Enrollment Service
 // Handles employee enrollment API calls
 
-console.log('[enrollmentService] Module loaded/imported');
-
 import api from '../utils/api';
+
+console.log('[enrollmentService] Module loaded/imported');
 
 /**
  * Enroll employees via career-path-driven learning flow
