@@ -47,17 +47,29 @@ api.interceptors.request.use(
       if (config.data && typeof config.data === 'object') {
         config.data = JSON.stringify(config.data);
       }
+      console.log("[api] FINAL outgoing body:", config.data);
       return config;
     }
     
+    // For non-auth endpoints: wrap body in envelope format if needed
     if (config.data && typeof config.data === 'object') {
-      // Ensure request body follows the required format for other endpoints
+      // Don't wrap if requester_service already exists (already wrapped)
+      if (config.data.requester_service) {
+        console.log("[api] FINAL outgoing body:", config.data);
+        return config;
+      }
+      
+      // Build envelope structure
       const requestBody = {
-        requester_service: config.data.requester_service || 'directory_service',
-        payload: config.data.payload || config.data
+        requester_service: 'directory-service',
+        payload: config.data
       };
+      
       config.data = requestBody;
     }
+    
+    // Log exactly what Axios is sending
+    console.log("[api] FINAL outgoing body:", config.data);
     return config;
   },
   (error) => {
