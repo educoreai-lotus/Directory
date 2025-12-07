@@ -51,24 +51,28 @@ api.interceptors.request.use(
       return config;
     }
     
-    // For non-auth endpoints: wrap body in envelope format if needed
-    if (config.data && typeof config.data === 'object') {
-      // Don't wrap if requester_service already exists (already wrapped)
-      if (config.data.requester_service) {
-        console.log("[api] FINAL outgoing body:", config.data);
-        return config;
-      }
-      
-      // Build envelope structure
-      const requestBody = {
-        requester_service: 'directory-service',
-        payload: config.data
-      };
-      
-      config.data = requestBody;
+    // RULE 1: NEVER overwrite config.data when it is undefined/null
+    if (!config.data) {
+      console.warn("[api] WARNING: config.data was empty, skipping envelope wrapping.");
+      console.log("[api] FINAL outgoing body:", config.data);
+      return config;
     }
     
-    // Log exactly what Axios is sending
+    // RULE 2: Envelope wrapping must ONLY occur when config.data is a plain object
+    // that does NOT already contain requester_service or payload
+    if (
+      typeof config.data === 'object' &&
+      !Array.isArray(config.data) &&
+      !config.data.requester_service &&
+      !config.data.payload
+    ) {
+      config.data = {
+        requester_service: "directory-service",
+        payload: config.data
+      };
+    }
+    
+    // RULE 4: Log final body to confirm correct output
     console.log("[api] FINAL outgoing body:", config.data);
     return config;
   },
