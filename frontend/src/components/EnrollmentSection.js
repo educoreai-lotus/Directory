@@ -2,11 +2,15 @@
 // Allows company to enroll employees to courses via three learning flows
 
 import React, { useState } from 'react';
+import { enrollCareerPath } from '../services/enrollmentService';
 
 function EnrollmentSection({ employees, companyId }) {
   const [selectedFlow, setSelectedFlow] = useState(null); // 'career-path', 'skill-driven', 'trainer-led'
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [showEmployeeList, setShowEmployeeList] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
+  const [enrollmentError, setEnrollmentError] = useState(null);
+  const [enrollmentSuccess, setEnrollmentSuccess] = useState(null);
 
   const handleFlowSelect = (flow) => {
     setSelectedFlow(flow);
@@ -24,18 +28,74 @@ function EnrollmentSection({ employees, companyId }) {
     });
   };
 
-  const handleEnroll = () => {
+  const handleEnroll = async () => {
+    console.log('[EnrollmentSection] handleEnroll START');
+    console.log('[EnrollmentSection] Current state:', {
+      selectedFlow,
+      selectedEmployees,
+      selectedEmployeesCount: selectedEmployees.length,
+      companyId,
+      enrolling,
+      showEmployeeList
+    });
+
     if (selectedEmployees.length === 0) {
+      console.warn('[EnrollmentSection] No employees selected, showing alert');
       alert('Please select at least one employee');
       return;
     }
-    console.log('Enroll employees:', {
-      flow: selectedFlow,
-      employees: selectedEmployees,
-      companyId
-    });
-    // TODO: Implement enrollment logic (will connect to Learning Analytics microservice)
-    alert(`Enrolling ${selectedEmployees.length} employee(s) via ${selectedFlow} flow...`);
+
+    // Only implement career-path flow for now
+    if (selectedFlow !== 'career-path') {
+      console.warn('[EnrollmentSection] Wrong flow selected:', selectedFlow);
+      alert(`${selectedFlow} enrollment is not yet implemented`);
+      return;
+    }
+
+    console.log('[EnrollmentSection] Validation passed, proceeding with enrollment');
+
+    try {
+      console.log('[EnrollmentSection] Setting enrolling state to true');
+      setEnrolling(true);
+      setEnrollmentError(null);
+      setEnrollmentSuccess(null);
+
+      console.log('[EnrollmentSection] Enrolling employees:', {
+        flow: selectedFlow,
+        employees: selectedEmployees,
+        companyId
+      });
+
+      console.log('[EnrollmentSection] Calling enrollCareerPath NOW...');
+      console.log('[EnrollmentSection] enrollCareerPath function:', typeof enrollCareerPath);
+      
+      const result = await enrollCareerPath(companyId, selectedEmployees);
+      console.log('[EnrollmentSection] enrollCareerPath returned:', result);
+
+      if (result.success) {
+        setEnrollmentSuccess(result.message || `Enrollment request sent for ${selectedEmployees.length} employee(s)`);
+        // Clear selection after successful enrollment
+        setTimeout(() => {
+          setSelectedEmployees([]);
+          setEnrollmentSuccess(null);
+        }, 3000);
+      } else {
+        throw new Error(result.message || 'Enrollment failed');
+      }
+    } catch (error) {
+      console.error('[EnrollmentSection] Enrollment error caught:', error);
+      console.error('[EnrollmentSection] Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        response: error.response
+      });
+      setEnrollmentError(error.message || 'Failed to enroll employees. Please try again.');
+    } finally {
+      console.log('[EnrollmentSection] handleEnroll FINALLY block - setting enrolling to false');
+      setEnrolling(false);
+      console.log('[EnrollmentSection] handleEnroll END');
+    }
   };
 
   const getFlowDescription = (flow) => {
@@ -172,13 +232,56 @@ function EnrollmentSection({ employees, companyId }) {
             </div>
           </div>
 
+          {/* Success Message */}
+          {enrollmentSuccess && (
+            <div 
+              className="p-3 rounded-lg mb-4"
+              style={{
+                background: 'rgba(34, 197, 94, 0.1)',
+                border: '1px solid rgb(34, 197, 94)',
+                color: 'rgb(34, 197, 94)'
+              }}
+            >
+              <p className="text-sm">{enrollmentSuccess}</p>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {enrollmentError && (
+            <div 
+              className="p-3 rounded-lg mb-4"
+              style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid var(--border-error)',
+                color: 'var(--text-error)'
+              }}
+            >
+              <p className="text-sm">{enrollmentError}</p>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <button
-              onClick={handleEnroll}
-              disabled={selectedEmployees.length === 0}
+              onClick={(e) => {
+                console.log('[EnrollmentSection] Button clicked!', {
+                  selectedFlow,
+                  selectedEmployeesCount: selectedEmployees.length,
+                  enrolling,
+                  disabled: selectedEmployees.length === 0 || enrolling
+                });
+                handleEnroll();
+              }}
+              disabled={selectedEmployees.length === 0 || enrolling}
               className="px-6 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Enroll Selected Employees
+              {enrolling ? (
+                <>
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></span>
+                  Enrolling...
+                </>
+              ) : (
+                'Enroll Selected Employees'
+              )}
             </button>
             <button
               onClick={() => {
