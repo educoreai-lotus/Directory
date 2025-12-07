@@ -18,9 +18,13 @@ class EnrollEmployeesCareerPathUseCase {
    * @returns {Promise<Object>} Enrollment result
    */
   async execute(companyId, employeeIds) {
+    console.log('[EnrollEmployeesCareerPathUseCase] ===== USE CASE EXECUTE START =====');
+    console.log('[EnrollEmployeesCareerPathUseCase] Incoming companyId:', companyId);
+    console.log('[EnrollEmployeesCareerPathUseCase] Incoming employeeIds:', JSON.stringify(employeeIds, null, 2));
+    console.log('[EnrollEmployeesCareerPathUseCase] employeeIds type:', Array.isArray(employeeIds) ? 'array' : typeof employeeIds);
+    console.log('[EnrollEmployeesCareerPathUseCase] employeeIds length:', employeeIds?.length || 0);
+    
     try {
-      console.log('[EnrollEmployeesCareerPathUseCase] Starting enrollment for company:', companyId);
-      console.log('[EnrollEmployeesCareerPathUseCase] Employee IDs:', employeeIds);
 
       // Validate employeeIds is non-empty array
       if (!Array.isArray(employeeIds) || employeeIds.length === 0) {
@@ -36,7 +40,11 @@ class EnrollEmployeesCareerPathUseCase {
       console.log('[EnrollEmployeesCareerPathUseCase] Company found:', company.company_name);
 
       // Load employees with required fields for Coordinator payload (5 fields per learner)
+      console.log('[EnrollEmployeesCareerPathUseCase] Loading employees from database...');
       const employees = await this.loadEmployeesWithMetadata(companyId, employeeIds);
+      
+      console.log('[EnrollEmployeesCareerPathUseCase] Employees loaded from DB:', employees.length);
+      console.log('[EnrollEmployeesCareerPathUseCase] Employee data (first 2):', JSON.stringify(employees.slice(0, 2), null, 2));
       
       if (employees.length === 0) {
         throw new Error('No valid employees found for enrollment');
@@ -46,9 +54,20 @@ class EnrollEmployeesCareerPathUseCase {
         console.warn(`[EnrollEmployeesCareerPathUseCase] Only found ${employees.length} of ${employeeIds.length} requested employees`);
       }
 
-      console.log(`[EnrollEmployeesCareerPathUseCase] Loaded ${employees.length} learners for enrollment`);
+      // Validate each employee has exactly 5 required fields
+      console.log('[EnrollEmployeesCareerPathUseCase] Validating employee data structure...');
+      employees.forEach((emp, idx) => {
+        const requiredFields = ['learner_id', 'learner_name', 'company_id', 'learning_flow_tag', 'preferred_language'];
+        const missingFields = requiredFields.filter(field => !(field in emp));
+        if (missingFields.length > 0) {
+          console.error(`[EnrollEmployeesCareerPathUseCase] Employee ${idx} missing fields:`, missingFields);
+        } else {
+          console.log(`[EnrollEmployeesCareerPathUseCase] Employee ${idx} has all 5 required fields:`, Object.keys(emp));
+        }
+      });
 
       // Build Coordinator payload with exactly 5 fields per learner
+      console.log('[EnrollEmployeesCareerPathUseCase] Building Coordinator payload...');
       const payload = {
         action: 'enroll_employees_career_path',
         learning_flow: 'CAREER_PATH_DRIVEN',
@@ -57,26 +76,41 @@ class EnrollEmployeesCareerPathUseCase {
         learners: employees // Already in the correct format from loadEmployeesWithMetadata
       };
 
-      console.log('[EnrollEmployeesCareerPathUseCase] Coordinator payload prepared:', {
+      console.log('[EnrollEmployeesCareerPathUseCase] Coordinator payload structure:', {
         action: payload.action,
         learning_flow: payload.learning_flow,
-        learning_flow_tag: 'CAREER_PATH_DRIVEN',
         company_id: payload.company_id,
+        company_name: payload.company_name,
         learners_count: payload.learners.length
       });
+      console.log('[EnrollEmployeesCareerPathUseCase] First learner example (5 fields):', JSON.stringify(payload.learners[0], null, 2));
+      console.log('[EnrollEmployeesCareerPathUseCase] Full payload:', JSON.stringify(payload, null, 2));
 
       // Build Coordinator envelope (no response template needed)
+      console.log('[EnrollEmployeesCareerPathUseCase] Building Coordinator envelope...');
       const coordinatorRequestBody = {
         requester_service: 'directory-service',
         payload
       };
 
+      console.log('[EnrollEmployeesCareerPathUseCase] Coordinator envelope structure:', {
+        has_requester_service: !!coordinatorRequestBody.requester_service,
+        requester_service: coordinatorRequestBody.requester_service,
+        has_payload: !!coordinatorRequestBody.payload,
+        payload_keys: Object.keys(coordinatorRequestBody.payload || {})
+      });
+      console.log('[EnrollEmployeesCareerPathUseCase] Full envelope:', JSON.stringify(coordinatorRequestBody, null, 2));
+
       // Call Coordinator unified proxy
       console.log('[EnrollEmployeesCareerPathUseCase] Calling Coordinator...');
       const { resp, data } = await postToCoordinator(coordinatorRequestBody);
 
-      console.log('[EnrollEmployeesCareerPathUseCase] Coordinator response status:', resp.status);
-      console.log('[EnrollEmployeesCareerPathUseCase] Coordinator response success:', resp.ok);
+      console.log('[EnrollEmployeesCareerPathUseCase] ===== COORDINATOR RESPONSE RECEIVED =====');
+      console.log('[EnrollEmployeesCareerPathUseCase] Response status:', resp.status);
+      console.log('[EnrollEmployeesCareerPathUseCase] Response statusText:', resp.statusText);
+      console.log('[EnrollEmployeesCareerPathUseCase] Response ok:', resp.ok);
+      console.log('[EnrollEmployeesCareerPathUseCase] Response headers:', JSON.stringify(Object.fromEntries(resp.headers.entries()), null, 2));
+      console.log('[EnrollEmployeesCareerPathUseCase] Full response data:', JSON.stringify(data, null, 2));
       
       // Log response summary without personal data
       if (data) {
@@ -84,8 +118,11 @@ class EnrollEmployeesCareerPathUseCase {
           success: data.success || data.data?.success,
           message: data.message || data.data?.message,
           enrollment_batch_id: data.enrollment_batch_id || data.data?.enrollment_batch_id,
-          failed_count: (data.failed_employee_ids || data.data?.failed_employee_ids || []).length
+          failed_count: (data.failed_employee_ids || data.data?.failed_employee_ids || []).length,
+          response_keys: Object.keys(data)
         });
+      } else {
+        console.warn('[EnrollEmployeesCareerPathUseCase] Coordinator returned empty data');
       }
 
       // Handle Coordinator response
@@ -101,16 +138,25 @@ class EnrollEmployeesCareerPathUseCase {
       }
 
       // Return success result
-      return {
+      const result = {
         success: true,
         message: responseData.message || `Enrollment request sent for ${employees.length} learner(s)`,
         enrollment_batch_id: responseData.enrollment_batch_id || null,
         failed_employee_ids: responseData.failed_employee_ids || [],
         employees_enrolled: employees.length
       };
+      
+      console.log('[EnrollEmployeesCareerPathUseCase] Returning success result:', JSON.stringify(result, null, 2));
+      console.log('[EnrollEmployeesCareerPathUseCase] ===== USE CASE EXECUTE SUCCESS =====');
+      
+      return result;
 
     } catch (error) {
-      console.error('[EnrollEmployeesCareerPathUseCase] Error:', error);
+      console.error('[EnrollEmployeesCareerPathUseCase] ===== USE CASE EXECUTE ERROR =====');
+      console.error('[EnrollEmployeesCareerPathUseCase] Error name:', error.name);
+      console.error('[EnrollEmployeesCareerPathUseCase] Error message:', error.message);
+      console.error('[EnrollEmployeesCareerPathUseCase] Error stack:', error.stack);
+      console.error('[EnrollEmployeesCareerPathUseCase] Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
       throw error;
     }
   }
