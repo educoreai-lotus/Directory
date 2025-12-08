@@ -58,6 +58,11 @@ const authMiddleware = async (req, res, next) => {
     console.log('[authMiddleware] Validating token...');
     const validationResult = await provider.validateToken(token);
     console.log('[authMiddleware] Validation result:', validationResult.valid ? 'valid' : 'invalid', validationResult.error || '');
+    console.log("[authMiddleware] RAW token from header:", token);
+    console.log("[authMiddleware] Decoded user payload:", validationResult.user);
+    console.log("[authMiddleware] typeof user:", typeof validationResult.user);
+    console.log("[authMiddleware] user.isHR:", validationResult.user?.isHR);
+    console.log("[authMiddleware] user.companyId:", validationResult.user?.companyId);
 
     if (!validationResult.valid) {
       return res.status(401).json({
@@ -72,6 +77,7 @@ const authMiddleware = async (req, res, next) => {
     req.user = validationResult.user;
     req.token = token;
     console.log('[authMiddleware] User authenticated:', req.user.email, 'ID:', req.user.id);
+    console.log("[authMiddleware] AUTH OK → Passing request to next middleware");
 
     next();
   } catch (error) {

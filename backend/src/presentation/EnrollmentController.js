@@ -14,6 +14,13 @@ class EnrollmentController {
    * Requires authentication
    */
   async enrollCareerPath(req, res, next) {
+    console.log("[EnrollmentController] ===== REQUEST RECEIVED =====");
+    console.log("[EnrollmentController] req.method:", req.method);
+    console.log("[EnrollmentController] req.path:", req.path);
+    console.log("[EnrollmentController] req.params:", req.params);
+    console.log("[EnrollmentController] req.body:", JSON.stringify(req.body, null, 2));
+    console.log("[EnrollmentController] req.parsedBody:", JSON.stringify(req.parsedBody, null, 2));
+    console.log("[EnrollmentController] req.user:", req.user);
     console.log('[EnrollmentController] ===== ENROLLMENT REQUEST RECEIVED =====');
     console.log('[EnrollmentController] Method:', req.method);
     console.log('[EnrollmentController] Path:', req.path);
@@ -40,6 +47,11 @@ class EnrollmentController {
       const userCompanyId = req.user?.companyId || req.user?.company_id;
       const isHR = req.user?.isHR || false;
       const isAdmin = req.user?.isAdmin || req.user?.role === 'DIRECTORY_ADMIN' || false;
+      console.log("[EnrollmentController] User permission check:");
+      console.log("  isHR:", isHR);
+      console.log("  isAdmin:", isAdmin);
+      console.log("  userCompanyId:", userCompanyId);
+      console.log("  requestCompanyId:", companyId);
 
       // Only HR or admins can enroll employees
       if (!isHR && !isAdmin) {
@@ -80,6 +92,7 @@ class EnrollmentController {
         employeeIdsCount: employeeIds.length,
         employeeIds: employeeIds
       });
+      console.log("[EnrollmentController] Calling UseCase → enrollCareerPathUseCase.execute()");
       
       const result = await this.enrollCareerPathUseCase.execute(companyId, employeeIds);
 

@@ -18,6 +18,10 @@ class EnrollEmployeesCareerPathUseCase {
    * @returns {Promise<Object>} Enrollment result
    */
   async execute(companyId, employeeIds) {
+    console.log("[UseCase] ===== EXECUTE START =====");
+    console.log("[UseCase] Incoming companyId:", companyId);
+    console.log("[UseCase] Incoming employeeIds:", employeeIds);
+    console.log("[UseCase] employeeIds type:", Array.isArray(employeeIds) ? "array" : typeof employeeIds);
     console.log('[EnrollEmployeesCareerPathUseCase] ===== USE CASE EXECUTE START =====');
     console.log('[EnrollEmployeesCareerPathUseCase] Incoming companyId:', companyId);
     console.log('[EnrollEmployeesCareerPathUseCase] Incoming employeeIds:', JSON.stringify(employeeIds, null, 2));
