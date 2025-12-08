@@ -86,18 +86,30 @@ class EnrollEmployeesCareerPathUseCase {
       console.log('[EnrollEmployeesCareerPathUseCase] First learner example (5 fields):', JSON.stringify(payload.learners[0], null, 2));
       console.log('[EnrollEmployeesCareerPathUseCase] Full payload:', JSON.stringify(payload, null, 2));
 
-      // Build Coordinator envelope (no response template needed)
+      // Build Coordinator envelope with REQUIRED response template
+      // Coordinator's /api/fill-content-metrics/ endpoint REQUIRES:
+      // 1. requester_service (required)
+      // 2. payload (optional but we send it)
+      // 3. response (REQUIRED - defines expected response structure)
       console.log('[EnrollEmployeesCareerPathUseCase] Building Coordinator envelope...');
       const coordinatorRequestBody = {
         requester_service: 'directory-service',
-        payload
+        payload,
+        response: {
+          success: false,
+          message: '',
+          enrollment_batch_id: '',
+          failed_employee_ids: []
+        }
       };
 
       console.log('[EnrollEmployeesCareerPathUseCase] Coordinator envelope structure:', {
         has_requester_service: !!coordinatorRequestBody.requester_service,
         requester_service: coordinatorRequestBody.requester_service,
         has_payload: !!coordinatorRequestBody.payload,
-        payload_keys: Object.keys(coordinatorRequestBody.payload || {})
+        payload_keys: Object.keys(coordinatorRequestBody.payload || {}),
+        has_response: !!coordinatorRequestBody.response,
+        response_keys: Object.keys(coordinatorRequestBody.response || {})
       });
       console.log('[EnrollEmployeesCareerPathUseCase] Full envelope:', JSON.stringify(coordinatorRequestBody, null, 2));
 
@@ -130,19 +142,28 @@ class EnrollEmployeesCareerPathUseCase {
         throw new Error(`Coordinator returned error: ${resp.status} - ${JSON.stringify(data)}`);
       }
 
-      // Extract response data (Coordinator may wrap it)
+      // Coordinator's unified proxy returns:
+      // {
+      //   "success": true,
+      //   "data": { ... mapped response matching our template ... },
+      //   "metadata": { ... routing info ... }
+      // }
+      // The "data" field contains the response mapped to our template structure
       const responseData = data?.data || data?.response || data;
       
-      if (!responseData || responseData.success === false) {
-        throw new Error(responseData?.message || 'Enrollment failed - Coordinator returned error');
+      console.log('[EnrollEmployeesCareerPathUseCase] Extracted responseData:', JSON.stringify(responseData, null, 2));
+      
+      // Check if Coordinator returned success
+      if (data.success === false || (responseData && responseData.success === false)) {
+        throw new Error(responseData?.message || data?.message || 'Enrollment failed - Coordinator returned error');
       }
 
-      // Return success result
+      // Return success result - map from Coordinator's response structure
       const result = {
         success: true,
-        message: responseData.message || `Enrollment request sent for ${employees.length} learner(s)`,
-        enrollment_batch_id: responseData.enrollment_batch_id || null,
-        failed_employee_ids: responseData.failed_employee_ids || [],
+        message: responseData?.message || data?.message || `Enrollment request sent for ${employees.length} learner(s)`,
+        enrollment_batch_id: responseData?.enrollment_batch_id || null,
+        failed_employee_ids: responseData?.failed_employee_ids || [],
         employees_enrolled: employees.length
       };
       
