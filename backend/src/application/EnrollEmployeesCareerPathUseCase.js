@@ -117,9 +117,74 @@ class EnrollEmployeesCareerPathUseCase {
       });
       console.log('[EnrollEmployeesCareerPathUseCase] Full envelope:', JSON.stringify(coordinatorRequestBody, null, 2));
 
-      // Call Coordinator unified proxy
-      console.log('[EnrollEmployeesCareerPathUseCase] Calling Coordinator...');
-      const { resp, data } = await postToCoordinator(coordinatorRequestBody);
+      // Validate environment variables before Coordinator call
+      console.log('[EnrollEmployeesCareerPathUseCase] ===== VALIDATING ENVIRONMENT =====');
+      const COORDINATOR_URL = process.env.COORDINATOR_URL;
+      const PRIVATE_KEY = process.env.PRIVATE_KEY;
+      
+      console.log('[EnrollEmployeesCareerPathUseCase] COORDINATOR_URL check:', {
+        exists: !!COORDINATOR_URL,
+        type: typeof COORDINATOR_URL,
+        length: COORDINATOR_URL?.length || 0,
+        value: COORDINATOR_URL ? `${COORDINATOR_URL.substring(0, 50)}...` : 'undefined'
+      });
+      
+      console.log('[EnrollEmployeesCareerPathUseCase] PRIVATE_KEY check:', {
+        exists: !!PRIVATE_KEY,
+        type: typeof PRIVATE_KEY,
+        length: PRIVATE_KEY?.length || 0,
+        hasNewlines: PRIVATE_KEY?.includes('\\n') || PRIVATE_KEY?.includes('\n'),
+        startsWith: PRIVATE_KEY ? PRIVATE_KEY.substring(0, 30) : 'undefined'
+      });
+      
+      if (!COORDINATOR_URL) {
+        throw new Error('COORDINATOR_URL environment variable is not set');
+      }
+      
+      // Validate response template is valid JSON
+      try {
+        JSON.stringify(coordinatorRequestBody.response);
+        console.log('[EnrollEmployeesCareerPathUseCase] Response template is valid JSON');
+      } catch (jsonError) {
+        console.error('[EnrollEmployeesCareerPathUseCase] Response template JSON validation failed:', jsonError);
+        throw new Error(`Invalid response template: ${jsonError.message}`);
+      }
+
+      // Call Coordinator unified proxy with comprehensive error handling
+      console.log('[EnrollEmployeesCareerPathUseCase] ===== CALLING COORDINATOR =====');
+      console.log('[EnrollEmployeesCareerPathUseCase] About to call postToCoordinator...');
+      
+      let resp, data;
+      try {
+        console.log('[EnrollEmployeesCareerPathUseCase] Executing postToCoordinator()...');
+        const coordinatorResult = await postToCoordinator(coordinatorRequestBody);
+        resp = coordinatorResult.resp;
+        data = coordinatorResult.data;
+        console.log('[EnrollEmployeesCareerPathUseCase] postToCoordinator() completed successfully');
+        console.log('[EnrollEmployeesCareerPathUseCase] Response object received:', {
+          hasResp: !!resp,
+          hasData: !!data,
+          respStatus: resp?.status,
+          respOk: resp?.ok
+        });
+      } catch (coordinatorError) {
+        console.error('[EnrollEmployeesCareerPathUseCase] ===== COORDINATOR CALL FAILED =====');
+        console.error('[EnrollEmployeesCareerPathUseCase] Error name:', coordinatorError?.name);
+        console.error('[EnrollEmployeesCareerPathUseCase] Error message:', coordinatorError?.message);
+        console.error('[EnrollEmployeesCareerPathUseCase] Error stack:', coordinatorError?.stack);
+        console.error('[EnrollEmployeesCareerPathUseCase] Full error:', JSON.stringify(coordinatorError, Object.getOwnPropertyNames(coordinatorError), 2));
+        
+        // Check for specific error types
+        if (coordinatorError?.code === 'ENOTFOUND' || coordinatorError?.code === 'ECONNREFUSED') {
+          throw new Error(`Cannot connect to Coordinator at ${COORDINATOR_URL}. Service may be offline.`);
+        } else if (coordinatorError?.message?.includes('PRIVATE_KEY')) {
+          throw new Error(`PRIVATE_KEY error: ${coordinatorError.message}. Check key format.`);
+        } else if (coordinatorError?.message?.includes('signature')) {
+          throw new Error(`Signature generation failed: ${coordinatorError.message}`);
+        } else {
+          throw new Error(`Coordinator request failed: ${coordinatorError?.message || 'Unknown error'}`);
+        }
+      }
 
       console.log('[EnrollEmployeesCareerPathUseCase] ===== COORDINATOR RESPONSE RECEIVED =====');
       console.log('[EnrollEmployeesCareerPathUseCase] Response status:', resp.status);

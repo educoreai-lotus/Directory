@@ -18,6 +18,13 @@ async function postToCoordinator(envelope) {
   console.log('[CoordinatorClient] ===== POST TO COORDINATOR START =====');
   console.log('[CoordinatorClient] COORDINATOR_URL from env:', COORDINATOR_URL);
   
+  // Validate COORDINATOR_URL
+  if (!COORDINATOR_URL) {
+    const error = new Error('COORDINATOR_URL environment variable is not set');
+    console.error('[CoordinatorClient] Validation error:', error.message);
+    throw error;
+  }
+  
   const url = `${COORDINATOR_URL}/api/fill-content-metrics/`;
   console.log('[CoordinatorClient] Full Coordinator URL:', url);
   console.log('[CoordinatorClient] Envelope being sent:', JSON.stringify(envelope, null, 2));
@@ -29,34 +36,99 @@ async function postToCoordinator(envelope) {
   // Add signature if private key is configured
   if (PRIVATE_KEY) {
     console.log('[CoordinatorClient] PRIVATE_KEY is configured, generating signature...');
-    const sig = generateSignature(SERVICE_NAME, PRIVATE_KEY, envelope);
-    headers['X-Service-Name'] = SERVICE_NAME;
-    headers['X-Signature'] = sig;
-    console.log('[CoordinatorClient] Signature generated, length:', sig.length);
+    console.log('[CoordinatorClient] PRIVATE_KEY details:', {
+      exists: !!PRIVATE_KEY,
+      type: typeof PRIVATE_KEY,
+      length: PRIVATE_KEY.length,
+      hasEscapedNewlines: PRIVATE_KEY.includes('\\n'),
+      hasActualNewlines: PRIVATE_KEY.includes('\n'),
+      startsWith: PRIVATE_KEY.substring(0, 30)
+    });
+    
+    try {
+      // Handle multiline PRIVATE_KEY - replace escaped newlines with actual newlines
+      let normalizedPrivateKey = PRIVATE_KEY;
+      if (normalizedPrivateKey.includes('\\n')) {
+        console.log('[CoordinatorClient] Normalizing PRIVATE_KEY: replacing \\n with actual newlines');
+        normalizedPrivateKey = normalizedPrivateKey.replace(/\\n/g, '\n');
+      }
+      
+      console.log('[CoordinatorClient] Generating signature with normalized key...');
+      const sig = generateSignature(SERVICE_NAME, normalizedPrivateKey, envelope);
+      headers['X-Service-Name'] = SERVICE_NAME;
+      headers['X-Signature'] = sig;
+      console.log('[CoordinatorClient] Signature generated successfully, length:', sig.length);
+    } catch (signatureError) {
+      console.error('[CoordinatorClient] Signature generation failed:', signatureError);
+      console.error('[CoordinatorClient] Signature error name:', signatureError?.name);
+      console.error('[CoordinatorClient] Signature error message:', signatureError?.message);
+      console.error('[CoordinatorClient] Signature error stack:', signatureError?.stack);
+      throw new Error(`Failed to generate signature: ${signatureError?.message || 'Unknown signature error'}`);
+    }
   } else {
     console.warn('[CoordinatorClient] PRIVATE_KEY not configured, sending without signature');
   }
 
   console.log('[CoordinatorClient] Request headers:', JSON.stringify(headers, null, 2));
   console.log('[CoordinatorClient] Sending POST request to Coordinator...');
+  console.log('[CoordinatorClient] Request body size:', JSON.stringify(envelope).length, 'bytes');
 
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(envelope),
-  });
+  let resp;
+  try {
+    console.log('[CoordinatorClient] Executing fetch() to Coordinator...');
+    resp = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(envelope),
+    });
+    console.log('[CoordinatorClient] Fetch completed, response received');
+  } catch (fetchError) {
+    console.error('[CoordinatorClient] ===== FETCH ERROR =====');
+    console.error('[CoordinatorClient] Fetch error name:', fetchError?.name);
+    console.error('[CoordinatorClient] Fetch error message:', fetchError?.message);
+    console.error('[CoordinatorClient] Fetch error code:', fetchError?.code);
+    console.error('[CoordinatorClient] Fetch error stack:', fetchError?.stack);
+    
+    // Provide user-friendly error messages
+    if (fetchError?.code === 'ENOTFOUND') {
+      throw new Error(`Cannot resolve Coordinator hostname. Check COORDINATOR_URL: ${COORDINATOR_URL}`);
+    } else if (fetchError?.code === 'ECONNREFUSED') {
+      throw new Error(`Connection refused to Coordinator. Service may be offline: ${COORDINATOR_URL}`);
+    } else if (fetchError?.code === 'ETIMEDOUT' || fetchError?.code === 'ECONNABORTED') {
+      throw new Error(`Request timeout connecting to Coordinator: ${COORDINATOR_URL}`);
+    } else {
+      throw new Error(`Network error connecting to Coordinator: ${fetchError?.message || 'Unknown error'}`);
+    }
+  }
 
   console.log('[CoordinatorClient] Coordinator response received');
   console.log('[CoordinatorClient] Response status:', resp.status);
   console.log('[CoordinatorClient] Response statusText:', resp.statusText);
+  console.log('[CoordinatorClient] Response ok:', resp.ok);
   console.log('[CoordinatorClient] Response headers:', JSON.stringify(Object.fromEntries(resp.headers.entries()), null, 2));
 
-  const data = await resp.json().catch((err) => {
-    console.error('[CoordinatorClient] Failed to parse JSON response:', err);
-    return {};
-  });
-  
-  console.log('[CoordinatorClient] Response data parsed:', JSON.stringify(data, null, 2));
+  let data;
+  try {
+    console.log('[CoordinatorClient] Parsing response JSON...');
+    data = await resp.json();
+    console.log('[CoordinatorClient] Response data parsed successfully');
+    console.log('[CoordinatorClient] Response data parsed:', JSON.stringify(data, null, 2));
+  } catch (jsonError) {
+    console.error('[CoordinatorClient] Failed to parse JSON response:', jsonError);
+    console.error('[CoordinatorClient] Response status:', resp.status);
+    console.error('[CoordinatorClient] Response statusText:', resp.statusText);
+    
+    // Try to get text response for debugging
+    try {
+      const textResponse = await resp.text();
+      console.error('[CoordinatorClient] Response body (text):', textResponse.substring(0, 500));
+    } catch (textError) {
+      console.error('[CoordinatorClient] Could not read response as text:', textError);
+    }
+    
+    // Return empty data but don't crash - let the use case handle it
+    data = {};
+  }
 
   // Optional: verify Coordinator response signature (non-blocking)
   try {
