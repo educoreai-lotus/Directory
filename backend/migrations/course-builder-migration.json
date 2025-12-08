@@ -1,0 +1,109 @@
+{
+  "service_name": "course-builder-service",
+  "serviceName": "course-builder-service",
+  "version": "1.0.0",
+  "description": "Manages course creation, employee enrollment, learning flows, and personalized learning paths based on career goals.",
+  "endpoint": "https://coursebuilderfs-production.up.railway.app/api/fill-content-metrics",
+  "capabilities": [
+    "employee learning enrollment",
+    "career-path enrollment",
+    "assign employees to courses",
+    "process enrollment actions",
+    "learning-flow-driven enrollment",
+    "course generation",
+    "personalized learning paths",
+    "career-path-driven learning",
+    "skill-driven learning",
+    "trainer-led learning"
+  ],
+  "schemas": {
+    "database": [
+      {
+        "name": "learners",
+        "columns": [
+          {"name": "learner_id", "type": "VARCHAR(255)", "primary_key": true},
+          {"name": "learner_name", "type": "VARCHAR(255)", "not_null": true},
+          {"name": "company_id", "type": "VARCHAR(255)", "not_null": true},
+          {"name": "learning_flow_tag", "type": "VARCHAR(100)"},
+          {"name": "preferred_language", "type": "VARCHAR(50)", "default": "en"},
+          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"},
+          {"name": "updated_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
+        ]
+      },
+      {
+        "name": "enrollments",
+        "columns": [
+          {"name": "id", "type": "UUID", "primary_key": true},
+          {"name": "learner_id", "type": "VARCHAR(255)", "not_null": true},
+          {"name": "company_id", "type": "VARCHAR(255)", "not_null": true},
+          {"name": "learning_flow_tag", "type": "VARCHAR(100)", "not_null": true},
+          {"name": "enrollment_batch_id", "type": "VARCHAR(255)"},
+          {"name": "status", "type": "VARCHAR(50)", "default": "pending"},
+          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"},
+          {"name": "updated_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
+        ]
+      },
+      {
+        "name": "courses",
+        "columns": [
+          {"name": "id", "type": "UUID", "primary_key": true},
+          {"name": "course_name", "type": "VARCHAR(255)", "not_null": true},
+          {"name": "learner_id", "type": "VARCHAR(255)", "not_null": true},
+          {"name": "learning_flow_tag", "type": "VARCHAR(100)"},
+          {"name": "status", "type": "VARCHAR(50)", "default": "active"},
+          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"},
+          {"name": "updated_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
+        ]
+      }
+    ],
+    "endpoints": [
+      {
+        "method": "POST",
+        "path": "/api/fill-content-metrics",
+        "description": "Universal endpoint for microservice-to-microservice communication via Coordinator"
+      },
+      {
+        "method": "GET",
+        "path": "/health",
+        "description": "Health check endpoint for service availability"
+      }
+    ],
+    "actions": {
+      "enroll_employees_career_path": {
+        "description": "Enroll employees into a personalized learning flow using career-path logic"
+      }
+    },
+    "events": [],
+    "env": [
+      {
+        "name": "PORT",
+        "description": "Server port number",
+        "required": false,
+        "default": "3000"
+      },
+      {
+        "name": "DATABASE_URL",
+        "description": "PostgreSQL connection string",
+        "required": true
+      },
+      {
+        "name": "COORDINATOR_URL",
+        "description": "Coordinator service base URL",
+        "required": false,
+        "default": "https://coordinator-production-e0a0.up.railway.app"
+      },
+      {
+        "name": "SERVICE_NAME",
+        "description": "Service identifier for Coordinator communication",
+        "required": false,
+        "default": "course-builder-service"
+      },
+      {
+        "name": "PRIVATE_KEY",
+        "description": "ECDSA private key for signing requests to Coordinator",
+        "required": false
+      }
+    ]
+  }
+}
+
