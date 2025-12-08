@@ -86,6 +86,12 @@ api.interceptors.request.use(
     // - the request is NOT FormData (already handled above)
     // - config.data is a plain object
     // - config.data does NOT already contain requester_service or payload
+    // SPECIAL CASE: Certain endpoints should NOT be wrapped (e.g., internal Directory endpoints)
+    const skipEnvelopeEndpoints = [
+      '/enrollments/career-path' // Frontend should send plain JSON to Directory backend for enrollment
+    ];
+    const shouldSkipEnvelope = skipEnvelopeEndpoints.some(endpoint => config.url?.includes(endpoint));
+
     if (
       config.data !== undefined &&
       config.data !== null &&
@@ -93,7 +99,8 @@ api.interceptors.request.use(
       !Array.isArray(config.data) &&
       !(config.data instanceof FormData) &&
       !config.data.requester_service &&
-      !config.data.payload
+      !config.data.payload &&
+      !shouldSkipEnvelope
     ) {
       console.log('[api] Applying envelope wrapping to config.data');
       config.data = {
@@ -108,7 +115,8 @@ api.interceptors.request.use(
         type: typeof config.data,
         isArray: Array.isArray(config.data),
         hasRequesterService: config.data?.requester_service,
-        hasPayload: config.data?.payload
+        hasPayload: config.data?.payload,
+        shouldSkipEnvelope
       });
     }
     

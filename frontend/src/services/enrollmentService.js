@@ -41,8 +41,8 @@ export const enrollCareerPath = async (companyId, employeeIds) => {
       finalResolvedURL: finalUrl
     });
 
-    // api.js interceptor will wrap this in envelope format
-    console.log('[enrollmentService] Calling api.post NOW...');
+    // Send plain JSON body (no envelope) to Directory backend
+    console.log('[enrollmentService] Calling api.post NOW (plain JSON)...');
     const response = await api.post(url, requestBody);
     console.log('[enrollmentService] api.post completed, response received:', {
       status: response?.status,
