@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - deployment-amazon
 
 env:
   REGISTRY: docker.io
