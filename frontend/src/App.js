@@ -12,6 +12,7 @@ import EnrichProfilePage from './pages/EnrichProfilePage';
 import EmployeeProfilePage from './pages/EmployeeProfilePage';
 import AdminDashboard from './pages/AdminDashboard';
 import Header from './components/Header';
+import ChatbotContainer from './components/ChatbotContainer';
 import './App.css';
 
 function App() {
@@ -35,6 +36,7 @@ function App() {
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
               </Routes>
             </main>
+            <ChatbotContainer />
           </div>
         </AuthProvider>
       </DesignSystemProvider>

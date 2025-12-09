@@ -33,6 +33,8 @@ const PDFUploadController = require('./presentation/PDFUploadController');
 const ManualDataController = require('./presentation/ManualDataController');
 // Enrollment controller
 const EnrollmentController = require('./presentation/EnrollmentController');
+// Chatbot controller
+const ChatbotController = require('./presentation/ChatbotController');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -180,6 +182,8 @@ let pdfUploadController, manualDataController, enrollmentController;
 let companyProfileController, employeeController, authController, oauthController;
 let enrichmentController, approvalController, trainerController, requestController;
 let universalEndpointController, adminController;
+// Chatbot controller
+let chatbotController;
 
 const initController = (name, initFn) => {
   try {
@@ -212,6 +216,8 @@ adminController = initController('AdminController', () => new AdminController())
 pdfUploadController = initController('PDFUploadController', () => new PDFUploadController());
 manualDataController = initController('ManualDataController', () => new ManualDataController());
 enrollmentController = initController('EnrollmentController', () => new EnrollmentController());
+// Chatbot controller
+chatbotController = initController('ChatbotController', () => new ChatbotController());
 console.log('[Init] Controller initialization complete');
 
 // API Routes
@@ -518,6 +524,22 @@ apiRouter.post(
   }
 );
 
+// Chatbot query endpoint
+apiRouter.post(
+  '/chatbot/query',
+  authMiddleware,
+  (req, res, next) => {
+    console.log('[index.js] Chatbot query route hit - POST /api/v1/chatbot/query');
+    try {
+      checkController(chatbotController, 'ChatbotController');
+      chatbotController.processQuery(req, res, next);
+    } catch (error) {
+      console.error('[index.js] Error in chatbot route:', error);
+      next(error);
+    }
+  }
+);
+
 // Universal Endpoint for other microservices (no auth required - internal service-to-service)
 // This must be BEFORE /api/v1 to avoid conflicts
 app.post('/api/fill-content-metrics', (req, res) => {
@@ -541,6 +563,9 @@ app.use('/api/v1', apiRouter);
 // Log enrollment route registration
 console.log('[index.js] ✅ Enrollment route registered: POST /api/v1/companies/:companyId/enrollments/career-path');
 console.log('[index.js] ✅ EnrollmentController initialized:', !!enrollmentController);
+// Log chatbot route registration
+console.log('[index.js] ✅ Chatbot route registered: POST /api/v1/chatbot/query');
+console.log('[index.js] ✅ ChatbotController initialized:', !!chatbotController);
 
 // 404 handler for undefined routes
 app.use((req, res) => {

@@ -64,6 +64,20 @@ const config = {
     serviceName: process.env.SERVICE_NAME || 'directory-service'
   },
   
+  // gRPC Configuration (for Coordinator gRPC communication)
+  grpc: {
+    coordinatorUrl: process.env.COORDINATOR_GRPC_URL || 'coordinator:50051',
+    coordinatorHost: process.env.GRPC_COORDINATOR_HOST || 'coordinator',
+    coordinatorPort: process.env.GRPC_COORDINATOR_PORT || '50051',
+    useSsl: process.env.GRPC_USE_SSL === 'true',
+    timeout: parseInt(process.env.GRPC_TIMEOUT || '30000', 10)
+  },
+  
+  // RAG Service Configuration (for chatbot widget)
+  rag: {
+    serviceUrl: process.env.RAG_SERVICE_URL || 'https://rag-production-3a4c.up.railway.app'
+  },
+  
   // Authentication Configuration
   auth: {
     // Authentication mode: 'dummy' (for testing) or 'auth-service' (for production)

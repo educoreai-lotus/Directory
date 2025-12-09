@@ -1,0 +1,23 @@
+syntax = "proto3";
+package rag.v1;
+
+service CoordinatorService {
+  rpc Route(RouteRequest) returns (RouteResponse);
+}
+
+message RouteRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+  string query_text = 3;
+  string requester_service = 4;
+  map<string, string> context = 5;
+  string envelope_json = 6;  // Universal Envelope JSON
+}
+
+message RouteResponse {
+  repeated string target_services = 1;
+  map<string, string> normalized_fields = 2;
+  string envelope_json = 3;
+  string routing_metadata = 4;
+}
+
