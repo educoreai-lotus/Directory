@@ -5,6 +5,27 @@
 const pdf = require('pdf-parse');
 const PDFCleaner = require('../utils/PDFCleaner');
 
+// Category synonyms for semantic heading normalization
+const CATEGORY_SYNONYMS = {
+  skills: ["skills", "abilities", "competencies", "strengths"],
+  courses: ["courses", "training", "programs", "certifications", "bootcamp"],
+  projects: ["projects", "portfolio", "systems", "applications"],
+  education: ["education", "studies", "academics", "university", "college"],
+  work_experience: ["experience", "employment", "career", "roles", "positions"],
+  volunteer: ["volunteer", "community", "social work"],
+  languages: ["languages", "linguistic"],
+  military: ["military", "army", "idf", "combat", "service"],
+};
+
+// Normalize heading text to category
+function normalizeHeading(text) {
+  const lower = text.toLowerCase();
+  for (const [category, synonyms] of Object.entries(CATEGORY_SYNONYMS)) {
+    if (synonyms.some(s => lower.includes(s))) return category;
+  }
+  return null;
+}
+
 class PDFExtractionService {
   /**
    * Extract raw text from PDF buffer
@@ -35,7 +56,9 @@ class PDFExtractionService {
         education: [],
         work_experience: [],
         volunteer: [],
-        military: []
+        military: [],
+        courses: [],
+        projects: []
       };
     }
 
@@ -47,29 +70,47 @@ class PDFExtractionService {
       education: [],
       work_experience: [],
       volunteer: [],
-      military: []
+      military: [],
+      courses: [],
+      projects: []
     };
 
     // IMPROVED: Extract all text content for fallback parsing if sections aren't found
     const fullText = text.toLowerCase();
 
-    // Helper function to extract section content
+    // Helper function to extract section content with semantic heading normalization
     const extractSection = (sectionName, sectionKeywords, stopKeywords = []) => {
       const items = [];
       let inSection = false;
       let sectionStartIndex = -1;
 
-      // Find section start
+      // Find section start using both direct keywords and semantic normalization
       for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].toLowerCase();
+        const line = lines[i];
+        const lineLower = line.toLowerCase();
+        
+        // Check direct keyword match
+        let matched = false;
         for (const keyword of sectionKeywords) {
-          if (line === keyword.toLowerCase() || line.startsWith(keyword.toLowerCase() + ':')) {
+          if (lineLower === keyword.toLowerCase() || lineLower.startsWith(keyword.toLowerCase() + ':')) {
             sectionStartIndex = i + 1;
             inSection = true;
+            matched = true;
             break;
           }
         }
-        if (inSection) break;
+        
+        // Check semantic normalization if direct match failed
+        if (!matched) {
+          const normalizedCategory = normalizeHeading(line);
+          if (normalizedCategory === sectionName.toLowerCase()) {
+            sectionStartIndex = i + 1;
+            inSection = true;
+            matched = true;
+          }
+        }
+        
+        if (matched) break;
       }
 
       if (!inSection || sectionStartIndex < 0) {
@@ -89,10 +130,16 @@ class PDFExtractionService {
           break;
         }
 
-        // Check if we hit another major section
+        // Check if we hit another major section (using semantic normalization)
+        const normalizedCategory = normalizeHeading(lines[i]);
+        if (normalizedCategory && normalizedCategory !== sectionName.toLowerCase() && line.length < 50) {
+          break;
+        }
+        
+        // Also check direct section names
         const majorSections = ['skills', 'languages', 'education', 'employment', 'work experience', 
-                              'volunteer', 'military', 'military service', 'projects', 'contact', 
-                              'references', 'certifications'];
+                              'volunteer', 'military', 'military service', 'projects', 'courses',
+                              'contact', 'references', 'certifications'];
         const hitMajorSection = majorSections.some(section => 
           line === section.toLowerCase() || line.startsWith(section.toLowerCase() + ':')
         );
@@ -168,16 +215,106 @@ class PDFExtractionService {
       result.volunteer = volunteerItems;
     }
 
-    // Extract Military Service section
-    const militaryKeywords = ['military service', 'military', 'army', 'navy', 'air force', 'service'];
-    const militaryItems = extractSection('Military Service', militaryKeywords, ['volunteer', 'employment', 'work experience', 'education']);
-    if (militaryItems.length > 0) {
-      result.military = militaryItems;
+    // Extract Courses section
+    const coursesKeywords = ['courses', 'training', 'programs', 'certifications', 'bootcamp'];
+    const coursesItems = extractSection('Courses', coursesKeywords, ['education', 'employment', 'work experience', 'skills', 'projects']);
+    if (coursesItems.length > 0) {
+      result.courses = coursesItems;
     }
 
+    // Extract Projects section
+    const projectsKeywords = ['projects', 'portfolio', 'systems', 'applications'];
+    const projectsItems = extractSection('Projects', projectsKeywords, ['education', 'employment', 'work experience', 'skills', 'courses']);
+    if (projectsItems.length > 0) {
+      result.projects = projectsItems;
+    }
+
+    // Extract Military Service section (STRICT - only explicit military context)
+    // Military classification should ONLY happen when text contains explicit military context
+    const militaryKeywords = ['military service', 'military', 'army', 'idf', 'combat'];
+    const militaryItems = extractSection('Military Service', militaryKeywords, ['volunteer', 'employment', 'work experience', 'education', 'courses', 'projects']);
+    // Additional strict filtering: only keep items with explicit military context
+    // Allow items that contain military keywords OR are in a military section
+    const strictMilitaryItems = militaryItems.filter(item => {
+      const isMilitary = /(idf|army|combat|military\s+service|military)/i.test(item);
+      return isMilitary;
+    });
+    if (strictMilitaryItems.length > 0) {
+      result.military = strictMilitaryItems;
+    }
+
+    // LINE-LEVEL CLASSIFICATION: Process unclassified lines with keyword-based detection
+    // This runs for lines that weren't captured by structured sections
+    const allClassifiedLines = new Set([
+      ...result.skills,
+      ...result.languages,
+      ...result.education,
+      ...result.work_experience,
+      ...result.volunteer,
+      ...result.military,
+      ...result.courses,
+      ...result.projects
+    ]);
+
+    // Track section headings to skip them
+    const sectionHeadings = new Set();
+    lines.forEach(line => {
+      const normalizedCategory = normalizeHeading(line);
+      if (normalizedCategory) {
+        sectionHeadings.add(line.toLowerCase());
+      }
+    });
+
+    lines.forEach(line => {
+      // Skip if already classified
+      if (allClassifiedLines.has(line)) return;
+      // Skip if it's a section heading
+      if (sectionHeadings.has(line.toLowerCase())) return;
+
+      const lineLower = line.toLowerCase();
+
+      // Courses detection (fallback) - check for training-related keywords
+      // Must contain training-related keyword AND not be military context
+      const courseKeywords = ["training", "bootcamp", "certification"];
+      const hasCourseKeyword = courseKeywords.some(keyword => lineLower.includes(keyword));
+      const hasProgramKeyword = lineLower.includes("program") && !lineLower.includes("military program");
+      
+      if (hasCourseKeyword || hasProgramKeyword) {
+        // Additional check: don't classify if it's clearly not a course (e.g., "training program" in military context)
+        if (!/(idf|army|combat|military\s+service)/i.test(line)) {
+          result.courses.push(line);
+          allClassifiedLines.add(line);
+          return;
+        }
+      }
+
+      // Projects detection (fallback) - check for project-related keywords
+      const projectKeywords = ["developing", "building", "created", "designed", "microservice", "platform", "application", "system"];
+      if (projectKeywords.some(keyword => lineLower.includes(keyword))) {
+        result.projects.push(line);
+        allClassifiedLines.add(line);
+        return;
+      }
+
+      // Military detection (STRICT - only explicit military context)
+      const isMilitary = /(idf|army|combat|military)/i.test(line);
+      if (isMilitary) {
+        result.military.push(line);
+        allClassifiedLines.add(line);
+        return;
+      }
+
+      // If not classified, discard (DO NOT assign to military or any other category)
+    });
+
     // FALLBACK EXTRACTION: If no structured sections found, extract from raw text
-    const hasStructuredData = result.skills.length > 0 || result.languages.length > 0 || 
-                              result.education.length > 0 || result.work_experience.length > 0;
+    // Check if we have structured data from sections OR line-level classification
+    // Only run fallback if we have NO data at all (not even from line-level classification)
+    const hasStructuredDataFromSections = result.skills.length > 0 || result.languages.length > 0 || 
+                                         result.education.length > 0 || result.work_experience.length > 0 ||
+                                         result.volunteer.length > 0 || result.military.length > 0;
+    const hasDataFromLineLevel = result.courses.length > 0 || result.projects.length > 0;
+    const hasStructuredData = hasStructuredDataFromSections || hasDataFromLineLevel;
     
     if (!hasStructuredData) {
       console.log('[PDFExtractionService] No structured sections found, using fallback extraction from raw text');
@@ -307,6 +444,8 @@ class PDFExtractionService {
       result.languages = [...new Set(result.languages)];
       result.education = [...new Set(result.education)];
       result.work_experience = [...new Set(result.work_experience)];
+      result.courses = [...new Set(result.courses)];
+      result.projects = [...new Set(result.projects)];
     }
     
     // LAST RESORT: If still empty, put raw text into work_experience
@@ -323,12 +462,14 @@ class PDFExtractionService {
       }
     }
 
-    // Clean sensitive data from arrays before returning
+    // Clean sensitive data from arrays before returning (ALWAYS run PDFCleaner AFTER classification)
     result.skills = PDFCleaner.cleanArray(result.skills);
     result.education = PDFCleaner.cleanArray(result.education);
     result.work_experience = PDFCleaner.cleanArray(result.work_experience);
     result.volunteer = PDFCleaner.cleanArray(result.volunteer);
     result.military = PDFCleaner.cleanArray(result.military);
+    result.courses = PDFCleaner.cleanArray(result.courses);
+    result.projects = PDFCleaner.cleanArray(result.projects);
 
     console.log('[PDFExtractionService] Parsed CV data:', {
       skills_count: result.skills.length,
@@ -336,7 +477,9 @@ class PDFExtractionService {
       education_count: result.education.length,
       work_experience_count: result.work_experience.length,
       volunteer_count: result.volunteer.length,
-      military_count: result.military.length
+      military_count: result.military.length,
+      courses_count: result.courses.length,
+      projects_count: result.projects.length
     });
 
     return result;

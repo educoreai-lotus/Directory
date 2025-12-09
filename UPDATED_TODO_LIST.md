@@ -780,6 +780,54 @@ TASK-036 (Enterprise) → TASK-024
 
 ---
 
+## 7. PDF Extraction & Classification - Future Improvements (Nice-to-Have)
+
+**Status:** 📝 Documented for future enhancement stages  
+**Priority:** Low (current implementation is stable and correct)  
+**Note:** These are future improvements only - NO CODE CHANGES REQUIRED NOW
+
+### 7.1. Improve Semantic Classification from PDFs
+
+**Current State:** Extraction works well and is stable.
+
+**Future Enhancement Ideas:**
+- Expand keyword mappings for more flexible detection:
+  - **Skills:** "skills", "abilities", "capabilities", "competencies" → map to skills
+  - **Courses:** "training", "courses", "bootcamp", "certificate", "program" → map to courses
+  - **Work Experience:** "experience", "work history", "career background" → map to work_experience
+  - **Projects:** "projects", "portfolio", "case studies", "application development" → map to projects
+
+### 7.2. AI-Assisted Classification (Future Enhancement)
+
+**Future Enhancement Idea:**
+- Consider adding a lightweight AI step that helps classify lines extracted from PDFs more accurately, especially when section headers are missing.
+- Could improve accuracy for ambiguous content that doesn't clearly match existing patterns.
+
+### 7.3. Improve Fallback Rules
+
+**Future Enhancement Idea:**
+- Allow smarter fallback classification of lines that don't clearly match a section, without risking misclassification.
+- Balance between capturing relevant information and avoiding false positives.
+
+### 7.4. Expand Sensitive Data Filtering
+
+**Current State:** Current filtering is good and working correctly.
+
+**Future Enhancement Ideas:**
+- Add more patterns for sensitive data removal
+- Detect dates, addresses, and personal identifiers in more formats
+- Optionally block "birth year" or "location" even when formatted differently
+- This is only for future refinement - current implementation is sufficient.
+
+### 7.5. Improve Project and Course Detection
+
+**Future Enhancement Idea:**
+- Expand verb-based detection for projects and courses:
+  - Lines containing verbs such as "built", "developed", "designed", "created", "launched", etc., could be expanded in the classifier in future releases.
+- Improve accuracy of project vs. work experience classification.
+
+---
+
 **Document Version:** 1.0  
 **Last Updated:** 2025-01-20  
 **Next Review:** After completing Week 1-2 tasks
