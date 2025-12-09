@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  backend:
+    image: jasminemograby/directory-backend:latest
+    env_file:
+      - .env
+    environment:
+      - PORT=3001
+    ports:
+      - "8080:3001"
+    networks:
+      - directory-net
+
+  frontend:
+    image: jasminemograby/directory-frontend:latest
+    environment:
+      - VITE_API_URL=http://backend:3001
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - directory-net
+
+networks:
+  directory-net:
+    driver: bridge
+
