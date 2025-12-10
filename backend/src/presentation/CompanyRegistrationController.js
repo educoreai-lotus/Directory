@@ -14,7 +14,9 @@ class CompanyRegistrationController {
    */
   async register(req, res, next) {
     try {
-      const companyData = req.body;
+      // Handle envelope structure from parseRequest middleware or frontend API interceptor
+      // parseRequest sets req.parsedBody, but we check req.body.payload first for compatibility
+      const companyData = req.parsedBody || req.body.payload || req.body;
       
       // Debug logging (remove in production)
       console.log('Received company data:', JSON.stringify(companyData, null, 2));
