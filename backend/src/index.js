@@ -287,7 +287,19 @@ apiRouter.post('/companies/:id/verify', (req, res, next) => {
 
 // CSV Upload
 apiRouter.post('/companies/:id/upload', (req, res, next) => {
-  csvUploadController.uploadCSV(req, res, next);
+  console.log('[index.js] ========== CSV UPLOAD ROUTE HIT ==========');
+  console.log('[index.js] Route: POST /api/v1/companies/:id/upload');
+  console.log('[index.js] Company ID:', req.params.id);
+  console.log('[index.js] Content-Type:', req.headers['content-type']);
+  console.log('[index.js] Content-Length:', req.headers['content-length']);
+  try {
+    checkController(csvUploadController, 'CSVUploadController');
+    csvUploadController.uploadCSV(req, res, next);
+  } catch (error) {
+    console.error('[index.js] Error in CSV upload route:', error);
+    console.error('[index.js] Error stack:', error.stack);
+    next(error);
+  }
 });
 
 // Company Profile

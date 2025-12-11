@@ -32,10 +32,31 @@ class CSVUploadController {
    * POST /api/v1/companies/:id/upload
    */
   async uploadCSV(req, res, next) {
+    console.log('[CSVUploadController] ========== CSV UPLOAD REQUEST RECEIVED ==========');
+    console.log('[CSVUploadController] Method:', req.method);
+    console.log('[CSVUploadController] URL:', req.url);
+    console.log('[CSVUploadController] Company ID:', req.params.id);
+    console.log('[CSVUploadController] Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('[CSVUploadController] Content-Type:', req.headers['content-type']);
+    console.log('[CSVUploadController] Content-Length:', req.headers['content-length']);
+    
     // Use multer middleware
     this.upload(req, res, async (err) => {
+      console.log('[CSVUploadController] Multer callback executed');
+      console.log('[CSVUploadController] Error from multer:', err ? err.message : 'none');
+      console.log('[CSVUploadController] req.file exists:', !!req.file);
+      if (req.file) {
+        console.log('[CSVUploadController] File details:', {
+          originalname: req.file.originalname,
+          mimetype: req.file.mimetype,
+          size: req.file.size,
+          bufferLength: req.file.buffer ? req.file.buffer.length : 0
+        });
+      }
+      
       if (err) {
         console.error('[CSVUploadController] Upload error:', err);
+        console.error('[CSVUploadController] Upload error stack:', err.stack);
         return res.status(400).json({
           error: err.message || 'File upload failed'
         });
