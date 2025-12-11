@@ -24,7 +24,7 @@ async function main() {
 
     // Configuration
     const SERVICE_NAME = 'directory-service';
-    const SERVICE_ENDPOINT = process.env.DIRECTORY_URL || 'https://directory3-production.up.railway.app';
+    const SERVICE_ENDPOINT = process.env.DIRECTORY_URL || 'https://directory-production-addc.up.railway.app';
     const SERVICE_VERSION = '1.0.0';
     const COORDINATOR_URL = process.env.COORDINATOR_URL;
 
@@ -86,7 +86,7 @@ async function main() {
     console.log('');
 
     // Upload migration
-    const { resp: migrationResp, data: migrationDataResponse } = await uploadMigration(serviceId, migrationData);
+    const { resp: migrationResp, data: migrationDataResponse } = await uploadMigration(serviceId, migrationPath);
 
     if (!migrationResp.ok) {
       throw new Error(`Migration upload failed: ${migrationResp.status} - ${JSON.stringify(migrationDataResponse)}`);

@@ -211,36 +211,39 @@ async function uploadMigration(serviceId, migrationFilePath) {
   const fs = require('fs');
   const FormData = require('form-data');
 
-  // Create FormData and append file stream with exact field name "migration"
-  const form = new FormData();
-  form.append('migration', fs.createReadStream(migrationFilePath));
+  // Read migration file content
+  const fileContent = fs.readFileSync(migrationFilePath, 'utf8');
+  const migrationData = JSON.parse(fileContent);
 
-  // Get headers from FormData (includes Content-Type with boundary)
-  // Do NOT set Content-Type manually - FormData handles it
-  const headers = form.getHeaders();
+  // Prepare headers
+  const headers = {
+    'Content-Type': 'application/json'
+  };
 
   // Add signature if private key is configured
-  // Read file content for signing
   if (PRIVATE_KEY) {
-    const fileContent = fs.readFileSync(migrationFilePath, 'utf8');
-    const migrationData = JSON.parse(fileContent);
     const sig = generateSignature(SERVICE_NAME, PRIVATE_KEY, migrationData);
     headers['X-Service-Name'] = SERVICE_NAME;
     headers['X-Signature'] = sig;
   } else {
-    // Still add service name even without signature
     headers['X-Service-Name'] = SERVICE_NAME;
   }
 
   console.log(`[CoordinatorClient] STEP 2: Uploading migration file for service ${serviceId}...`);
   console.log(`[CoordinatorClient] URL: ${url}`);
   console.log(`[CoordinatorClient] File path: ${migrationFilePath}`);
-  console.log(`[CoordinatorClient] Field name: migration`);
+  console.log(`[CoordinatorClient] Sending as JSON body`);
   console.log(`[CoordinatorClient] Headers:`, Object.keys(headers));
+  console.log(`[CoordinatorClient] Migration data structure:`, {
+    hasMigrationFile: !!migrationData.migrationFile,
+    topLevelKeys: Object.keys(migrationData),
+    fileSize: fileContent.length
+  });
 
+  // Send migration data as JSON in request body
   const resp = await fetch(url, {
     method: 'POST',
-    body: form,
+    body: JSON.stringify(migrationData),
     headers: headers
   });
 

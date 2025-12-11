@@ -1,646 +1,280 @@
 {
-  "service_name": "directory-service",
-  "serviceName": "directory-service",
-  "version": "1.0.0",
-  "description": "Manages organizations, employees, trainers, departments, teams, and directory workflows.",
-  "endpoint": "https://directory3-production.up.railway.app/api/fill-content-metrics",
-  "schemas": {
-    "database": [
-      {
-        "name": "companies",
-        "columns": [
-          {"name": "id", "type": "UUID", "primary_key": true},
-          {"name": "company_name", "type": "VARCHAR(255)", "not_null": true},
-          {"name": "industry", "type": "VARCHAR(255)"},
-          {"name": "domain", "type": "VARCHAR(255)", "unique": true, "not_null": true},
-          {"name": "hr_contact_name", "type": "VARCHAR(255)"},
-          {"name": "hr_contact_email", "type": "VARCHAR(255)"},
-          {"name": "hr_contact_role", "type": "VARCHAR(255)"},
-          {"name": "verification_status", "type": "VARCHAR(50)", "default": "pending"},
-          {"name": "approval_policy", "type": "VARCHAR(50)", "default": "manual"},
-          {"name": "kpis", "type": "TEXT", "not_null": true, "default": "Not specified"},
-          {"name": "logo_url", "type": "VARCHAR(500)"},
-          {"name": "passing_grade", "type": "INTEGER"},
-          {"name": "max_attempts", "type": "INTEGER"},
-          {"name": "exercises_limited", "type": "BOOLEAN", "default": false},
-          {"name": "num_of_exercises", "type": "INTEGER"},
-          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"},
-          {"name": "updated_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
-        ]
-      },
-      {
-        "name": "departments",
-        "columns": [
-          {"name": "id", "type": "UUID", "primary_key": true},
-          {"name": "company_id", "type": "UUID", "not_null": true, "foreign_key": "companies(id)"},
-          {"name": "department_id", "type": "VARCHAR(255)", "not_null": true},
-          {"name": "department_name", "type": "VARCHAR(255)", "not_null": true},
-          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"},
-          {"name": "updated_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
-        ]
-      },
-      {
-        "name": "teams",
-        "columns": [
-          {"name": "id", "type": "UUID", "primary_key": true},
-          {"name": "company_id", "type": "UUID", "not_null": true, "foreign_key": "companies(id)"},
-          {"name": "department_id", "type": "UUID", "foreign_key": "departments(id)"},
-          {"name": "team_id", "type": "VARCHAR(255)", "not_null": true},
-          {"name": "team_name", "type": "VARCHAR(255)", "not_null": true},
-          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"},
-          {"name": "updated_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
-        ]
-      },
-      {
-        "name": "employees",
-        "columns": [
-          {"name": "id", "type": "UUID", "primary_key": true},
-          {"name": "company_id", "type": "UUID", "not_null": true, "foreign_key": "companies(id)"},
-          {"name": "employee_id", "type": "VARCHAR(255)", "not_null": true},
-          {"name": "full_name", "type": "VARCHAR(255)", "not_null": true},
-          {"name": "email", "type": "VARCHAR(255)", "unique": true, "not_null": true},
-          {"name": "password_hash", "type": "VARCHAR(255)", "not_null": true},
-          {"name": "current_role_in_company", "type": "VARCHAR(255)", "not_null": true},
-          {"name": "target_role_in_company", "type": "VARCHAR(255)", "not_null": true},
-          {"name": "preferred_language", "type": "VARCHAR(50)", "not_null": true},
-          {"name": "status", "type": "VARCHAR(50)", "not_null": true, "default": "active"},
-          {"name": "bio", "type": "TEXT"},
-          {"name": "profile_photo_url", "type": "VARCHAR(500)"},
-          {"name": "linkedin_url", "type": "VARCHAR(500)"},
-          {"name": "github_url", "type": "VARCHAR(500)"},
-          {"name": "linkedin_data", "type": "JSONB"},
-          {"name": "github_data", "type": "JSONB"},
-          {"name": "enrichment_completed", "type": "BOOLEAN", "default": false},
-          {"name": "enrichment_completed_at", "type": "TIMESTAMP"},
-          {"name": "profile_status", "type": "VARCHAR(50)", "default": "basic"},
-          {"name": "value_proposition", "type": "TEXT"},
-          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"},
-          {"name": "updated_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
-        ]
-      },
-      {
-        "name": "employee_roles",
-        "columns": [
-          {"name": "id", "type": "UUID", "primary_key": true},
-          {"name": "employee_id", "type": "UUID", "not_null": true, "foreign_key": "employees(id)"},
-          {"name": "role_type", "type": "VARCHAR(50)", "not_null": true},
-          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
-        ]
-      },
-      {
-        "name": "employee_teams",
-        "columns": [
-          {"name": "id", "type": "UUID", "primary_key": true},
-          {"name": "employee_id", "type": "UUID", "not_null": true, "foreign_key": "employees(id)"},
-          {"name": "team_id", "type": "UUID", "not_null": true, "foreign_key": "teams(id)"},
-          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
-        ]
-      },
-      {
-        "name": "employee_managers",
-        "columns": [
-          {"name": "id", "type": "UUID", "primary_key": true},
-          {"name": "employee_id", "type": "UUID", "not_null": true, "foreign_key": "employees(id)"},
-          {"name": "manager_id", "type": "UUID", "not_null": true, "foreign_key": "employees(id)"},
-          {"name": "relationship_type", "type": "VARCHAR(50)", "not_null": true},
-          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
-        ]
-      },
-      {
-        "name": "employee_project_summaries",
-        "columns": [
-          {"name": "id", "type": "UUID", "primary_key": true},
-          {"name": "employee_id", "type": "UUID", "not_null": true, "foreign_key": "employees(id)"},
-          {"name": "repository_name", "type": "VARCHAR(255)", "not_null": true},
-          {"name": "repository_url", "type": "VARCHAR(500)"},
-          {"name": "summary", "type": "TEXT", "not_null": true},
-          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
-        ]
-      },
-      {
-        "name": "trainer_settings",
-        "columns": [
-          {"name": "id", "type": "UUID", "primary_key": true},
-          {"name": "employee_id", "type": "UUID", "unique": true, "not_null": true, "foreign_key": "employees(id)"},
-          {"name": "ai_enabled", "type": "BOOLEAN", "default": false},
-          {"name": "public_publish_enable", "type": "BOOLEAN", "default": false},
-          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"},
-          {"name": "updated_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
-        ]
-      },
-      {
-        "name": "audit_logs",
-        "columns": [
-          {"name": "id", "type": "UUID", "primary_key": true},
-          {"name": "company_id", "type": "UUID", "foreign_key": "companies(id)"},
-          {"name": "user_id", "type": "UUID", "foreign_key": "employees(id)"},
-          {"name": "action_type", "type": "VARCHAR(255)", "not_null": true},
-          {"name": "resource_type", "type": "VARCHAR(255)"},
-          {"name": "resource_id", "type": "UUID"},
-          {"name": "action_details", "type": "JSONB"},
-          {"name": "ip_address", "type": "VARCHAR(45)"},
-          {"name": "user_agent", "type": "VARCHAR(500)"},
-          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
-        ]
-      },
-      {
-        "name": "company_registration_requests",
-        "columns": [
-          {"name": "id", "type": "UUID", "primary_key": true},
-          {"name": "company_name", "type": "VARCHAR(255)", "not_null": true},
-          {"name": "industry", "type": "VARCHAR(255)"},
-          {"name": "domain", "type": "VARCHAR(255)", "unique": true, "not_null": true},
-          {"name": "hr_contact_name", "type": "VARCHAR(255)"},
-          {"name": "hr_contact_email", "type": "VARCHAR(255)"},
-          {"name": "hr_contact_role", "type": "VARCHAR(255)"},
-          {"name": "verification_status", "type": "VARCHAR(50)", "default": "pending"},
-          {"name": "verification_notes", "type": "TEXT"},
-          {"name": "reviewed_by", "type": "UUID", "foreign_key": "employees(id)"},
-          {"name": "reviewed_at", "type": "TIMESTAMP"},
-          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"},
-          {"name": "updated_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
-        ]
-      },
-      {
-        "name": "employee_profile_approvals",
-        "columns": [
-          {"name": "id", "type": "UUID", "primary_key": true},
-          {"name": "employee_id", "type": "UUID", "not_null": true, "foreign_key": "employees(id)"},
-          {"name": "company_id", "type": "UUID", "not_null": true, "foreign_key": "companies(id)"},
-          {"name": "status", "type": "VARCHAR(50)", "default": "pending"},
-          {"name": "enriched_at", "type": "TIMESTAMP"},
-          {"name": "requested_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"},
-          {"name": "reviewed_at", "type": "TIMESTAMP"},
-          {"name": "reviewed_by", "type": "UUID", "foreign_key": "employees(id)"},
-          {"name": "rejection_reason", "type": "TEXT"},
-          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"},
-          {"name": "updated_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
-        ]
-      },
-      {
-        "name": "employee_requests",
-        "columns": [
-          {"name": "id", "type": "UUID", "primary_key": true},
-          {"name": "employee_id", "type": "UUID", "not_null": true, "foreign_key": "employees(id)"},
-          {"name": "company_id", "type": "UUID", "not_null": true, "foreign_key": "companies(id)"},
-          {"name": "request_type", "type": "VARCHAR(50)", "not_null": true},
-          {"name": "title", "type": "VARCHAR(255)", "not_null": true},
-          {"name": "description", "type": "TEXT"},
-          {"name": "status", "type": "VARCHAR(50)", "default": "pending"},
-          {"name": "requested_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"},
-          {"name": "reviewed_at", "type": "TIMESTAMP"},
-          {"name": "reviewed_by", "type": "UUID", "foreign_key": "employees(id)"},
-          {"name": "rejection_reason", "type": "TEXT"},
-          {"name": "response_notes", "type": "TEXT"},
-          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"},
-          {"name": "updated_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
-        ]
-      },
-      {
-        "name": "directory_admins",
-        "columns": [
-          {"name": "id", "type": "UUID", "primary_key": true},
-          {"name": "email", "type": "VARCHAR(255)", "unique": true, "not_null": true},
-          {"name": "password_hash", "type": "VARCHAR(255)", "not_null": true},
-          {"name": "full_name", "type": "VARCHAR(255)", "not_null": true},
-          {"name": "role", "type": "VARCHAR(50)", "default": "DIRECTORY_ADMIN"},
-          {"name": "is_active", "type": "BOOLEAN", "default": true},
-          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"},
-          {"name": "updated_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
-        ]
-      },
-      {
-        "name": "employee_raw_data",
-        "columns": [
-          {"name": "id", "type": "UUID", "primary_key": true},
-          {"name": "employee_id", "type": "UUID", "not_null": true, "foreign_key": "employees(id)"},
-          {"name": "source", "type": "raw_data_source", "not_null": true},
-          {"name": "data", "type": "JSONB", "not_null": true},
-          {"name": "created_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"},
-          {"name": "updated_at", "type": "TIMESTAMP", "default": "CURRENT_TIMESTAMP"}
-        ]
-      }
+  "migrationFile": {
+    "version": "1.0.0",
+    "description": "Manages organizations, employees, trainers, departments, teams, and directory workflows.",
+    "database": {
+      "tables": [
+        {
+          "name": "companies",
+          "schema": {
+            "id": "uuid",
+            "company_name": "string",
+            "industry": "string",
+            "domain": "string",
+            "hr_contact_name": "string",
+            "hr_contact_email": "string",
+            "hr_contact_role": "string",
+            "verification_status": "string",
+            "approval_policy": "string",
+            "kpis": "text",
+            "logo_url": "string",
+            "passing_grade": "integer",
+            "max_attempts": "integer",
+            "exercises_limited": "boolean",
+            "num_of_exercises": "integer",
+            "created_at": "timestamp",
+            "updated_at": "timestamp"
+          }
+        },
+        {
+          "name": "departments",
+          "schema": {
+            "id": "uuid",
+            "company_id": "uuid",
+            "department_id": "string",
+            "department_name": "string",
+            "created_at": "timestamp",
+            "updated_at": "timestamp"
+          }
+        },
+        {
+          "name": "teams",
+          "schema": {
+            "id": "uuid",
+            "company_id": "uuid",
+            "department_id": "uuid",
+            "team_id": "string",
+            "team_name": "string",
+            "created_at": "timestamp",
+            "updated_at": "timestamp"
+          }
+        },
+        {
+          "name": "employees",
+          "schema": {
+            "id": "uuid",
+            "company_id": "uuid",
+            "employee_id": "string",
+            "full_name": "string",
+            "email": "string",
+            "password_hash": "string",
+            "current_role_in_company": "string",
+            "target_role_in_company": "string",
+            "preferred_language": "string",
+            "status": "string",
+            "bio": "text",
+            "profile_photo_url": "string",
+            "linkedin_url": "string",
+            "github_url": "string",
+            "linkedin_data": "jsonb",
+            "github_data": "jsonb",
+            "enrichment_completed": "boolean",
+            "enrichment_completed_at": "timestamp",
+            "profile_status": "string",
+            "value_proposition": "text",
+            "created_at": "timestamp",
+            "updated_at": "timestamp"
+          }
+        },
+        {
+          "name": "employee_roles",
+          "schema": {
+            "id": "uuid",
+            "employee_id": "uuid",
+            "role_type": "string",
+            "created_at": "timestamp"
+          }
+        },
+        {
+          "name": "employee_teams",
+          "schema": {
+            "id": "uuid",
+            "employee_id": "uuid",
+            "team_id": "uuid",
+            "created_at": "timestamp"
+          }
+        },
+        {
+          "name": "employee_managers",
+          "schema": {
+            "id": "uuid",
+            "employee_id": "uuid",
+            "manager_id": "uuid",
+            "relationship_type": "string",
+            "created_at": "timestamp"
+          }
+        },
+        {
+          "name": "employee_project_summaries",
+          "schema": {
+            "id": "uuid",
+            "employee_id": "uuid",
+            "repository_name": "string",
+            "repository_url": "string",
+            "summary": "text",
+            "created_at": "timestamp"
+          }
+        },
+        {
+          "name": "trainer_settings",
+          "schema": {
+            "id": "uuid",
+            "employee_id": "uuid",
+            "ai_enabled": "boolean",
+            "public_publish_enable": "boolean",
+            "created_at": "timestamp",
+            "updated_at": "timestamp"
+          }
+        },
+        {
+          "name": "audit_logs",
+          "schema": {
+            "id": "uuid",
+            "company_id": "uuid",
+            "user_id": "uuid",
+            "action_type": "string",
+            "resource_type": "string",
+            "resource_id": "uuid",
+            "action_details": "jsonb",
+            "ip_address": "string",
+            "user_agent": "string",
+            "created_at": "timestamp"
+          }
+        },
+        {
+          "name": "company_registration_requests",
+          "schema": {
+            "id": "uuid",
+            "company_name": "string",
+            "industry": "string",
+            "domain": "string",
+            "hr_contact_name": "string",
+            "hr_contact_email": "string",
+            "hr_contact_role": "string",
+            "verification_status": "string",
+            "verification_notes": "text",
+            "reviewed_by": "uuid",
+            "reviewed_at": "timestamp",
+            "created_at": "timestamp",
+            "updated_at": "timestamp"
+          }
+        },
+        {
+          "name": "employee_profile_approvals",
+          "schema": {
+            "id": "uuid",
+            "employee_id": "uuid",
+            "company_id": "uuid",
+            "status": "string",
+            "enriched_at": "timestamp",
+            "requested_at": "timestamp",
+            "reviewed_at": "timestamp",
+            "reviewed_by": "uuid",
+            "rejection_reason": "text",
+            "created_at": "timestamp",
+            "updated_at": "timestamp"
+          }
+        },
+        {
+          "name": "employee_requests",
+          "schema": {
+            "id": "uuid",
+            "employee_id": "uuid",
+            "company_id": "uuid",
+            "request_type": "string",
+            "title": "string",
+            "description": "text",
+            "status": "string",
+            "requested_at": "timestamp",
+            "reviewed_at": "timestamp",
+            "reviewed_by": "uuid",
+            "rejection_reason": "text",
+            "response_notes": "text",
+            "created_at": "timestamp",
+            "updated_at": "timestamp"
+          }
+        },
+        {
+          "name": "directory_admins",
+          "schema": {
+            "id": "uuid",
+            "email": "string",
+            "password_hash": "string",
+            "full_name": "string",
+            "role": "string",
+            "is_active": "boolean",
+            "created_at": "timestamp",
+            "updated_at": "timestamp"
+          }
+        },
+        {
+          "name": "employee_raw_data",
+          "schema": {
+            "id": "uuid",
+            "employee_id": "uuid",
+            "source": "string",
+            "data": "jsonb",
+            "created_at": "timestamp",
+            "updated_at": "timestamp"
+          }
+        }
+      ],
+      "migrations": ["001_initial_schema"]
+    },
+    "api": {
+      "endpoints": [
+        {
+          "path": "/api/fill-content-metrics",
+          "method": "POST",
+          "description": "Universal endpoint for microservice-to-microservice communication via Coordinator",
+          "requestSchema": {
+            "required": ["requester_service", "payload", "response"],
+            "properties": {
+              "requester_service": {"type": "string"},
+              "payload": {"type": "object"},
+              "response": {"type": "object"}
+            }
+          },
+          "responseSchema": {
+            "properties": {
+              "requester_service": {"type": "string"},
+              "response": {"type": "object"}
+            }
+          }
+        }
+      ]
+    },
+    "capabilities": [
+      "employee management",
+      "company management",
+      "directory services",
+      "employee profiles",
+      "profile enrichment",
+      "company registration",
+      "employee enrollment",
+      "career path enrollment",
+      "learning flow enrollment",
+      "organizational hierarchy",
+      "department management",
+      "team management",
+      "employee skills",
+      "employee courses",
+      "learning paths",
+      "chatbot integration",
+      "OAuth integration",
+      "profile approvals",
+      "trainer management"
     ],
-    "endpoints": [
-      {
-        "method": "GET",
-        "path": "/health",
-        "description": "Health check endpoint for service availability"
-      },
-      {
-        "method": "POST",
-        "path": "/api/v1/auth/login",
-        "description": "Authenticate user and return JWT token"
-      },
-      {
-        "method": "POST",
-        "path": "/api/v1/auth/logout",
-        "description": "Logout user and invalidate session"
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/auth/me",
-        "description": "Get current authenticated user information",
-        "requires_auth": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/oauth/linkedin/authorize",
-        "description": "Get LinkedIn OAuth authorization URL",
-        "requires_auth": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/oauth/linkedin/callback",
-        "description": "Handle LinkedIn OAuth callback and store profile data"
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/oauth/github/authorize",
-        "description": "Get GitHub OAuth authorization URL",
-        "requires_auth": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/oauth/github/callback",
-        "description": "Handle GitHub OAuth callback and store profile data"
-      },
-      {
-        "method": "POST",
-        "path": "/api/v1/companies/register",
-        "description": "Register a new company and create registration request"
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/companies/:id/verification",
-        "description": "Get company verification status"
-      },
-      {
-        "method": "POST",
-        "path": "/api/v1/companies/:id/verify",
-        "description": "Verify or reject company registration request"
-      },
-      {
-        "method": "POST",
-        "path": "/api/v1/companies/:id/upload",
-        "description": "Upload CSV file with company hierarchy and employees"
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/companies/:id/profile",
-        "description": "Get company profile information"
-      },
-      {
-        "method": "POST",
-        "path": "/api/v1/companies/:id/employees",
-        "description": "Add a new employee to the company"
-      },
-      {
-        "method": "PUT",
-        "path": "/api/v1/companies/:id/employees/:employeeId",
-        "description": "Update employee information"
-      },
-      {
-        "method": "DELETE",
-        "path": "/api/v1/companies/:id/employees/:employeeId",
-        "description": "Delete employee (soft delete - mark as inactive)"
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/companies/:id/employees/:employeeId",
-        "description": "Get employee profile information"
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/companies/:id/employees/:employeeId/skills",
-        "description": "Get employee skills and competencies from Skills Engine",
-        "requires_auth": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/companies/:id/employees/:employeeId/courses",
-        "description": "Get employee courses from Course Builder",
-        "requires_auth": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/companies/:id/employees/:employeeId/learning-path",
-        "description": "Get employee learning path from Learner AI",
-        "requires_auth": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/companies/:id/employees/:employeeId/dashboard",
-        "description": "Get employee learning dashboard data from Learning Analytics",
-        "requires_auth": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/companies/:id/employees/:employeeId/management-hierarchy",
-        "description": "Get employee management hierarchy (managers and reports)",
-        "requires_auth": true
-      },
-      {
-        "method": "POST",
-        "path": "/api/v1/companies/:id/employees/:employeeId/requests",
-        "description": "Submit employee request (learning opportunities, trainer applications, etc.)",
-        "requires_auth": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/companies/:id/employees/:employeeId/requests",
-        "description": "Get all requests for an employee",
-        "requires_auth": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/companies/:id/requests",
-        "description": "Get all company requests (HR/Manager view)",
-        "requires_auth": true
-      },
-      {
-        "method": "PUT",
-        "path": "/api/v1/companies/:id/requests/:requestId",
-        "description": "Update request status (approve/reject)",
-        "requires_auth": true
-      },
-      {
-        "method": "POST",
-        "path": "/api/v1/employees/:employeeId/enrich",
-        "description": "Trigger profile enrichment with AI-generated bio, skills, and projects",
-        "requires_auth": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/employees/:employeeId/enrichment-status",
-        "description": "Get enrichment status for an employee",
-        "requires_auth": true
-      },
-      {
-        "method": "POST",
-        "path": "/api/v1/employees/:id/upload-cv",
-        "description": "Upload CV PDF file and extract structured data",
-        "requires_auth": true
-      },
-      {
-        "method": "POST",
-        "path": "/api/v1/employees/:id/manual-data",
-        "description": "Save manual profile data (work experience, skills, education)",
-        "requires_auth": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/companies/:id/profile-approvals",
-        "description": "Get pending profile approvals for HR review",
-        "requires_auth": true
-      },
-      {
-        "method": "POST",
-        "path": "/api/v1/companies/:id/profile-approvals/:approvalId/approve",
-        "description": "Approve employee profile enrichment",
-        "requires_auth": true
-      },
-      {
-        "method": "POST",
-        "path": "/api/v1/companies/:id/profile-approvals/:approvalId/reject",
-        "description": "Reject employee profile enrichment",
-        "requires_auth": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/employees/:id/approval-status",
-        "description": "Get approval status for employee profile",
-        "requires_auth": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/employees/:employeeId/trainer-settings",
-        "description": "Get trainer settings (AI enabled, public publish)",
-        "requires_auth": true
-      },
-      {
-        "method": "PUT",
-        "path": "/api/v1/employees/:employeeId/trainer-settings",
-        "description": "Update trainer settings",
-        "requires_auth": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/employees/:employeeId/courses-taught",
-        "description": "Get courses taught by trainer",
-        "requires_auth": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/admin/companies",
-        "description": "Get all companies (platform-level admin only)",
-        "requires_auth": true,
-        "requires_admin": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/admin/companies/:companyId",
-        "description": "Get company details (platform-level admin only)",
-        "requires_auth": true,
-        "requires_admin": true
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/admin/employees/:employeeId",
-        "description": "Get employee details (platform-level admin only)",
-        "requires_auth": true,
-        "requires_admin": true
-      },
-      {
-        "method": "POST",
-        "path": "/api/fill-content-metrics",
-        "description": "Universal endpoint for microservice-to-microservice communication via Coordinator"
-      },
-      {
-        "method": "GET",
-        "path": "/assets/:logo",
-        "description": "Serve logo assets (logo1, logo2)"
-      },
-      {
-        "method": "GET",
-        "path": "/design-tokens",
-        "description": "Get design tokens for frontend theming"
-      }
+    "dependencies": [
+      "skills-engine",
+      "course-builder",
+      "learner-ai",
+      "learning-analytics",
+      "coordinator"
     ],
-    "actions": [
-      {
-        "name": "get_employee_skills_for_directory_profile",
-        "target_service": "skills-engine",
-        "description": "Request employee skills normalization and competency mapping from Skills Engine"
-      },
-      {
-        "name": "fetch_employee_courses_for_directory",
-        "target_service": "course-builder",
-        "description": "Request employee courses data from Course Builder"
-      },
-      {
-        "name": "get_learning_path_for_employee_dashboard",
-        "target_service": "learner-ai",
-        "description": "Request personalized learning path from Learner AI"
-      },
-      {
-        "name": "fetch_learning_progress_for_employee_dashboard",
-        "target_service": "learning-analytics",
-        "description": "Request learning progress and analytics from Learning Analytics"
-      }
-    ],
-    "events": [],
-    "env": [
-      {
-        "name": "PORT",
-        "description": "Server port number",
-        "required": false,
-        "default": "3001"
-      },
-      {
-        "name": "DATABASE_URL",
-        "description": "PostgreSQL connection string",
-        "required": true
-      },
-      {
-        "name": "SUPABASE_DB_URL",
-        "description": "Alternative Supabase database URL",
-        "required": false
-      },
-      {
-        "name": "DB_HOST",
-        "description": "Database host",
-        "required": false
-      },
-      {
-        "name": "DB_PORT",
-        "description": "Database port",
-        "required": false,
-        "default": "5432"
-      },
-      {
-        "name": "DB_NAME",
-        "description": "Database name",
-        "required": false,
-        "default": "postgres"
-      },
-      {
-        "name": "DB_USER",
-        "description": "Database user",
-        "required": false
-      },
-      {
-        "name": "DB_PASSWORD",
-        "description": "Database password",
-        "required": false
-      },
-      {
-        "name": "DB_SSL",
-        "description": "Enable SSL for database connection",
-        "required": false,
-        "default": "true"
-      },
-      {
-        "name": "SUPABASE_PROJECT_REF",
-        "description": "Supabase project reference for connection pooler",
-        "required": false
-      },
-      {
-        "name": "DB_USE_POOLER",
-        "description": "Use connection pooler for database",
-        "required": false,
-        "default": "true"
-      },
-      {
-        "name": "COORDINATOR_URL",
-        "description": "Coordinator service base URL",
-        "required": false,
-        "default": "https://coordinator-production-e0a0.up.railway.app"
-      },
-      {
-        "name": "SERVICE_NAME",
-        "description": "Service identifier for Coordinator communication",
-        "required": false,
-        "default": "directory-service"
-      },
-      {
-        "name": "PRIVATE_KEY",
-        "description": "ECDSA private key for signing requests to Coordinator",
-        "required": false
-      },
-      {
-        "name": "COORDINATOR_PUBLIC_KEY",
-        "description": "Coordinator public key for verifying responses",
-        "required": false
-      },
-      {
-        "name": "AUTH_MODE",
-        "description": "Authentication mode: 'dummy' or 'auth-service'",
-        "required": false,
-        "default": "dummy"
-      },
-      {
-        "name": "AUTH_SERVICE_URL",
-        "description": "Auth service base URL (when AUTH_MODE=auth-service)",
-        "required": false
-      },
-      {
-        "name": "JWT_SECRET",
-        "description": "JWT secret for validating tokens from Auth Service",
-        "required": false
-      },
-      {
-        "name": "LINKEDIN_CLIENT_ID",
-        "description": "LinkedIn OAuth client ID",
-        "required": false
-      },
-      {
-        "name": "LINKEDIN_CLIENT_SECRET",
-        "description": "LinkedIn OAuth client secret",
-        "required": false
-      },
-      {
-        "name": "LINKEDIN_REDIRECT_URI",
-        "description": "LinkedIn OAuth redirect URI",
-        "required": false
-      },
-      {
-        "name": "GITHUB_CLIENT_ID",
-        "description": "GitHub OAuth client ID",
-        "required": false
-      },
-      {
-        "name": "GITHUB_CLIENT_SECRET",
-        "description": "GitHub OAuth client secret",
-        "required": false
-      },
-      {
-        "name": "GITHUB_REDIRECT_URI",
-        "description": "GitHub OAuth redirect URI",
-        "required": false
-      },
-      {
-        "name": "OPENAI_API_KEY",
-        "description": "OpenAI API key for AI enrichment",
-        "required": false
-      },
-      {
-        "name": "GEMINI_API_KEY",
-        "description": "Google Gemini API key (deprecated, kept for backward compatibility)",
-        "required": false
-      },
-      {
-        "name": "DIRECTORY_URL",
-        "description": "Directory service base URL for OAuth redirects",
-        "required": false
-      },
-      {
-        "name": "FRONTEND_URL",
-        "description": "Frontend application URL for OAuth redirects",
-        "required": false,
-        "default": "http://localhost:3000"
-      }
-    ]
+    "events": {
+      "publishes": [],
+      "subscribes": []
+    }
   }
 }
-
