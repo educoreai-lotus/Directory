@@ -81,6 +81,11 @@ class CSVUploadController {
         }
       } catch (error) {
         console.error('[CSVUploadController] CSV processing error:', error);
+        console.error('[CSVUploadController] Error stack:', error.stack);
+        console.error('[CSVUploadController] Error code:', error.code);
+        console.error('[CSVUploadController] Error constraint:', error.constraint);
+        console.error('[CSVUploadController] Error detail:', error.detail);
+        console.error('[CSVUploadController] Error message:', error.message);
         
         // Translate technical errors to human-friendly messages
         const userFriendlyMessage = ErrorTranslator.translateError(error);

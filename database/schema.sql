@@ -1,5 +1,6 @@
 -- EDUCORE Directory Management System - Database Schema
 -- PostgreSQL Database Schema
+-- This schema matches the migration file and what the application code expects
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -14,8 +15,14 @@ CREATE TABLE IF NOT EXISTS companies (
     hr_contact_email VARCHAR(255),
     hr_contact_role VARCHAR(255),
     verification_status VARCHAR(50) DEFAULT 'pending' CHECK (verification_status IN ('pending', 'approved', 'rejected')),
-    learning_path_approval VARCHAR(50) DEFAULT 'manual' CHECK (learning_path_approval IN ('manual', 'automatic')),
-    primary_kpis TEXT,
+    approval_policy VARCHAR(50) DEFAULT 'manual' CHECK (approval_policy IN ('manual', 'auto')),
+    kpis TEXT NOT NULL DEFAULT 'Not specified',
+    logo_url VARCHAR(500),
+    -- Company settings for microservice integration
+    passing_grade INTEGER,
+    max_attempts INTEGER,
+    exercises_limited BOOLEAN DEFAULT FALSE,
+    num_of_exercises INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -50,18 +57,21 @@ CREATE TABLE IF NOT EXISTS employees (
     employee_id VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255),
-    current_role_in_company VARCHAR(255),
-    target_role_in_company VARCHAR(255),
-    preferred_language VARCHAR(50),
-    status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    password_hash VARCHAR(255) NOT NULL,
+    current_role_in_company VARCHAR(255) NOT NULL,
+    target_role_in_company VARCHAR(255) NOT NULL,
+    preferred_language VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
     bio TEXT,
+    profile_photo_url VARCHAR(500),
     linkedin_url VARCHAR(500),
     github_url VARCHAR(500),
     linkedin_data JSONB,
     github_data JSONB,
     enrichment_completed BOOLEAN DEFAULT FALSE,
     enrichment_completed_at TIMESTAMP,
+    profile_status VARCHAR(50) DEFAULT 'basic' CHECK (profile_status IN ('basic', 'enriched', 'approved', 'rejected')),
+    value_proposition TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(company_id, employee_id)
@@ -147,8 +157,57 @@ CREATE TABLE IF NOT EXISTS company_registration_requests (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Employee profile approvals table (HR approval workflow)
+CREATE TABLE IF NOT EXISTS employee_profile_approvals (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    enriched_at TIMESTAMP,
+    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP,
+    reviewed_by UUID REFERENCES employees(id) ON DELETE SET NULL,
+    rejection_reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(employee_id)
+);
+
+-- Employee requests table (for learning opportunities, trainer applications, etc.)
+CREATE TABLE IF NOT EXISTS employee_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    request_type VARCHAR(50) NOT NULL CHECK (request_type IN ('learn-new-skills', 'apply-trainer', 'self-learning', 'other')),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'in_progress', 'completed')),
+    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP,
+    reviewed_by UUID REFERENCES employees(id) ON DELETE SET NULL,
+    rejection_reason TEXT,
+    response_notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Directory Admins table (platform-level admins, not tied to any company)
+CREATE TABLE IF NOT EXISTS directory_admins (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'DIRECTORY_ADMIN' CHECK (role = 'DIRECTORY_ADMIN'),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_companies_domain ON companies(domain);
+CREATE INDEX IF NOT EXISTS idx_employees_profile_status ON employees(profile_status);
+CREATE INDEX IF NOT EXISTS idx_employee_profile_approvals_company_status ON employee_profile_approvals(company_id, status);
+CREATE INDEX IF NOT EXISTS idx_employee_profile_approvals_employee ON employee_profile_approvals(employee_id);
 CREATE INDEX IF NOT EXISTS idx_employees_email ON employees(email);
 CREATE INDEX IF NOT EXISTS idx_employees_company_employee_id ON employees(company_id, employee_id);
 CREATE INDEX IF NOT EXISTS idx_departments_company_department_id ON departments(company_id, department_id);
@@ -156,4 +215,7 @@ CREATE INDEX IF NOT EXISTS idx_teams_company_team_id ON teams(company_id, team_i
 CREATE INDEX IF NOT EXISTS idx_audit_logs_company_created ON audit_logs(company_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_created ON audit_logs(user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_employee_project_summaries_employee ON employee_project_summaries(employee_id);
-
+CREATE INDEX IF NOT EXISTS idx_employee_requests_employee ON employee_requests(employee_id);
+CREATE INDEX IF NOT EXISTS idx_employee_requests_company_status ON employee_requests(company_id, status);
+CREATE INDEX IF NOT EXISTS idx_employee_requests_type ON employee_requests(request_type);
+CREATE INDEX IF NOT EXISTS idx_directory_admins_email ON directory_admins(email);
