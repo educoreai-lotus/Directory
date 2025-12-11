@@ -116,11 +116,15 @@ class ParseCSVUseCase {
     }
 
     // Start transaction
+    console.log(`[ParseCSVUseCase] Starting transaction for company ${companyId}`);
     const client = await this.companyRepository.beginTransaction();
+    console.log(`[ParseCSVUseCase] ✅ Transaction started`);
 
     try {
       // Update company settings from company row (row 1) only
+      console.log(`[ParseCSVUseCase] Step 1: Updating company settings...`);
       await this.updateCompanySettings(companyId, companyRow, client);
+      console.log(`[ParseCSVUseCase] ✅ Step 1 complete: Company settings updated`);
       
       // Validate DECISION_MAKER requirement if approval_policy is "manual"
       const approvalPolicy = companyRow.approval_policy || 'manual';
@@ -142,15 +146,22 @@ class ParseCSVUseCase {
       const employeeIdToUuid = new Map(); // CSV employee_id -> employee UUID
 
       // Pre-validate all emails against database to catch conflicts early
+      console.log(`[ParseCSVUseCase] Pre-validating ${employeeRows.length} employee emails for conflicts...`);
       const emailConflicts = [];
       for (const row of employeeRows) {
-        const emailOwner = await this.employeeRepository.findEmailOwner(row.email);
-        if (emailOwner && emailOwner.company_id !== companyId) {
-          emailConflicts.push({
-            email: row.email,
-            row: row.rowNumber,
-            existingCompany: emailOwner.company_id
-          });
+        try {
+          const emailOwner = await this.employeeRepository.findEmailOwner(row.email);
+          if (emailOwner && emailOwner.company_id !== companyId) {
+            emailConflicts.push({
+              email: row.email,
+              row: row.rowNumber,
+              existingCompany: emailOwner.company_id
+            });
+            console.log(`[ParseCSVUseCase] ⚠️ Email conflict detected: ${row.email} (row ${row.rowNumber}) already exists in company ${emailOwner.company_id}`);
+          }
+        } catch (error) {
+          console.error(`[ParseCSVUseCase] Error checking email ${row.email}:`, error);
+          throw error;
         }
       }
 
@@ -195,19 +206,32 @@ class ParseCSVUseCase {
           ? validatedRow.password 
           : 'SecurePass123'; // Default password if not provided in CSV
         
-        const employee = await this.employeeRepository.createOrUpdate({
-          company_id: companyId,
-          employee_id: validatedRow.employee_id,
-          full_name: validatedRow.full_name,
-          email: validatedRow.email,
-          password: employeePassword, // Always provide a password (hashed in repository)
-          current_role_in_company: validatedRow.current_role_in_company,
-          target_role_in_company: validatedRow.target_role_in_company,
-          preferred_language: validatedRow.preferred_language,
-          status: validatedRow.status
-        }, client);
+        console.log(`[ParseCSVUseCase] Creating/updating employee: ${validatedRow.employee_id} (${validatedRow.email})`);
         
-        console.log(`[ParseCSVUseCase] Created/updated employee ${validatedRow.email} with password (will be hashed)`);
+        let employee;
+        try {
+          employee = await this.employeeRepository.createOrUpdate({
+            company_id: companyId,
+            employee_id: validatedRow.employee_id,
+            full_name: validatedRow.full_name,
+            email: validatedRow.email,
+            password: employeePassword, // Always provide a password (hashed in repository)
+            current_role_in_company: validatedRow.current_role_in_company,
+            target_role_in_company: validatedRow.target_role_in_company,
+            preferred_language: validatedRow.preferred_language,
+            status: validatedRow.status
+          }, client);
+          
+          console.log(`[ParseCSVUseCase] ✅ Created/updated employee ${validatedRow.email} (ID: ${employee.id})`);
+        } catch (employeeError) {
+          console.error(`[ParseCSVUseCase] ❌ ERROR creating employee ${validatedRow.employee_id} (${validatedRow.email}):`);
+          console.error('  - Error message:', employeeError.message);
+          console.error('  - Error code:', employeeError.code);
+          console.error('  - Error constraint:', employeeError.constraint);
+          console.error('  - Error detail:', employeeError.detail);
+          console.error('  - Error stack:', employeeError.stack);
+          throw employeeError; // Re-throw to trigger transaction rollback
+        }
 
         createdEmployees.set(validatedRow.employee_id, employee.id);
         employeeIdToUuid.set(validatedRow.employee_id, employee.id);
@@ -272,8 +296,22 @@ class ParseCSVUseCase {
       };
     } catch (error) {
       // Rollback transaction on error
-      await this.companyRepository.rollbackTransaction(client);
-      console.error('[ParseCSVUseCase] Error processing CSV:', error);
+      console.error('[ParseCSVUseCase] ❌ ERROR processing CSV - starting rollback');
+      try {
+        await this.companyRepository.rollbackTransaction(client);
+        console.error('[ParseCSVUseCase] ✅ Transaction rolled back successfully');
+      } catch (rollbackError) {
+        console.error('[ParseCSVUseCase] ❌ ERROR during rollback:', rollbackError);
+      }
+      
+      // Log comprehensive error details
+      console.error('[ParseCSVUseCase] Error details:');
+      console.error('  - Message:', error.message);
+      console.error('  - Code:', error.code);
+      console.error('  - Constraint:', error.constraint);
+      console.error('  - Detail:', error.detail);
+      console.error('  - Stack:', error.stack);
+      
       // Re-throw with original message (will be translated by controller)
       throw error;
     }
