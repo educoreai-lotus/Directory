@@ -45,8 +45,17 @@ app.use(cors({
   origin: true, // Allow all origins
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Content-Length', 'X-Requested-With']
 }));
+
+// Add request logging middleware to track all incoming requests
+app.use((req, res, next) => {
+  console.log(`[Express] ${req.method} ${req.url}`);
+  console.log(`[Express] Headers:`, JSON.stringify(req.headers, null, 2));
+  console.log(`[Express] Content-Type:`, req.headers['content-type']);
+  next();
+});
+
 // Note: parseRequest must come before express.json for stringified JSON
 // But multer (file uploads) needs to be handled separately in the route
 app.use(express.json());
