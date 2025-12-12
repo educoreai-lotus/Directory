@@ -55,21 +55,66 @@ const authMiddleware = async (req, res, next) => {
   if (process.env.AUTH_MODE === 'dummy') {
     console.log('[authMiddleware] AUTH_MODE=dummy, skipping authentication for:', req.path);
     
-    // Extract companyId from request params or body for dummy user
-    // This allows enrollment and other company-scoped operations to work
-    const companyId = req.params?.companyId || req.params?.id || req.body?.companyId || req.parsedBody?.companyId;
-    
-    req.user = { 
-      id: 'dummy-user', 
-      isHR: true, 
-      isAdmin: false,
-      companyId: companyId, // Set companyId from request for company-scoped operations
-      company_id: companyId // Also set company_id for compatibility
-    };
-    req.token = 'dummy-token';
-    
-    console.log('[authMiddleware] Dummy user created with companyId:', companyId);
-    return next();
+    // In dummy mode, we still need to extract the real employee ID from the token
+    // Token format: dummy-token-{employeeId}-{email}-{timestamp}
+    // We use DummyAuthProvider to parse the token and get the real user data
+    try {
+      const provider = getAuthProvider();
+      const token = provider.extractTokenFromHeaders(req.headers);
+      
+      if (token && token.startsWith('dummy-token-')) {
+        // Validate token to extract real user data
+        const validationResult = await provider.validateToken(token);
+        if (validationResult.valid && validationResult.user) {
+          // Use the real user data from token
+          req.user = validationResult.user;
+          req.token = token;
+          
+          // Extract companyId from request params or body if not in user object
+          const companyId = req.params?.companyId || req.params?.id || req.body?.companyId || req.parsedBody?.companyId || req.user.companyId;
+          if (companyId) {
+            req.user.companyId = companyId;
+            req.user.company_id = companyId;
+          }
+          
+          console.log('[authMiddleware] Dummy mode: Extracted real user from token:', {
+            id: req.user.id,
+            email: req.user.email,
+            companyId: req.user.companyId
+          });
+          return next();
+        }
+      }
+      
+      // Fallback: If token parsing fails, use dummy user but try to extract companyId
+      const companyId = req.params?.companyId || req.params?.id || req.body?.companyId || req.parsedBody?.companyId;
+      
+      req.user = { 
+        id: 'dummy-user', 
+        isHR: true, 
+        isAdmin: false,
+        companyId: companyId,
+        company_id: companyId
+      };
+      req.token = token || 'dummy-token';
+      
+      console.warn('[authMiddleware] Dummy mode: Could not parse token, using fallback dummy user');
+      console.log('[authMiddleware] Dummy user created with companyId:', companyId);
+      return next();
+    } catch (error) {
+      console.error('[authMiddleware] Error parsing dummy token:', error);
+      // Fallback to basic dummy user
+      const companyId = req.params?.companyId || req.params?.id || req.body?.companyId || req.parsedBody?.companyId;
+      req.user = { 
+        id: 'dummy-user', 
+        isHR: true, 
+        isAdmin: false,
+        companyId: companyId,
+        company_id: companyId
+      };
+      req.token = 'dummy-token';
+      return next();
+    }
   }
 
   try {
