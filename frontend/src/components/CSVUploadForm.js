@@ -57,6 +57,15 @@ function CSVUploadForm({ onFileSelect, onUpload, isUploading, companyId }) {
       }
       return;
     }
+    
+    // Verify file still exists before uploading
+    if (!selectedFile || !(selectedFile instanceof File)) {
+      console.error('[CSVUploadForm] File reference is invalid:', selectedFile);
+      alert('File reference lost. Please select the file again.');
+      return;
+    }
+    
+    console.log('[CSVUploadForm] Uploading file:', selectedFile.name, 'Size:', selectedFile.size);
     onUpload(selectedFile);
   };
 

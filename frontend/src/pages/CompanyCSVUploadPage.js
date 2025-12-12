@@ -29,6 +29,15 @@ function CompanyCSVUploadPage() {
       return;
     }
 
+    // Verify file is valid before starting upload
+    if (!file || !(file instanceof File)) {
+      console.error('[CompanyCSVUploadPage] Invalid file reference:', file);
+      setError('File reference is invalid. Please select the file again.');
+      return;
+    }
+
+    console.log('[CompanyCSVUploadPage] Starting upload for file:', file.name, 'Size:', file.size);
+
     setIsUploading(true);
     setError(null);
     setUploadResult(null);

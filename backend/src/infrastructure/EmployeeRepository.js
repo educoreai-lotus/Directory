@@ -402,14 +402,27 @@ class EmployeeRepository {
    * @returns {Promise<Object>} Created relationship
    */
   async assignToTeam(employeeId, teamId, client = null) {
-    const query = `
-      INSERT INTO employee_teams (employee_id, team_id)
-      VALUES ($1, $2)
-      ON CONFLICT (employee_id, team_id) DO NOTHING
-      RETURNING *
+    // First check if the assignment already exists
+    const checkQuery = `
+      SELECT * FROM employee_teams 
+      WHERE employee_id = $1 AND team_id = $2
     `;
     const queryRunner = client || this.pool;
-    const result = await queryRunner.query(query, [employeeId, teamId]);
+    const checkResult = await queryRunner.query(checkQuery, [employeeId, teamId]);
+    
+    if (checkResult.rows.length > 0) {
+      // Assignment already exists, return it
+      console.log(`[EmployeeRepository] Employee ${employeeId} already assigned to team ${teamId}`);
+      return checkResult.rows[0];
+    }
+    
+    // Assignment doesn't exist, insert it
+    const insertQuery = `
+      INSERT INTO employee_teams (employee_id, team_id)
+      VALUES ($1, $2)
+      RETURNING *
+    `;
+    const result = await queryRunner.query(insertQuery, [employeeId, teamId]);
     return result.rows[0];
   }
 
@@ -422,14 +435,27 @@ class EmployeeRepository {
    * @returns {Promise<Object>} Created relationship
    */
   async assignManager(employeeId, managerId, relationshipType, client = null) {
-    const query = `
-      INSERT INTO employee_managers (employee_id, manager_id, relationship_type)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (employee_id, manager_id, relationship_type) DO NOTHING
-      RETURNING *
+    // First check if the relationship already exists
+    const checkQuery = `
+      SELECT * FROM employee_managers 
+      WHERE employee_id = $1 AND manager_id = $2 AND relationship_type = $3
     `;
     const queryRunner = client || this.pool;
-    const result = await queryRunner.query(query, [employeeId, managerId, relationshipType]);
+    const checkResult = await queryRunner.query(checkQuery, [employeeId, managerId, relationshipType]);
+    
+    if (checkResult.rows.length > 0) {
+      // Relationship already exists, return it
+      console.log(`[EmployeeRepository] Manager relationship already exists for employee ${employeeId} and manager ${managerId}`);
+      return checkResult.rows[0];
+    }
+    
+    // Relationship doesn't exist, insert it
+    const insertQuery = `
+      INSERT INTO employee_managers (employee_id, manager_id, relationship_type)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `;
+    const result = await queryRunner.query(insertQuery, [employeeId, managerId, relationshipType]);
     return result.rows[0];
   }
 
