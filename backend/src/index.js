@@ -78,12 +78,14 @@ app.use((req, res, next) => {
   express.urlencoded({ extended: true })(req, res, next);
 });
 
-// Conditional parseRequest middleware - skip for user-facing routes
+// Conditional parseRequest middleware - skip for user-facing routes and file uploads
 app.use((req, res, next) => {
   if (
     req.path.includes('/manual-data') ||
-    req.path.includes('/upload-cv')
+    req.path.includes('/upload-cv') ||
+    req.path.includes('/upload') // Skip for CSV uploads
   ) {
+    console.log('[Express] Skipping parseRequest for:', req.path);
     return next();
   }
   return parseRequest(req, res, next);
