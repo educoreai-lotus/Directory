@@ -33,68 +33,68 @@ class ParseCSVUseCase {
     
     try {
       // Step 1: Parse CSV
-    const rawRows = await this.csvParser.parse(fileBuffer);
-    console.log(`[ParseCSVUseCase] Parsed ${rawRows.length} rows from CSV`);
+      const rawRows = await this.csvParser.parse(fileBuffer);
+      console.log(`[ParseCSVUseCase] Parsed ${rawRows.length} rows from CSV`);
 
-    if (rawRows.length === 0) {
-      throw new Error('CSV file is empty or contains no data rows');
-    }
+      if (rawRows.length === 0) {
+        throw new Error('CSV file is empty or contains no data rows');
+      }
 
-    // Step 2: Separate company row (row 1) from employee rows (rows 2+)
-    const companyRow = rawRows[0];
-    const employeeRows = rawRows.slice(1);
+      // Step 2: Separate company row (row 1) from employee rows (rows 2+)
+      const companyRow = rawRows[0];
+      const employeeRows = rawRows.slice(1);
 
-    if (employeeRows.length === 0) {
-      throw new Error('CSV file must contain at least one employee row (row 2+)');
-    }
+      if (employeeRows.length === 0) {
+        throw new Error('CSV file must contain at least one employee row (row 2+)');
+      }
 
-    // Step 3: Normalize company row (row 1)
-    const companyRowNumber = companyRow._csvLineNumber || 2; // Row 2 in CSV (after header)
-    const normalizedCompanyRow = this.csvParser.normalizeCompanyRow(companyRow, companyRowNumber);
-    console.log(`[ParseCSVUseCase] Normalized company row from CSV row ${companyRowNumber}`);
+      // Step 3: Normalize company row (row 1)
+      const companyRowNumber = companyRow._csvLineNumber || 2; // Row 2 in CSV (after header)
+      const normalizedCompanyRow = this.csvParser.normalizeCompanyRow(companyRow, companyRowNumber);
+      console.log(`[ParseCSVUseCase] Normalized company row from CSV row ${companyRowNumber}`);
 
-    // Step 4: Normalize employee rows (rows 2+)
-    const normalizedEmployeeRows = employeeRows.map((row) => {
-      // Use the actual CSV line number if stored during parsing, otherwise fall back to index + 3
-      const rowNumber = row._csvLineNumber || (employeeRows.indexOf(row) + 3);
-      return this.csvParser.normalizeEmployeeRow(row, rowNumber);
-    });
-    console.log(`[ParseCSVUseCase] Normalized ${normalizedEmployeeRows.length} employee rows`);
+      // Step 4: Normalize employee rows (rows 2+)
+      const normalizedEmployeeRows = employeeRows.map((row) => {
+        // Use the actual CSV line number if stored during parsing, otherwise fall back to index + 3
+        const rowNumber = row._csvLineNumber || (employeeRows.indexOf(row) + 3);
+        return this.csvParser.normalizeEmployeeRow(row, rowNumber);
+      });
+      console.log(`[ParseCSVUseCase] Normalized ${normalizedEmployeeRows.length} employee rows`);
 
-    // Step 5: Validate CSV data (company row + employee rows)
-    const allRows = [normalizedCompanyRow, ...normalizedEmployeeRows];
-    const validationResult = this.csvValidator.validate(allRows, companyId, normalizedCompanyRow);
-    console.log(`[ParseCSVUseCase] Validation complete: ${validationResult.validRows.length} valid rows, ${validationResult.errors.length} errors, ${validationResult.warnings.length} warnings`);
-    
-    // Log first few errors for debugging
-    if (validationResult.errors.length > 0) {
-      console.log(`[ParseCSVUseCase] First 5 errors:`, validationResult.errors.slice(0, 5));
-    }
+      // Step 5: Validate CSV data (company row + employee rows)
+      const allRows = [normalizedCompanyRow, ...normalizedEmployeeRows];
+      const validationResult = this.csvValidator.validate(allRows, companyId, normalizedCompanyRow);
+      console.log(`[ParseCSVUseCase] Validation complete: ${validationResult.validRows.length} valid rows, ${validationResult.errors.length} errors, ${validationResult.warnings.length} warnings`);
+      
+      // Log first few errors for debugging
+      if (validationResult.errors.length > 0) {
+        console.log(`[ParseCSVUseCase] First 5 errors:`, validationResult.errors.slice(0, 5));
+      }
 
-    // Step 4: If there are critical errors, return validation result without processing
-    if (!validationResult.isValid) {
-      return {
-        success: false,
-        validation: validationResult,
-        created: {
-          departments: 0,
-          teams: 0,
-          employees: 0
-        },
-        message: 'CSV validation failed. Please correct errors before proceeding.'
-      };
-    }
+      // Step 4: If there are critical errors, return validation result without processing
+      if (!validationResult.isValid) {
+        return {
+          success: false,
+          validation: validationResult,
+          created: {
+            departments: 0,
+            teams: 0,
+            employees: 0
+          },
+          message: 'CSV validation failed. Please correct errors before proceeding.'
+        };
+      }
 
-    // Step 6: Process valid rows and create database records
-    // Separate company row from employee rows
-    const validCompanyRow = validationResult.validRows.find(r => r.rowNumber === companyRowNumber);
-    const validEmployeeRows = validationResult.validRows.filter(r => r.rowNumber !== companyRowNumber);
-    
-    if (!validCompanyRow) {
-      throw new Error('Company row (row 1) validation failed. Please check company-level fields.');
-    }
+      // Step 6: Process valid rows and create database records
+      // Separate company row from employee rows
+      const validCompanyRow = validationResult.validRows.find(r => r.rowNumber === companyRowNumber);
+      const validEmployeeRows = validationResult.validRows.filter(r => r.rowNumber !== companyRowNumber);
+      
+      if (!validCompanyRow) {
+        throw new Error('Company row (row 1) validation failed. Please check company-level fields.');
+      }
 
-    const processingResult = await this.processValidRows(validCompanyRow, validEmployeeRows, companyId);
+      const processingResult = await this.processValidRows(validCompanyRow, validEmployeeRows, companyId);
 
       console.log(`[ParseCSVUseCase] ✅ CSV processing completed successfully`);
       return {
