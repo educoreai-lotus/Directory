@@ -294,19 +294,28 @@ apiRouter.post('/companies/:id/verify', (req, res, next) => {
   companyVerificationController.verify(req, res, next);
 });
 
-// CSV Upload
+// CSV Upload - NO AUTH REQUIRED (handled by authMiddleware in dummy mode)
+// Route: POST /api/v1/companies/:id/upload
 apiRouter.post('/companies/:id/upload', (req, res, next) => {
   console.log('[index.js] ========== CSV UPLOAD ROUTE HIT ==========');
   console.log('[index.js] Route: POST /api/v1/companies/:id/upload');
+  console.log('[index.js] Full URL:', req.originalUrl);
   console.log('[index.js] Company ID:', req.params.id);
   console.log('[index.js] Content-Type:', req.headers['content-type']);
   console.log('[index.js] Content-Length:', req.headers['content-length']);
+  console.log('[index.js] Authorization header:', req.headers['authorization'] ? 'present' : 'missing');
+  console.log('[index.js] AUTH_MODE:', process.env.AUTH_MODE || 'not set (defaults to dummy)');
+  console.log('[index.js] csvUploadController exists:', !!csvUploadController);
+  
   try {
     checkController(csvUploadController, 'CSVUploadController');
+    console.log('[index.js] ✅ Controller check passed, calling csvUploadController.uploadCSV()');
     csvUploadController.uploadCSV(req, res, next);
   } catch (error) {
-    console.error('[index.js] Error in CSV upload route:', error);
+    console.error('[index.js] ❌ ERROR in CSV upload route handler:');
+    console.error('[index.js] Error message:', error.message);
     console.error('[index.js] Error stack:', error.stack);
+    console.error('[index.js] Error name:', error.name);
     next(error);
   }
 });
@@ -579,12 +588,17 @@ app.post('/api/fill-content-metrics', (req, res) => {
   }
 });
 
+// Mount API router BEFORE error handlers
+console.log('[index.js] ========== MOUNTING API ROUTER ==========');
+console.log('[index.js] Mounting apiRouter at /api/v1');
+console.log('[index.js] Total routes registered:', apiRouter.stack.length);
 app.use('/api/v1', apiRouter);
+console.log('[index.js] ✅ API router mounted at /api/v1');
 
-// Log enrollment route registration
+// Log critical route registrations
+console.log('[index.js] ✅ CSV Upload route registered: POST /api/v1/companies/:id/upload');
 console.log('[index.js] ✅ Enrollment route registered: POST /api/v1/companies/:companyId/enrollments/career-path');
 console.log('[index.js] ✅ EnrollmentController initialized:', !!enrollmentController);
-// Log chatbot route registration
 console.log('[index.js] ✅ Chatbot route registered: POST /api/v1/chatbot/query');
 console.log('[index.js] ✅ ChatbotController initialized:', !!chatbotController);
 
@@ -598,13 +612,29 @@ app.use((req, res) => {
   });
 });
 
-// Error handler
+// Error handler - MUST be after all routes
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(500).json({
+  console.error('[index.js] ========== GLOBAL ERROR HANDLER ==========');
+  console.error('[index.js] Error caught by global error handler:');
+  console.error('[index.js] Error message:', err.message);
+  console.error('[index.js] Error code:', err.code);
+  console.error('[index.js] Error constraint:', err.constraint);
+  console.error('[index.js] Error detail:', err.detail);
+  console.error('[index.js] Error stack:', err.stack);
+  console.error('[index.js] Request path:', req.path);
+  console.error('[index.js] Request method:', req.method);
+  
+  // Don't send response if headers already sent
+  if (res.headersSent) {
+    console.error('[index.js] Headers already sent, cannot send error response');
+    return next(err);
+  }
+  
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({
     requester_service: 'directory_service',
     response: {
-      error: 'Internal server error'
+      error: err.message || 'Internal server error'
     }
   });
 });

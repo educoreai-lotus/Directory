@@ -23,8 +23,12 @@ const upload = multer({
 
 class CSVUploadController {
   constructor() {
+    console.log('[CSVUploadController] ========== CONSTRUCTOR CALLED ==========');
+    console.log('[CSVUploadController] Initializing CSVUploadController...');
     this.parseCSVUseCase = new ParseCSVUseCase();
     this.upload = upload.single('csvFile');
+    console.log('[CSVUploadController] ✅ CSVUploadController initialized successfully');
+    console.log('[CSVUploadController] Multer configured for single file upload with field name: csvFile');
   }
 
   /**

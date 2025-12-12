@@ -27,9 +27,12 @@ class ParseCSVUseCase {
    * @returns {Promise<Object>} Processing result with validation and created records
    */
   async execute(fileBuffer, companyId) {
-    console.log(`[ParseCSVUseCase] Starting CSV processing for company ${companyId}`);
-
-    // Step 1: Parse CSV
+    console.log(`[ParseCSVUseCase] ========== EXECUTE START ==========`);
+    console.log(`[ParseCSVUseCase] Company ID: ${companyId}`);
+    console.log(`[ParseCSVUseCase] File buffer size: ${fileBuffer ? fileBuffer.length : 0} bytes`);
+    
+    try {
+      // Step 1: Parse CSV
     const rawRows = await this.csvParser.parse(fileBuffer);
     console.log(`[ParseCSVUseCase] Parsed ${rawRows.length} rows from CSV`);
 
@@ -93,12 +96,25 @@ class ParseCSVUseCase {
 
     const processingResult = await this.processValidRows(validCompanyRow, validEmployeeRows, companyId);
 
+      console.log(`[ParseCSVUseCase] ✅ CSV processing completed successfully`);
       return {
         success: true,
         validation: validationResult,
         created: processingResult,
         message: `Successfully processed ${validEmployeeRows.length} employees, ${processingResult.departments} departments, and ${processingResult.teams} teams.`
       };
+    } catch (error) {
+      console.error(`[ParseCSVUseCase] ❌ ERROR in execute():`);
+      console.error(`[ParseCSVUseCase] Error message:`, error.message);
+      console.error(`[ParseCSVUseCase] Error code:`, error.code);
+      console.error(`[ParseCSVUseCase] Error constraint:`, error.constraint);
+      console.error(`[ParseCSVUseCase] Error detail:`, error.detail);
+      console.error(`[ParseCSVUseCase] Error stack:`, error.stack);
+      console.error(`[ParseCSVUseCase] Error name:`, error.name);
+      
+      // Re-throw to be handled by controller
+      throw error;
+    }
   }
 
   /**
