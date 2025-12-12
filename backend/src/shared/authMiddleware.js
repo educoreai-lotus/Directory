@@ -54,8 +54,21 @@ const authMiddleware = async (req, res, next) => {
   // Skip authentication if AUTH_MODE=dummy
   if (process.env.AUTH_MODE === 'dummy') {
     console.log('[authMiddleware] AUTH_MODE=dummy, skipping authentication for:', req.path);
-    req.user = { id: 'dummy-user', isHR: true, isAdmin: false };
+    
+    // Extract companyId from request params or body for dummy user
+    // This allows enrollment and other company-scoped operations to work
+    const companyId = req.params?.companyId || req.params?.id || req.body?.companyId || req.parsedBody?.companyId;
+    
+    req.user = { 
+      id: 'dummy-user', 
+      isHR: true, 
+      isAdmin: false,
+      companyId: companyId, // Set companyId from request for company-scoped operations
+      company_id: companyId // Also set company_id for compatibility
+    };
     req.token = 'dummy-token';
+    
+    console.log('[authMiddleware] Dummy user created with companyId:', companyId);
     return next();
   }
 
