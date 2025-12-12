@@ -26,6 +26,21 @@ function resetAuthProvider() {
 }
 
 /**
+ * Skip Authentication in Dummy Mode Middleware
+ * When AUTH_MODE=dummy, skip all authentication checks and treat caller as authenticated
+ * This allows CSV uploads and other operations to work without tokens in dummy mode
+ */
+const skipAuthInDummyMode = (req, res, next) => {
+  if (process.env.AUTH_MODE === 'dummy') {
+    console.log('[skipAuthInDummyMode] AUTH_MODE=dummy, skipping authentication for:', req.path);
+    req.user = { id: 'dummy-user', isHR: true, isAdmin: false };
+    req.token = 'dummy-token';
+    return next();
+  }
+  next();
+};
+
+/**
  * Authentication Middleware
  * Validates JWT token from request headers and attaches user to request
  * 
@@ -36,6 +51,14 @@ function resetAuthProvider() {
  *   });
  */
 const authMiddleware = async (req, res, next) => {
+  // Skip authentication if AUTH_MODE=dummy
+  if (process.env.AUTH_MODE === 'dummy') {
+    console.log('[authMiddleware] AUTH_MODE=dummy, skipping authentication for:', req.path);
+    req.user = { id: 'dummy-user', isHR: true, isAdmin: false };
+    req.token = 'dummy-token';
+    return next();
+  }
+
   try {
     const provider = getAuthProvider();
     const token = provider.extractTokenFromHeaders(req.headers);
@@ -176,6 +199,7 @@ module.exports = {
   optionalAuthMiddleware,
   hrOnlyMiddleware,
   adminOnlyMiddleware,
+  skipAuthInDummyMode,
   resetAuthProvider
 };
 

@@ -30,7 +30,17 @@ api.interceptors.request.use(
     console.log('[api] config.url =', config.url);
     
     // Add Authorization header if token exists
-    const token = localStorage.getItem('auth_token');
+    // In dummy mode, inject dummy token if missing
+    let token = localStorage.getItem('auth_token');
+    const isDummyMode = process.env.REACT_APP_AUTH_MODE === 'dummy' || !process.env.REACT_APP_AUTH_MODE;
+    
+    if (isDummyMode && !token) {
+      // In dummy mode, if no token exists, create and store a dummy token
+      token = 'dummy-token';
+      localStorage.setItem('auth_token', token);
+      console.log('[api] Request interceptor - Dummy mode: Created and stored dummy token');
+    }
+    
     console.log('[api] Request interceptor - Token in localStorage:', token ? `${token.substring(0, 30)}...` : 'null');
     
     if (token) {
