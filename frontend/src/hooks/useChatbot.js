@@ -2,13 +2,14 @@
 // React hook for chatbot initialization
 // Based on: CHATBOT_SCRIPT_INTEGRATION_GUIDE.md
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import config from '../config';
 
 export function useChatbot() {
   const { user, isAuthenticated } = useAuth();
-  const [botInitialized, setBotInitialized] = useState(false);
+  const botInitializedRef = useRef(false);
+  const scriptLoadedRef = useRef(false);
 
   useEffect(() => {
     // Only initialize if user is logged in
@@ -33,19 +34,28 @@ export function useChatbot() {
     // Remove trailing slash to avoid double slashes
     ragServiceUrl = ragServiceUrl.replace(/\/$/, '');
 
+    // DISABLE CHATBOT: DIRECTORY microservice is not supported by bot.js
+    // The bot only accepts "ASSESSMENT" or "DEVLAB" microservices
+    // TODO: Enable when DIRECTORY microservice is supported by the chatbot
+    console.log('[useChatbot] Chatbot disabled: DIRECTORY microservice not supported by bot.js');
+    console.log('[useChatbot] Supported microservices: ASSESSMENT, DEVLAB');
+    return;
+
+    // NOTE: Below code is disabled until DIRECTORY microservice is supported
+    /*
     // Check if script is already loaded
-    if (window.EDUCORE_BOT_LOADED) {
+    if (window.EDUCORE_BOT_LOADED || scriptLoadedRef.current) {
       // Script already loaded, just initialize
-      if (window.initializeEducoreBot && !botInitialized) {
+      if (window.initializeEducoreBot && !botInitializedRef.current) {
         console.log('[useChatbot] Script already loaded, initializing chatbot...');
         try {
           window.initializeEducoreBot({
-            microservice: 'DIRECTORY',
+            microservice: 'ASSESSMENT', // Use ASSESSMENT as fallback until DIRECTORY is supported
             userId: user.id,
             token: token,
             tenantId: user.companyId || 'default'
           });
-          setBotInitialized(true);
+          botInitializedRef.current = true;
           console.log('[useChatbot] Chatbot initialized successfully');
         } catch (error) {
           console.error('[useChatbot] Error initializing chatbot:', error);
@@ -60,15 +70,16 @@ export function useChatbot() {
       
       script.onload = () => {
         console.log('[useChatbot] Chatbot script loaded successfully');
-        if (window.initializeEducoreBot && !botInitialized) {
+        scriptLoadedRef.current = true;
+        if (window.initializeEducoreBot && !botInitializedRef.current) {
           try {
             window.initializeEducoreBot({
-              microservice: 'DIRECTORY',
+              microservice: 'ASSESSMENT', // Use ASSESSMENT as fallback until DIRECTORY is supported
               userId: user.id,
               token: token,
               tenantId: user.companyId || 'default'
             });
-            setBotInitialized(true);
+            botInitializedRef.current = true;
             console.log('[useChatbot] Chatbot initialized successfully');
           } catch (error) {
             console.error('[useChatbot] Error initializing chatbot:', error);
@@ -85,16 +96,17 @@ export function useChatbot() {
 
     // Cleanup on unmount
     return () => {
-      if (window.destroyEducoreBot) {
+      if (window.destroyEducoreBot && botInitializedRef.current) {
         try {
           window.destroyEducoreBot();
-          setBotInitialized(false);
+          botInitializedRef.current = false;
           console.log('[useChatbot] Chatbot destroyed');
         } catch (error) {
           console.error('[useChatbot] Error destroying chatbot:', error);
         }
       }
     };
-  }, [user, isAuthenticated, botInitialized]);
+    */
+  }, [user, isAuthenticated]); // Removed botInitialized from dependencies to prevent loop
 }
 
