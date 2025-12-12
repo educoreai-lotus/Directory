@@ -149,7 +149,10 @@ const config = {
   },
   
   directory: {
-    baseUrl: process.env.DIRECTORY_URL || 'https://directory3-production.up.railway.app',
+    // Auto-detect Railway URL from environment, or use DIRECTORY_URL, or fallback to old URL
+    baseUrl: process.env.RAILWAY_PUBLIC_DOMAIN 
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+      : (process.env.DIRECTORY_URL || 'https://directory-production-addc.up.railway.app'),
     endpoint: '/api/fill-content-metrics'
   },
   
@@ -157,13 +160,23 @@ const config = {
   linkedin: {
     clientId: process.env.LINKEDIN_CLIENT_ID,
     clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
-    redirectUri: process.env.LINKEDIN_REDIRECT_URI || `${process.env.DIRECTORY_URL || 'https://directory3-production.up.railway.app'}/api/v1/oauth/linkedin/callback`
+    redirectUri: process.env.LINKEDIN_REDIRECT_URI || (() => {
+      const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
+        ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+        : (process.env.DIRECTORY_URL || 'https://directory-production-addc.up.railway.app');
+      return `${baseUrl}/api/v1/oauth/linkedin/callback`;
+    })()
   },
   
   github: {
     clientId: process.env.GITHUB_CLIENT_ID,
     clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    redirectUri: process.env.GITHUB_REDIRECT_URI || `${process.env.DIRECTORY_URL || 'https://directory3-production.up.railway.app'}/api/v1/oauth/github/callback`
+    redirectUri: process.env.GITHUB_REDIRECT_URI || (() => {
+      const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
+        ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+        : (process.env.DIRECTORY_URL || 'https://directory-production-addc.up.railway.app');
+      return `${baseUrl}/api/v1/oauth/github/callback`;
+    })()
   },
   
   // OpenAI AI Configuration
