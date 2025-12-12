@@ -47,9 +47,17 @@ function CSVUploadForm({ onFileSelect, onUpload, isUploading, companyId }) {
   };
 
   const handleUpload = () => {
-    if (selectedFile) {
-      onUpload(selectedFile);
+    // Prevent duplicate uploads
+    if (!selectedFile || isUploading) {
+      if (!selectedFile) {
+        console.log('[CSVUploadForm] No file selected, ignoring upload');
+      }
+      if (isUploading) {
+        console.log('[CSVUploadForm] Upload already in progress, ignoring duplicate call');
+      }
+      return;
     }
+    onUpload(selectedFile);
   };
 
   return (

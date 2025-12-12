@@ -23,6 +23,12 @@ function CompanyCSVUploadPage() {
   };
 
   const handleUpload = async (file) => {
+    // Prevent duplicate uploads
+    if (isUploading) {
+      console.log('[CompanyCSVUploadPage] Upload already in progress, ignoring duplicate call');
+      return;
+    }
+
     setIsUploading(true);
     setError(null);
     setUploadResult(null);
