@@ -370,14 +370,27 @@ class EmployeeRepository {
    * @returns {Promise<Object>} Created role
    */
   async createRole(employeeId, roleType, client = null) {
-    const query = `
-      INSERT INTO employee_roles (employee_id, role_type)
-      VALUES ($1, $2)
-      ON CONFLICT (employee_id, role_type) DO NOTHING
-      RETURNING *
+    // First check if the role already exists
+    const checkQuery = `
+      SELECT * FROM employee_roles 
+      WHERE employee_id = $1 AND role_type = $2
     `;
     const queryRunner = client || this.pool;
-    const result = await queryRunner.query(query, [employeeId, roleType]);
+    const checkResult = await queryRunner.query(checkQuery, [employeeId, roleType]);
+    
+    if (checkResult.rows.length > 0) {
+      // Role already exists, return it
+      console.log(`[EmployeeRepository] Role ${roleType} already exists for employee ${employeeId}`);
+      return checkResult.rows[0];
+    }
+    
+    // Role doesn't exist, insert it
+    const insertQuery = `
+      INSERT INTO employee_roles (employee_id, role_type)
+      VALUES ($1, $2)
+      RETURNING *
+    `;
+    const result = await queryRunner.query(insertQuery, [employeeId, roleType]);
     return result.rows[0];
   }
 

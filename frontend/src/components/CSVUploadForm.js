@@ -113,6 +113,7 @@ function CSVUploadForm({ onFileSelect, onUpload, isUploading, companyId }) {
       {selectedFile && (
         <div className="mt-4 flex justify-center">
           <button
+            type="button"
             onClick={handleUpload}
             disabled={isUploading}
             className={`px-6 py-3 rounded-lg font-medium transition-all ${
