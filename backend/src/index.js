@@ -58,8 +58,25 @@ app.use((req, res, next) => {
 
 // Note: parseRequest must come before express.json for stringified JSON
 // But multer (file uploads) needs to be handled separately in the route
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// CRITICAL: Skip body parsing for multipart/form-data (file uploads)
+// Multer will handle parsing these requests
+app.use((req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('multipart/form-data')) {
+    console.log('[Express] Skipping body parsing for multipart/form-data request:', req.path);
+    return next(); // Skip body parsing, let multer handle it
+  }
+  // For non-multipart requests, use standard body parsers
+  express.json()(req, res, next);
+});
+
+app.use((req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('multipart/form-data')) {
+    return next(); // Skip urlencoded parsing for multipart
+  }
+  express.urlencoded({ extended: true })(req, res, next);
+});
 
 // Conditional parseRequest middleware - skip for user-facing routes
 app.use((req, res, next) => {
