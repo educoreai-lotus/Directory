@@ -1,5 +1,6 @@
 company_name,industry,logo_url,approval_policy,kpis,passing_grade,max_attempts,exercises_limited,num_of_exercises,learning_path_approval,employee_id,full_name,email,role_type,department_id,department_name,team_id,team_name,manager_id,password,current_role_in_company,target_role_in_company,preferred_language,status,ai_enabled,public_publish_enable
 TechCorp Global,Software Development,https://via.placeholder.com/200x200?text=TechCorp,manual,Employee Satisfaction;Code Quality;Delivery Speed;Client Retention,80,5,true,20,manual,,,,,,,,,,,,,,
+,,,,,,,,,,HR001,Jennifer Martinez,jennifer.martinez@techcorp.global,REGULAR_EMPLOYEE + DEPARTMENT_MANAGER,DEPT004,Human Resources,TEAM006,HR Management,,SecurePass456,Human Resources,Human Resources,en,active,false,false
 ,,,,,,,,,,TC001,Michael Chen,michael.chen@techcorp.global,REGULAR_EMPLOYEE + DEPARTMENT_MANAGER,DEPT001,Engineering,TEAM001,Backend Development,,SecurePass456,Senior Backend Engineer,Lead Backend Engineer,en,active,false,false
 ,,,,,,,,,,TC002,Sarah Johnson,sarah.johnson@techcorp.global,TRAINER + DEPARTMENT_MANAGER,DEPT002,Product,TEAM002,Product Strategy,TC001,SecurePass456,Product Manager,Senior Product Manager,en,active,true,true
 ,,,,,,,,,,TC003,David Kim,david.kim@techcorp.global,REGULAR_EMPLOYEE,DEPT001,Engineering,TEAM003,Frontend Development,TC001,SecurePass456,Frontend Developer,Senior Frontend Developer,en,active,false,false
@@ -7,7 +8,8 @@ TechCorp Global,Software Development,https://via.placeholder.com/200x200?text=Te
 ,,,,,,,,,,TC005,James Wilson,james.wilson@techcorp.global,REGULAR_EMPLOYEE,DEPT003,Sales,TEAM005,Enterprise Sales,TC006,SecurePass456,Sales Representative,Senior Sales Representative,en,active,false,false
 ,,,,,,,,,,TC006,Robert Brown,robert.brown@techcorp.global,TRAINER + DEPARTMENT_MANAGER + DECISION_MAKER,DEPT003,Sales,TEAM005,Enterprise Sales,TC001,SecurePass456,Sales Director,Sales VP,en,active,true,true
 ,,,,,,,,,,TC007,Lisa Anderson,lisa.anderson@techcorp.global,REGULAR_EMPLOYEE,DEPT004,Marketing,TEAM006,Digital Marketing,TC008,SecurePass456,Marketing Specialist,Marketing Manager,en,active,false,false
-,,,,,,,,,,TC008,Jennifer Martinez,jennifer.martinez@techcorp.global,DEPARTMENT_MANAGER,DEPT004,Marketing,TEAM006,Digital Marketing,TC001,SecurePass456,Marketing Manager,Marketing Director,en,active,false,false
+,,,,,,,,,,TC008,Patricia Williams,patricia.williams@techcorp.global,DEPARTMENT_MANAGER,DEPT004,Marketing,TEAM006,Digital Marketing,TC001,SecurePass456,Marketing Manager,Marketing Director,en,active,false,false
+,,,,,,,,,,TC016,Amanda Foster,amanda.foster@techcorp.global,REGULAR_EMPLOYEE,DEPT004,Human Resources,TEAM013,Recruitment,HR001,SecurePass456,HR Specialist,HR Manager,en,active,false,false
 ,,,,,,,,,,TC009,Christopher Lee,christopher.lee@techcorp.global,REGULAR_EMPLOYEE,DEPT001,Engineering,TEAM007,DevOps,TC001,SecurePass456,DevOps Engineer,Senior DevOps Engineer,en,active,false,false
 ,,,,,,,,,,TC010,Amanda Taylor,amanda.taylor@techcorp.global,REGULAR_EMPLOYEE,DEPT005,Support,TEAM008,Customer Support,TC011,SecurePass456,Support Specialist,Support Manager,en,active,false,false
 ,,,,,,,,,,TC011,Daniel White,daniel.white@techcorp.global,DEPARTMENT_MANAGER,DEPT005,Support,TEAM008,Customer Support,TC001,SecurePass456,Support Manager,Support Director,en,active,false,false
