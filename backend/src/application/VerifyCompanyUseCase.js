@@ -159,12 +159,12 @@ class VerifyCompanyUseCase {
       throw new Error('Company not found');
     }
 
-    const updatedCompany = await this.companyRepository.updateVerificationStatus(
-      companyId,
-      'rejected'
-    );
+    // CRITICAL: Delete rejected companies from database
+    // Rejected companies should NOT be stored
+    console.log(`[VerifyCompanyUseCase] Rejecting company ${companyId} - deleting from database`);
+    await this.companyRepository.deleteById(companyId);
 
-    // TODO: Store rejection reason and log in audit_logs
+    // TODO: Store rejection reason and log in audit_logs (before deletion)
     // await auditLogger.log({
     //   action_type: 'company_rejected',
     //   company_id: companyId,
@@ -173,9 +173,9 @@ class VerifyCompanyUseCase {
     // });
 
     return {
-      company_id: updatedCompany.id,
-      verification_status: updatedCompany.verification_status,
-      message: 'Company rejected'
+      company_id: companyId,
+      verification_status: 'rejected',
+      message: 'Company rejected and removed from database'
     };
   }
 }
