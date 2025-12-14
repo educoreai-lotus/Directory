@@ -37,6 +37,16 @@ class FillContentMetricsUseCase {
       console.log('[FillContentMetricsUseCase] Payload:', JSON.stringify(payload));
       console.log('[FillContentMetricsUseCase] Response template:', JSON.stringify(responseTemplate));
 
+      // Check if this is a batch request from Learning Analytics
+      const isBatchRequest = payload?.type === 'batch' && 
+                           (requester_service === 'LearningAnalytics' || requester_service === 'learning-analytics');
+      
+      if (isBatchRequest) {
+        console.log('[FillContentMetricsUseCase] 🔄 Detected BATCH request from Learning Analytics');
+        console.log('[FillContentMetricsUseCase] Cursor:', payload.cursor || 'null (first page)');
+        return await this.handleBatchRequest(envelope);
+      }
+
       // Step 1: Generate SQL query using AI
       let sqlQuery;
       try {
@@ -261,6 +271,161 @@ class FillContentMetricsUseCase {
       payload: envelope.payload, // Preserve original payload
       response: this.buildEmptyResponse(envelope.response) // Empty response matching template
     };
+  }
+
+  /**
+   * Handle batch request from Learning Analytics (via Coordinator)
+   * Implements cursor-based pagination as per BATCH_PAGINATION_GUIDE.md
+   * @param {Object} envelope - Full Coordinator request envelope
+   * @returns {Promise<Object>} Full envelope with paginated response
+   */
+  async handleBatchRequest(envelope) {
+    const { requester_service, payload, response: responseTemplate } = envelope;
+    const cursor = payload.cursor || null; // null for first page
+    const pageSize = 1000; // Standard page size for batch requests
+
+    console.log('[FillContentMetricsUseCase] ========== BATCH REQUEST HANDLING ==========');
+    console.log('[FillContentMetricsUseCase] Cursor:', cursor || 'null (first page)');
+    console.log('[FillContentMetricsUseCase] Page size:', pageSize);
+
+    try {
+      // Step 1: Generate SQL query for data (with pagination)
+      let dataQuery;
+      try {
+        // Generate query with cursor-based pagination
+        dataQuery = await this.aiQueryGenerator.generateBatchQuery(
+          payload,
+          responseTemplate,
+          requester_service,
+          cursor,
+          pageSize
+        );
+        
+        if (!this.aiQueryGenerator.validateSQL(dataQuery)) {
+          throw new Error('Generated SQL query failed safety validation');
+        }
+      } catch (error) {
+        console.error('[FillContentMetricsUseCase] AI query generation failed:', error);
+        return this.buildEnvelopeWithEmptyResponse(envelope);
+      }
+
+      // Step 2: Generate COUNT query for total_records
+      let countQuery;
+      try {
+        countQuery = await this.aiQueryGenerator.generateCountQuery(
+          payload,
+          responseTemplate,
+          requester_service
+        );
+        
+        if (!this.aiQueryGenerator.validateSQL(countQuery)) {
+          throw new Error('Generated COUNT query failed safety validation');
+        }
+      } catch (error) {
+        console.error('[FillContentMetricsUseCase] COUNT query generation failed:', error);
+        // Continue without total count if COUNT query fails
+        countQuery = null;
+      }
+
+      // Step 3: Extract parameters from payload
+      const parameters = this.extractParameters(payload, dataQuery);
+
+      // Step 4: Execute data query
+      let queryResult;
+      try {
+        queryResult = await this.pool.query(dataQuery, parameters);
+        console.log('[FillContentMetricsUseCase] Data query executed. Rows:', queryResult.rows.length);
+      } catch (error) {
+        console.error('[FillContentMetricsUseCase] SQL execution failed:', error);
+        return this.buildEnvelopeWithEmptyResponse(envelope);
+      }
+
+      // Step 5: Execute COUNT query (if available)
+      let totalRecords = 0;
+      if (countQuery) {
+        try {
+          const countParams = this.extractParameters(payload, countQuery);
+          const countResult = await this.pool.query(countQuery, countParams);
+          totalRecords = parseInt(countResult.rows[0]?.count || 0, 10);
+          console.log('[FillContentMetricsUseCase] Total records:', totalRecords);
+        } catch (error) {
+          console.warn('[FillContentMetricsUseCase] COUNT query failed, using returned_records as total:', error.message);
+          // If COUNT fails, use returned_records as total (not ideal but better than 0)
+          totalRecords = queryResult.rows.length;
+        }
+      } else {
+        // If no COUNT query, use returned_records as total
+        totalRecords = queryResult.rows.length;
+      }
+
+      // Step 6: Map query results to response template
+      const filledResponse = this.mapResultsToTemplate(queryResult.rows, responseTemplate, payload);
+
+      // Step 7: Calculate pagination metadata
+      const returnedRecords = queryResult.rows.length;
+      const lastRecord = queryResult.rows[returnedRecords - 1];
+      
+      // Determine next_cursor (last record's primary key - typically 'id' or first UUID field)
+      let nextCursor = null;
+      if (returnedRecords > 0 && lastRecord) {
+        // Try to find the primary key (usually 'id' or first UUID field)
+        if (lastRecord.id) {
+          nextCursor = lastRecord.id;
+        } else {
+          // Find first UUID field
+          const uuidFields = Object.keys(lastRecord).filter(key => {
+            const value = lastRecord[key];
+            return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+          });
+          if (uuidFields.length > 0) {
+            nextCursor = lastRecord[uuidFields[0]];
+          }
+        }
+      }
+
+      // Determine has_more: true if returned_records equals page size AND next_cursor is not null
+      const hasMore = returnedRecords === pageSize && nextCursor !== null;
+
+      // If this is the last page, set next_cursor to null
+      if (!hasMore) {
+        nextCursor = null;
+      }
+
+      // Step 8: Add pagination metadata to response
+      filledResponse.pagination = {
+        total_records: totalRecords,
+        returned_records: returnedRecords,
+        next_cursor: nextCursor,
+        has_more: hasMore
+      };
+
+      // Add version and fetched_at if not present
+      if (!filledResponse.version) {
+        filledResponse.version = '2025-01-27'; // Current version
+      }
+      if (!filledResponse.fetched_at) {
+        filledResponse.fetched_at = new Date().toISOString();
+      }
+
+      console.log('[FillContentMetricsUseCase] ✅ Batch response prepared:');
+      console.log('[FillContentMetricsUseCase]   - Total records:', totalRecords);
+      console.log('[FillContentMetricsUseCase]   - Returned records:', returnedRecords);
+      console.log('[FillContentMetricsUseCase]   - Next cursor:', nextCursor || 'null (last page)');
+      console.log('[FillContentMetricsUseCase]   - Has more:', hasMore);
+
+      // Step 9: Return FULL envelope with original payload + filled response
+      const filledEnvelope = {
+        requester_service: requester_service,
+        payload: payload, // Preserve original payload
+        response: filledResponse // Return filled response with pagination
+      };
+
+      return filledEnvelope;
+
+    } catch (error) {
+      console.error('[FillContentMetricsUseCase] Error handling batch request:', error);
+      return this.buildEnvelopeWithEmptyResponse(envelope);
+    }
   }
 }
 

@@ -115,15 +115,132 @@ class AIQueryGenerator {
   }
 
   /**
-   * Build prompt for AI query generation
+   * Generate SQL query for batch requests with cursor-based pagination
+   * @param {Object} payload - Request payload
+   * @param {Object} responseTemplate - Response template
+   * @param {string} requesterService - Requester service name
+   * @param {string|null} cursor - Cursor for pagination (null for first page)
+   * @param {number} pageSize - Number of records per page (default: 1000)
+   * @returns {Promise<string>} Generated SQL query with pagination
+   */
+  async generateBatchQuery(payload, responseTemplate, requesterService, cursor, pageSize = 1000) {
+    if (!this.apiKey) {
+      throw new Error('AI query generation is not available. OPENAI_API_KEY is not configured.');
+    }
+
+    try {
+      const migrationContent = this.loadMigrationFiles();
+      const prompt = this.buildBatchPrompt(payload, responseTemplate, requesterService, migrationContent, cursor, pageSize);
+
+      const requestBody = {
+        model: 'gpt-4-turbo',
+        messages: [{
+          role: 'user',
+          content: prompt
+        }],
+        temperature: 0.3,
+        max_tokens: 2000
+      };
+
+      console.log('[AIQueryGenerator] ========== GENERATING BATCH SQL QUERY ==========');
+      console.log('[AIQueryGenerator] Cursor:', cursor || 'null (first page)');
+      console.log('[AIQueryGenerator] Page size:', pageSize);
+
+      const apiUrl = `${this.baseUrl}/chat/completions`;
+      const response = await axios.post(
+        apiUrl,
+        requestBody,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000
+        }
+      );
+
+      const generatedText = response.data?.choices?.[0]?.message?.content?.trim();
+      if (!generatedText) {
+        throw new Error('No SQL query generated from OpenAI API');
+      }
+
+      const sqlQuery = this.extractSQL(generatedText);
+      console.log('[AIQueryGenerator] ✅ Generated batch SQL query:', sqlQuery.substring(0, 200) + '...');
+      return sqlQuery;
+
+    } catch (error) {
+      console.error('[AIQueryGenerator] Error generating batch query:', error);
+      throw new Error(`Failed to generate batch SQL query: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generate COUNT query for total_records in batch requests
+   * @param {Object} payload - Request payload
+   * @param {Object} responseTemplate - Response template
+   * @param {string} requesterService - Requester service name
+   * @returns {Promise<string>} Generated COUNT SQL query
+   */
+  async generateCountQuery(payload, responseTemplate, requesterService) {
+    if (!this.apiKey) {
+      throw new Error('AI query generation is not available. OPENAI_API_KEY is not configured.');
+    }
+
+    try {
+      const migrationContent = this.loadMigrationFiles();
+      const prompt = this.buildCountPrompt(payload, responseTemplate, requesterService, migrationContent);
+
+      const requestBody = {
+        model: 'gpt-4-turbo',
+        messages: [{
+          role: 'user',
+          content: prompt
+        }],
+        temperature: 0.3,
+        max_tokens: 1000
+      };
+
+      console.log('[AIQueryGenerator] ========== GENERATING COUNT QUERY ==========');
+
+      const apiUrl = `${this.baseUrl}/chat/completions`;
+      const response = await axios.post(
+        apiUrl,
+        requestBody,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000
+        }
+      );
+
+      const generatedText = response.data?.choices?.[0]?.message?.content?.trim();
+      if (!generatedText) {
+        throw new Error('No COUNT query generated from OpenAI API');
+      }
+
+      const sqlQuery = this.extractSQL(generatedText);
+      console.log('[AIQueryGenerator] ✅ Generated COUNT query:', sqlQuery.substring(0, 200) + '...');
+      return sqlQuery;
+
+    } catch (error) {
+      console.error('[AIQueryGenerator] Error generating COUNT query:', error);
+      throw new Error(`Failed to generate COUNT query: ${error.message}`);
+    }
+  }
+
+  /**
+   * Build prompt for batch query generation with cursor-based pagination
    * @param {Object} payload - Request payload
    * @param {Object} responseTemplate - Response template
    * @param {string} requesterService - Requester service name
    * @param {string} migrationContent - Database schema
+   * @param {string|null} cursor - Cursor for pagination
+   * @param {number} pageSize - Page size
    * @returns {string} Prompt text
    */
-  buildPrompt(payload, responseTemplate, requesterService, migrationContent) {
-    // Load migration JSON for better schema context
+  buildBatchPrompt(payload, responseTemplate, requesterService, migrationContent, cursor, pageSize) {
     const migrationJsonPath = path.join(__dirname, '../../migrations/directory-migration.json');
     let migrationJsonContent = '';
     try {
@@ -134,8 +251,96 @@ class AIQueryGenerator {
       console.warn('[AIQueryGenerator] Could not load migration JSON:', error.message);
     }
 
-    // Business rules for field mappings and query patterns
-    const businessRules = `
+    const cursorClause = cursor 
+      ? `WHERE id > $1 ORDER BY id ASC LIMIT ${pageSize}`
+      : `ORDER BY id ASC LIMIT ${pageSize}`;
+
+    const businessRules = this.getBusinessRules();
+
+    return `You are an AI Query Builder for PostgreSQL. Generate ONLY a SELECT SQL query (no explanations, no markdown).
+
+SCHEMA (SQL Migration):
+${migrationContent}
+
+SCHEMA (JSON Migration):
+${migrationJsonContent}
+
+REQUEST:
+${JSON.stringify({ requester_service: requesterService, payload, response: responseTemplate }, null, 2)}
+
+${businessRules}
+
+BATCH PAGINATION REQUIREMENTS:
+- This is a BATCH request with cursor-based pagination
+- Cursor: ${cursor || 'null (first page)'}
+- Page size: ${pageSize} records
+- Use cursor-based pagination: ${cursor ? `WHERE id > '${cursor}'` : 'No cursor (first page)'}
+- Order by primary key (typically 'id') ASC
+- Limit to ${pageSize} records
+- Return all fields needed to fill the response template
+
+CRITICAL REQUIREMENTS:
+1. Use parameterized queries with $1, $2, etc. for payload values
+2. ${cursor ? `Use $1 for cursor value: '${cursor}'` : 'No cursor parameter needed (first page)'}
+3. Add ORDER BY id ASC (or appropriate primary key)
+4. Add LIMIT ${pageSize}
+5. ${cursor ? 'Add WHERE id > $1 (or appropriate primary key comparison)' : 'No WHERE clause for cursor (first page)'}
+6. Map response template fields to database columns using business rules
+7. Use proper JOINs when needed
+8. Return ONLY the SQL query, nothing else
+
+Generate the SQL query now:`;
+  }
+
+  /**
+   * Build prompt for COUNT query generation
+   * @param {Object} payload - Request payload
+   * @param {Object} responseTemplate - Response template
+   * @param {string} requesterService - Requester service name
+   * @param {string} migrationContent - Database schema
+   * @returns {string} Prompt text
+   */
+  buildCountPrompt(payload, responseTemplate, requesterService, migrationContent) {
+    const migrationJsonPath = path.join(__dirname, '../../migrations/directory-migration.json');
+    let migrationJsonContent = '';
+    try {
+      if (fs.existsSync(migrationJsonPath)) {
+        migrationJsonContent = fs.readFileSync(migrationJsonPath, 'utf8');
+      }
+    } catch (error) {
+      console.warn('[AIQueryGenerator] Could not load migration JSON:', error.message);
+    }
+
+    const businessRules = this.getBusinessRules();
+
+    return `You are an AI Query Builder for PostgreSQL. Generate ONLY a SELECT COUNT SQL query (no explanations, no markdown).
+
+SCHEMA (SQL Migration):
+${migrationContent}
+
+SCHEMA (JSON Migration):
+${migrationJsonContent}
+
+REQUEST:
+${JSON.stringify({ requester_service: requesterService, payload, response: responseTemplate }, null, 2)}
+
+${businessRules}
+
+COUNT QUERY REQUIREMENTS:
+- Generate a SELECT COUNT(*) query
+- Count all records that match the payload filters (if any)
+- Use the same WHERE conditions as the data query (but without cursor or LIMIT)
+- Return ONLY the SQL query, nothing else
+
+Generate the COUNT query now:`;
+  }
+
+  /**
+   * Get business rules for query generation
+   * @returns {string} Business rules text
+   */
+  getBusinessRules() {
+    return `
 BUSINESS RULES:
 1. Field Mappings:
    - user_id → employee_id (employees table)
@@ -192,6 +397,29 @@ BUSINESS RULES:
    - If response template has single object, return single row
    - If response template has array at root, return multiple rows
 `;
+  }
+
+  /**
+   * Build prompt for AI query generation
+   * @param {Object} payload - Request payload
+   * @param {Object} responseTemplate - Response template
+   * @param {string} requesterService - Requester service name
+   * @param {string} migrationContent - Database schema
+   * @returns {string} Prompt text
+   */
+  buildPrompt(payload, responseTemplate, requesterService, migrationContent) {
+    // Load migration JSON for better schema context
+    const migrationJsonPath = path.join(__dirname, '../../migrations/directory-migration.json');
+    let migrationJsonContent = '';
+    try {
+      if (fs.existsSync(migrationJsonPath)) {
+        migrationJsonContent = fs.readFileSync(migrationJsonPath, 'utf8');
+      }
+    } catch (error) {
+      console.warn('[AIQueryGenerator] Could not load migration JSON:', error.message);
+    }
+
+    const businessRules = this.getBusinessRules();
 
     return `You are an AI Query Builder for PostgreSQL. Generate ONLY a SELECT SQL query (no explanations, no markdown).
 
