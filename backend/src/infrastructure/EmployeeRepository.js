@@ -177,7 +177,8 @@ class EmployeeRepository {
       // Email exists - check if it's for the same company
       if (existingEmailOwner.company_id === company_id) {
         // Same company - UPDATE the employee
-        // Only update password if it's provided (not null/undefined/empty)
+        // CRITICAL: Always update password if provided in CSV (even if employee already exists)
+        // This ensures CSV password always takes precedence
         const updateData = {
           employee_id,
           full_name,
@@ -186,9 +187,13 @@ class EmployeeRepository {
           preferred_language,
           status
         };
-        // Only include password in update if it's provided
+        // Always include password in update if it's provided (from CSV)
+        // This ensures CSV password overwrites any existing password
         if (password && password.trim().length > 0) {
-          updateData.password = password;
+          updateData.password = password.trim();
+          console.log(`[EmployeeRepository] Updating password for existing employee: ${normalizedEmail}`);
+        } else {
+          console.log(`[EmployeeRepository] No password provided in CSV for existing employee: ${normalizedEmail}, keeping existing password`);
         }
         return await this.updateByEmail(normalizedEmail, company_id, updateData, client);
       } else {

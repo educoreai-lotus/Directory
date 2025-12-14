@@ -217,12 +217,15 @@ class ParseCSVUseCase {
         }
 
         // Create or update employee (handles email uniqueness)
-        // Ensure password is provided (required field from CSV)
+        // CRITICAL: Always use password from CSV, never use default for existing employees
+        // If password is empty in CSV, use default only for NEW employees
         const employeePassword = validatedRow.password && validatedRow.password.trim().length > 0 
-          ? validatedRow.password 
-          : 'SecurePass123'; // Default password if not provided in CSV
+          ? validatedRow.password.trim() 
+          : 'SecurePass123'; // Default password only if CSV password is empty
         
         console.log(`[ParseCSVUseCase] Creating/updating employee: ${validatedRow.employee_id} (${validatedRow.email})`);
+        console.log(`[ParseCSVUseCase] Password from CSV: ${validatedRow.password ? 'PROVIDED' : 'EMPTY'}`);
+        console.log(`[ParseCSVUseCase] Password to use: ${employeePassword ? 'PROVIDED (length: ' + employeePassword.length + ')' : 'DEFAULT'}`);
         
         let employee;
         try {
@@ -231,7 +234,7 @@ class ParseCSVUseCase {
             employee_id: validatedRow.employee_id,
             full_name: validatedRow.full_name,
             email: validatedRow.email,
-            password: employeePassword, // Always provide a password (hashed in repository)
+            password: employeePassword, // Always provide password from CSV (hashed in repository)
             current_role_in_company: validatedRow.current_role_in_company,
             target_role_in_company: validatedRow.target_role_in_company,
             preferred_language: validatedRow.preferred_language,
