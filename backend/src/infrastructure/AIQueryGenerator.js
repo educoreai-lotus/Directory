@@ -1,25 +1,22 @@
 // Infrastructure Layer - AI Query Generator
-// Uses Gemini AI to generate SQL queries based on payload and response structure
+// Uses OpenAI to generate SQL queries based on payload and response structure
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const config = require('../config');
 
 class AIQueryGenerator {
   constructor() {
-    this.apiKey = config.gemini?.apiKey;
+    this.apiKey = config.openai?.apiKey || process.env.OPENAI_API_KEY;
+    this.baseUrl = 'https://api.openai.com/v1';
+    
     if (!this.apiKey) {
-      console.warn('[AIQueryGenerator] ⚠️  GEMINI_API_KEY not configured. AI query generation will be disabled.');
-      this.genAI = null;
+      console.warn('[AIQueryGenerator] ⚠️  OPENAI_API_KEY not configured. AI query generation will be disabled.');
+      console.warn('[AIQueryGenerator] To enable AI query generation, set OPENAI_API_KEY in Railway.');
     } else {
-      try {
-        this.genAI = new GoogleGenerativeAI(this.apiKey);
-        console.log('[AIQueryGenerator] ✅ Initialized with Gemini API');
-      } catch (error) {
-        console.error('[AIQueryGenerator] ❌ Failed to initialize Gemini:', error);
-        this.genAI = null;
-      }
+      console.log('[AIQueryGenerator] ✅ Initialized with OpenAI API');
+      console.log('[AIQueryGenerator] API Key configured:', !!this.apiKey);
     }
   }
 
@@ -46,8 +43,8 @@ class AIQueryGenerator {
    * @returns {Promise<string>} Generated SQL query
    */
   async generateQuery(payload, responseTemplate, requesterService) {
-    if (!this.genAI) {
-      throw new Error('AI query generation is not available. GEMINI_API_KEY is not configured.');
+    if (!this.apiKey) {
+      throw new Error('AI query generation is not available. OPENAI_API_KEY is not configured.');
     }
 
     try {
@@ -56,13 +53,50 @@ class AIQueryGenerator {
       // Build prompt for AI
       const prompt = this.buildPrompt(payload, responseTemplate, requesterService, migrationContent);
 
-      // Get model
-      const model = this.genAI.getModel('gemini-1.5-flash'); // Using flash for faster responses
+      // Build OpenAI request
+      const requestBody = {
+        model: 'gpt-4-turbo', // Using gpt-4-turbo for better SQL generation
+        messages: [{
+          role: 'user',
+          content: prompt
+        }],
+        temperature: 0.3, // Lower temperature for more deterministic SQL queries
+        max_tokens: 2000 // SQL queries can be long, especially with JOINs
+      };
 
-      // Generate query
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const generatedText = response.text();
+      console.log('[AIQueryGenerator] ========== GENERATING SQL QUERY ==========');
+      console.log('[AIQueryGenerator] Requester service:', requesterService);
+      console.log('[AIQueryGenerator] Prompt length:', prompt.length, 'characters');
+      console.log('[AIQueryGenerator] Request body size:', JSON.stringify(requestBody).length, 'bytes');
+
+      // Call OpenAI API
+      const apiUrl = `${this.baseUrl}/chat/completions`;
+      const response = await axios.post(
+        apiUrl,
+        requestBody,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000
+        }
+      );
+
+      console.log('[AIQueryGenerator] ========== API RESPONSE ==========');
+      console.log('[AIQueryGenerator] Status:', response.status, response.statusText);
+      console.log('[AIQueryGenerator] Response has choices:', !!response.data?.choices);
+
+      // Extract generated text from OpenAI response
+      const generatedText = response.data?.choices?.[0]?.message?.content?.trim();
+      if (!generatedText) {
+        console.error('[AIQueryGenerator] ❌ No SQL query in response');
+        console.error('[AIQueryGenerator] Response data:', JSON.stringify(response.data, null, 2));
+        throw new Error('No SQL query generated from OpenAI API');
+      }
+
+      console.log('[AIQueryGenerator] ✅ Generated text received, length:', generatedText.length, 'characters');
+      console.log('[AIQueryGenerator] Generated text preview (first 300 chars):', generatedText.substring(0, 300));
 
       // Extract SQL query from response (AI might add explanations)
       const sqlQuery = this.extractSQL(generatedText);
@@ -72,6 +106,10 @@ class AIQueryGenerator {
 
     } catch (error) {
       console.error('[AIQueryGenerator] Error generating query:', error);
+      if (error.response) {
+        console.error('[AIQueryGenerator] OpenAI API error:', error.response.status, error.response.statusText);
+        console.error('[AIQueryGenerator] Error data:', JSON.stringify(error.response.data, null, 2));
+      }
       throw new Error(`Failed to generate SQL query: ${error.message}`);
     }
   }
