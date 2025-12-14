@@ -335,9 +335,44 @@ function CompanyVerificationPage() {
                   <p className="text-sm font-medium mb-2" style={{ color: 'var(--border-success)' }}>
                     ✓ Company Verified Successfully!
                   </p>
-                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                  <p className="text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>
                     You will be redirected to the CSV upload page shortly...
                   </p>
+                  
+                  {/* HR Login Information */}
+                  {verificationData.hr_contact_email && (
+                    <div className="mt-4 p-4 rounded-lg border" style={{ 
+                      background: 'var(--bg-card, #ffffff)',
+                      borderColor: 'var(--border-default, #e2e8f0)',
+                      textAlign: 'left'
+                    }}>
+                      <p className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
+                        📧 HR Contact Login Information
+                      </p>
+                      <div className="space-y-2 text-xs">
+                        <div>
+                          <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>Email:</span>
+                          <span className="ml-2 font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>
+                            {verificationData.hr_contact_email}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>Name:</span>
+                          <span className="ml-2" style={{ color: 'var(--text-primary)' }}>
+                            {verificationData.hr_contact_name || 'HR Contact'}
+                          </span>
+                        </div>
+                        <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--border-default, #e2e8f0)' }}>
+                          <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>Password:</span>
+                          <p className="text-xs mt-1" style={{ color: 'var(--text-muted, #94a3b8)' }}>
+                            💡 <strong>After CSV upload:</strong> Use the password from the CSV file for the HR employee row.
+                            <br />
+                            💡 <strong>If HR is not in CSV:</strong> Default password is <code className="font-mono bg-gray-100 px-1 rounded">SecurePass123</code>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
