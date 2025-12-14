@@ -3,11 +3,14 @@
 
 const CompanyRepository = require('../infrastructure/CompanyRepository');
 const VerifyCompanyUseCase = require('./VerifyCompanyUseCase');
+const { postToCoordinator } = require('../infrastructure/CoordinatorClient');
+const EmployeeRepository = require('../infrastructure/EmployeeRepository');
 
 class RegisterCompanyUseCase {
   constructor() {
     this.companyRepository = new CompanyRepository();
     this.verifyCompanyUseCase = new VerifyCompanyUseCase();
+    this.employeeRepository = new EmployeeRepository();
   }
 
   /**
@@ -108,6 +111,87 @@ class RegisterCompanyUseCase {
     const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     if (!domainRegex.test(companyData.domain)) {
       throw new Error('Invalid domain format');
+    }
+  }
+
+  /**
+   * Notify Learner AI microservice via Coordinator about company approval policy
+   * @param {Object} company - Created company object
+   */
+  async notifyLearnerAIAboutApprovalPolicy(company) {
+    try {
+      console.log('[RegisterCompanyUseCase] Notifying Learner AI about approval policy for company:', company.id);
+      
+      // Get approval policy (defaults to 'manual' if not set)
+      const approvalPolicy = company.approval_policy || 'manual';
+      
+      // Find decision maker (HR contact or employee with DECISION_MAKER role)
+      let decisionMaker = null;
+      
+      if (approvalPolicy === 'manual') {
+        // Try to find HR contact as employee first (if CSV was already uploaded)
+        try {
+          const hrEmployee = await this.employeeRepository.findByEmail(company.hr_contact_email);
+          if (hrEmployee) {
+            decisionMaker = {
+              employee_id: hrEmployee.id,
+              employee_name: hrEmployee.full_name || company.hr_contact_name,
+              employee_email: hrEmployee.email || company.hr_contact_email
+            };
+            console.log('[RegisterCompanyUseCase] Found HR employee as decision maker:', decisionMaker.employee_id);
+          } else {
+            // HR contact not found as employee yet (CSV not uploaded), use HR contact info
+            decisionMaker = {
+              employee_id: null, // Will be updated when CSV is uploaded
+              employee_name: company.hr_contact_name,
+              employee_email: company.hr_contact_email
+            };
+            console.log('[RegisterCompanyUseCase] HR contact not found as employee yet, using HR contact info');
+          }
+        } catch (error) {
+          // If employee lookup fails, use HR contact info
+          console.warn('[RegisterCompanyUseCase] Could not find HR employee, using HR contact info:', error.message);
+          decisionMaker = {
+            employee_id: null,
+            employee_name: company.hr_contact_name,
+            employee_email: company.hr_contact_email
+          };
+        }
+      }
+
+      // Build Coordinator envelope
+      const coordinatorEnvelope = {
+        requester_service: 'directory-service',
+        payload: {
+          action: 'sending_decision_maker_to_approve_learning_path',
+          company_id: company.id,
+          company_name: company.company_name,
+          approval_policy: approvalPolicy,
+          decision_maker: decisionMaker
+        },
+        response: {
+          success: false,
+          message: ''
+        }
+      };
+
+      console.log('[RegisterCompanyUseCase] Sending to Coordinator:', JSON.stringify(coordinatorEnvelope, null, 2));
+      
+      // Send to Coordinator (non-blocking - don't fail registration if this fails)
+      const result = await postToCoordinator(coordinatorEnvelope);
+      
+      console.log('[RegisterCompanyUseCase] Coordinator response:', {
+        status: result.resp?.status,
+        success: result.data?.success
+      });
+      
+      if (!result.resp.ok) {
+        console.warn('[RegisterCompanyUseCase] Coordinator returned non-OK status:', result.resp.status);
+      }
+    } catch (error) {
+      // Log error but don't throw - registration should succeed even if notification fails
+      console.error('[RegisterCompanyUseCase] Error notifying Learner AI:', error.message);
+      console.error('[RegisterCompanyUseCase] Error stack:', error.stack);
     }
   }
 }
