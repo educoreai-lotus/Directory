@@ -171,33 +171,27 @@ class RegisterCompanyUseCase {
       let decisionMaker = null;
       
       if (approvalPolicy === 'manual') {
-        // Try to find HR contact as employee first (if CSV was already uploaded)
+        // CRITICAL: Find employee with DECISION_MAKER role, NOT HR contact
+        // The DECISION_MAKER is the employee with DECISION_MAKER role_type in the CSV
         try {
-          const hrEmployee = await this.employeeRepository.findByEmail(company.hr_contact_email);
-          if (hrEmployee) {
+          const decisionMakerEmployee = await this.employeeRepository.findDecisionMakerByCompanyId(company.id);
+          if (decisionMakerEmployee) {
             decisionMaker = {
-              employee_id: hrEmployee.id,
-              employee_name: hrEmployee.full_name || company.hr_contact_name,
-              employee_email: hrEmployee.email || company.hr_contact_email
+              employee_id: decisionMakerEmployee.id,
+              employee_name: decisionMakerEmployee.full_name,
+              employee_email: decisionMakerEmployee.email
             };
-            console.log('[RegisterCompanyUseCase] Found HR employee as decision maker:', decisionMaker.employee_id);
+            console.log('[RegisterCompanyUseCase] Found DECISION_MAKER employee:', decisionMaker.employee_id, decisionMaker.employee_name);
           } else {
-            // HR contact not found as employee yet (CSV not uploaded), use HR contact info
-            decisionMaker = {
-              employee_id: null, // Will be updated when CSV is uploaded
-              employee_name: company.hr_contact_name,
-              employee_email: company.hr_contact_email
-            };
-            console.log('[RegisterCompanyUseCase] HR contact not found as employee yet, using HR contact info');
+            // DECISION_MAKER not found yet (CSV not uploaded or no DECISION_MAKER in CSV)
+            // Don't send decision_maker info - it will be sent after CSV upload
+            console.log('[RegisterCompanyUseCase] DECISION_MAKER employee not found yet (CSV may not be uploaded). Not sending decision_maker info.');
+            decisionMaker = null; // Don't send decision_maker if not found
           }
         } catch (error) {
-          // If employee lookup fails, use HR contact info
-          console.warn('[RegisterCompanyUseCase] Could not find HR employee, using HR contact info:', error.message);
-          decisionMaker = {
-            employee_id: null,
-            employee_name: company.hr_contact_name,
-            employee_email: company.hr_contact_email
-          };
+          // If employee lookup fails, don't send decision_maker
+          console.warn('[RegisterCompanyUseCase] Could not find DECISION_MAKER employee:', error.message);
+          decisionMaker = null; // Don't send decision_maker if lookup fails
         }
       }
 
@@ -209,7 +203,8 @@ class RegisterCompanyUseCase {
           company_id: company.id,
           company_name: company.company_name,
           approval_policy: approvalPolicy,
-          // Only include decision_maker if approval_policy is manual
+          // Only include decision_maker if approval_policy is manual AND decision_maker was found
+          // If CSV not uploaded yet, decision_maker will be null and won't be included
           ...(approvalPolicy === 'manual' && decisionMaker ? { decision_maker: decisionMaker } : {})
         },
         response: {}

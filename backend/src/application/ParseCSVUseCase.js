@@ -8,6 +8,7 @@ const CompanyRepository = require('../infrastructure/CompanyRepository');
 const DepartmentRepository = require('../infrastructure/DepartmentRepository');
 const TeamRepository = require('../infrastructure/TeamRepository');
 const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+const { postToCoordinator } = require('../infrastructure/CoordinatorClient');
 
 class ParseCSVUseCase {
   constructor() {
@@ -308,6 +309,13 @@ class ParseCSVUseCase {
       // This runs outside the transaction so it doesn't affect CSV processing if it fails
       await this.ensureHREmployeeExists(companyId);
 
+      // After CSV upload, notify Learner AI about DECISION_MAKER if approval_policy is manual
+      // This ensures Coordinator gets the correct DECISION_MAKER info after employees are created
+      await this.notifyLearnerAIAboutDecisionMaker(companyId).catch(error => {
+        console.error('[ParseCSVUseCase] Failed to notify Learner AI about DECISION_MAKER after CSV upload:', error);
+        // Don't fail CSV processing if notification fails
+      });
+
       return {
         departments: createdDepartments.size,
         teams: createdTeams.size,
@@ -333,6 +341,79 @@ class ParseCSVUseCase {
       
       // Re-throw with original message (will be translated by controller)
       throw error;
+    }
+  }
+
+  /**
+   * Notify Learner AI about DECISION_MAKER after CSV upload
+   * This sends the correct DECISION_MAKER employee info to Coordinator
+   * @param {string} companyId - Company ID
+   */
+  async notifyLearnerAIAboutDecisionMaker(companyId) {
+    try {
+      console.log('[ParseCSVUseCase] Notifying Learner AI about DECISION_MAKER for company:', companyId);
+      
+      // Get company info
+      const company = await this.companyRepository.findById(companyId);
+      if (!company) {
+        console.warn('[ParseCSVUseCase] Company not found:', companyId);
+        return;
+      }
+
+      const approvalPolicy = company.approval_policy || 'manual';
+      
+      // Only send if approval_policy is manual
+      if (approvalPolicy !== 'manual') {
+        console.log('[ParseCSVUseCase] Approval policy is not manual, skipping DECISION_MAKER notification');
+        return;
+      }
+
+      // Find DECISION_MAKER employee
+      const decisionMakerEmployee = await this.employeeRepository.findDecisionMakerByCompanyId(companyId);
+      
+      if (!decisionMakerEmployee) {
+        console.warn('[ParseCSVUseCase] No DECISION_MAKER employee found for company:', companyId);
+        return;
+      }
+
+      const decisionMaker = {
+        employee_id: decisionMakerEmployee.id,
+        employee_name: decisionMakerEmployee.full_name,
+        employee_email: decisionMakerEmployee.email
+      };
+
+      console.log('[ParseCSVUseCase] Found DECISION_MAKER employee:', decisionMaker.employee_id, decisionMaker.employee_name);
+
+      // Build Coordinator envelope
+      const coordinatorEnvelope = {
+        requester_service: 'directory',
+        payload: {
+          action: 'sending_new_decision_maker',
+          company_id: companyId,
+          company_name: company.company_name,
+          approval_policy: approvalPolicy,
+          decision_maker: decisionMaker
+        },
+        response: {}
+      };
+
+      console.log('[ParseCSVUseCase] Sending DECISION_MAKER to Coordinator:', JSON.stringify(coordinatorEnvelope, null, 2));
+      
+      // Send to Coordinator
+      const result = await postToCoordinator(coordinatorEnvelope);
+      
+      console.log('[ParseCSVUseCase] Coordinator response:', {
+        status: result.resp?.status,
+        success: result.data?.success
+      });
+      
+      if (!result.resp.ok) {
+        console.warn('[ParseCSVUseCase] Coordinator returned non-OK status:', result.resp.status);
+      }
+    } catch (error) {
+      console.error('[ParseCSVUseCase] Error notifying Learner AI about DECISION_MAKER:', error.message);
+      console.error('[ParseCSVUseCase] Error stack:', error.stack);
+      // Don't throw - CSV processing should succeed even if notification fails
     }
   }
 

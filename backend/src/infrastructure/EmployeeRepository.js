@@ -820,6 +820,29 @@ class EmployeeRepository {
    * @param {string} companyId - Company ID
    * @returns {Promise<Array>} Array of employees with roles and teams
    */
+  /**
+   * Find employee with DECISION_MAKER role for a company
+   * @param {string} companyId - Company ID
+   * @returns {Promise<Object|null>} Decision maker employee or null
+   */
+  async findDecisionMakerByCompanyId(companyId) {
+    const query = `
+      SELECT 
+        e.*,
+        COALESCE(
+          json_agg(DISTINCT er.role_type) FILTER (WHERE er.role_type IS NOT NULL),
+          '[]'::json
+        ) as roles
+      FROM employees e
+      INNER JOIN employee_roles er ON e.id = er.employee_id
+      WHERE e.company_id = $1 AND er.role_type = 'DECISION_MAKER'
+      GROUP BY e.id
+      LIMIT 1
+    `;
+    const result = await this.pool.query(query, [companyId]);
+    return result.rows[0] || null;
+  }
+
   async findByCompanyId(companyId) {
     const query = `
       SELECT 
