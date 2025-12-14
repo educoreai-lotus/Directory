@@ -73,7 +73,7 @@ class EnrollEmployeesCareerPathUseCase {
       // Build Coordinator payload with exactly 5 fields per learner
       console.log('[EnrollEmployeesCareerPathUseCase] Building Coordinator payload...');
       const payload = {
-        action: 'enroll_employees_career_path',
+        action: 'course_builder_enroll_career_path',
         learning_flow: 'CAREER_PATH_DRIVEN',
         company_id: companyId,
         company_name: company.company_name,
