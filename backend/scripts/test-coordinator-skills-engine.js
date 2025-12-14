@@ -1,15 +1,10 @@
 #!/usr/bin/env node
 /**
- * Test script to send a POST request to Coordinator for Learner AI microservice
- * Tests the "sending_decision_maker_to_approve_learning_path" action
+ * Test script to send a POST request to Coordinator for Skills Engine microservice
+ * Tests the "get_employee_skills_for_directory_profile" action
  * 
  * Usage:
- *   node backend/scripts/test-coordinator-learner-ai.js
- * 
- * Environment variables required:
- *   - COORDINATOR_URL (or uses default from config)
- *   - PRIVATE_KEY (or loads from backend/src/security/directory-private-key.pem)
- *   - SERVICE_NAME (defaults to 'directory-service')
+ *   node backend/scripts/test-coordinator-skills-engine.js
  */
 
 const fs = require('fs');
@@ -84,25 +79,72 @@ if (!PRIVATE_KEY) {
   }
 }
 
-// Test envelope - exact structure from user's request
+// Test envelope - matches the structure sent when enriching a profile
 const testEnvelope = {
-  "requester_service": "directory",
+  "requester_service": "directory-service",
   "payload": {
-    "action": "sending_decision_maker_to_approve_learning_path",
+    "action": "get_employee_skills_for_directory_profile",
+    "target_service": "skills-engine",
+    "employee_id": "EMP001",
     "company_id": "c1d2e3f4-5678-9012-3456-789012345678",
-    "company_name": "TechCorp Inc.",
-    "approval_policy": "manual",
-    "decision_maker": {
-      "employee_id": "123e4567-e89b-12d3-a456-426614174000",
-      "employee_name": "Sarah Johnson",
-      "employee_email": "sarah.johnson@techcorp.com"
+    "employee_type": "regular_employee",
+    "raw_data": {
+      "linkedin": {
+        "id": "linkedin-user-id-123",
+        "name": "John Doe",
+        "given_name": "John",
+        "family_name": "Doe",
+        "email": "john.doe@example.com",
+        "picture": "https://media.licdn.com/dms/image/...",
+        "locale": "en_US",
+        "headline": "Senior Software Engineer at TechCorp",
+        "positions": [
+          {
+            "title": "Senior Software Engineer",
+            "companyName": "TechCorp Inc.",
+            "description": "Leading development of scalable web applications...",
+            "startDate": "2020-01-01",
+            "endDate": "Current"
+          }
+        ]
+      },
+      "github": {
+        "login": "johndoe",
+        "id": 12345678,
+        "name": "John Doe",
+        "email": "john.doe@example.com",
+        "bio": "Full-stack developer passionate about JavaScript, React, Node.js",
+        "company": "TechCorp Inc.",
+        "location": "San Francisco, CA",
+        "blog": "https://johndoe.dev",
+        "public_repos": 25,
+        "followers": 150,
+        "following": 80,
+        "repositories": [
+          {
+            "id": 123456789,
+            "name": "awesome-project",
+            "full_name": "johndoe/awesome-project",
+            "description": "An awesome project built with React and Node.js",
+            "language": "JavaScript",
+            "stargazers_count": 42,
+            "forks_count": 10,
+            "created_at": "2023-01-15T10:30:00Z",
+            "updated_at": "2024-11-19T15:45:00Z"
+          }
+        ]
+      }
     }
   },
-  "response": {}
+  "response": {
+    "user_id": 0,
+    "competencies": [],
+    "relevance_score": 0
+  }
 };
 
 async function testCoordinatorRequest() {
-  console.log('\n🧪 ===== TESTING COORDINATOR → LEARNER AI REQUEST =====\n');
+  console.log('\n🧪 ===== TESTING COORDINATOR → SKILLS ENGINE REQUEST =====\n');
   
   // Build URL
   const url = `${COORDINATOR_URL}/api/fill-content-metrics/`;
@@ -175,14 +217,16 @@ async function testCoordinatorRequest() {
     if (response.ok) {
       console.log('\n✅ ✅ ✅ REQUEST SUCCESSFUL! ✅ ✅ ✅');
       console.log('   Coordinator accepted the request');
-      console.log('   Check Coordinator logs to verify it routed to Learner AI microservice');
+      console.log('   Check Coordinator logs to verify it routed to Skills Engine microservice');
+      console.log('   Action:', testEnvelope.payload.action);
+      console.log('   Target Service:', testEnvelope.payload.target_service);
     } else {
       console.log('\n⚠️  Request returned non-OK status');
       console.log('   Status:', response.status);
       console.log('   This might indicate:');
       console.log('     - Coordinator rejected the signature');
       console.log('     - Action not recognized');
-      console.log('     - Learner AI microservice error');
+      console.log('     - Skills Engine microservice error');
     }
     
     console.log('\n✨ ===== TEST COMPLETE =====\n');
