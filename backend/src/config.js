@@ -58,7 +58,7 @@ const config = {
   
   // Coordinator Configuration (unified proxy for microservice-to-microservice communication)
   coordinator: {
-    baseUrl: process.env.COORDINATOR_URL || 'https://coordinator-production-e0a0.up.railway.app',
+    baseUrl: process.env.COORDINATOR_URL || 'https://coordinator-production-6004.up.railway.app',
     endpoint: '/api/fill-content-metrics',
     // Service name used when Directory makes requests to Coordinator
     serviceName: process.env.SERVICE_NAME || 'directory-service'
