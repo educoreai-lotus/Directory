@@ -44,10 +44,17 @@ return {
 ## 🤖 2. Improved AI Query Generator
 
 ### Enhancements
-1. **Better Schema Context**: Now loads both SQL migration file AND JSON migration file
-2. **Business Rules**: Added comprehensive field mappings and query patterns
-3. **Hierarchy Support**: Added rules for building nested JSON structures (departments → teams → employees)
-4. **Field Mappings**: Documented all common field name variations (user_id → employee_id, etc.)
+1. **Switched to OpenAI**: Changed from Gemini to OpenAI API (gpt-4-turbo model)
+2. **Better Schema Context**: Now loads both SQL migration file AND JSON migration file
+3. **Business Rules**: Added comprehensive field mappings and query patterns
+4. **Hierarchy Support**: Added rules for building nested JSON structures (departments → teams → employees)
+5. **Field Mappings**: Documented all common field name variations (user_id → employee_id, etc.)
+
+### OpenAI Configuration
+- **Model**: `gpt-4-turbo` (better SQL generation than gpt-3.5-turbo)
+- **Temperature**: `0.3` (lower for more deterministic SQL queries)
+- **Max Tokens**: `2000` (to handle complex queries with JOINs)
+- **API Key**: Uses `OPENAI_API_KEY` from config or environment variable
 
 ### Key Business Rules Added:
 - Field mappings (user_id → employee_id, name → full_name, etc.)
