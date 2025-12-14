@@ -12,12 +12,7 @@ Use these details when registering TechCorp Global:
 ### HR Contact Information
 - **HR Contact Name:** `Jennifer Martinez`
 - **HR Contact Email:** `jennifer.martinez@techcorp.global`
-- **HR Contact Role:** `HR Manager` or `Marketing Manager` (she's the Marketing Department Manager)
-
-**Alternative HR Contact (if you prefer):**
-- **HR Contact Name:** `Daniel White`
-- **HR Contact Email:** `daniel.white@techcorp.global`
-- **HR Contact Role:** `Support Manager` (he's the Support Department Manager)
+- **HR Contact Role:** `Human Resources` (she's HR001 in the CSV, Department Manager of Human Resources)
 
 ## Registration Flow
 
