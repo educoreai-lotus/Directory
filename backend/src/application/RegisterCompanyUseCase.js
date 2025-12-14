@@ -60,6 +60,13 @@ class RegisterCompanyUseCase {
         // Don't fail registration if verification fails - company is already created
       });
 
+      // Step 5: Notify Learner AI microservice via Coordinator about company approval policy
+      // This happens AFTER successful commit, so even if it fails, company is saved
+      this.notifyLearnerAIAboutApprovalPolicy(company).catch(error => {
+        console.error('[RegisterCompanyUseCase] Failed to notify Learner AI about approval policy:', error);
+        // Don't fail registration if notification fails - company is already created
+      });
+
       return {
         company_id: company.id,
         company_name: company.company_name,
