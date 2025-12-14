@@ -27,10 +27,19 @@ export const login = async (email, password) => {
       console.log('[authService] result.user:', result.user);
       
       if (result.success && result.token) {
-        // Store token in localStorage
+        // CRITICAL: Clear old user data first to prevent showing wrong user
+        console.log('[authService] Clearing old user data before storing new user');
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+        
+        // Store new token and user in localStorage
         localStorage.setItem('auth_token', result.token);
         localStorage.setItem('user', JSON.stringify(result.user));
-        console.log('[authService] Login successful, token stored');
+        console.log('[authService] Login successful, new user stored:', {
+          email: result.user.email,
+          fullName: result.user.fullName,
+          companyId: result.user.companyId
+        });
         return {
           success: true,
           token: result.token,

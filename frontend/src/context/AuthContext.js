@@ -276,9 +276,20 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       setLoading(true);
+      
+      // CRITICAL: Clear old user state before login to prevent showing wrong user
+      console.log('[AuthContext] Clearing old user state before login');
+      setUser(null);
+      setIsAuthenticated(false);
+      
       const result = await authService.login(email, password);
 
       if (result.success) {
+        console.log('[AuthContext] Login successful, setting new user:', {
+          email: result.user.email,
+          fullName: result.user.fullName,
+          companyId: result.user.companyId
+        });
         setUser(result.user);
         setIsAuthenticated(true);
 

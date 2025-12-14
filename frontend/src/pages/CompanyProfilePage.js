@@ -25,6 +25,28 @@ function CompanyProfilePage() {
     const fetchProfile = async () => {
       try {
         setLoading(true);
+        
+        // CRITICAL: Verify logged-in user belongs to this company (unless admin)
+        if (!isAdminView && user && user.companyId && user.companyId !== companyId) {
+          console.error('[CompanyProfilePage] User company mismatch:', {
+            userCompanyId: user.companyId,
+            requestedCompanyId: companyId,
+            userEmail: user.email,
+            userFullName: user.fullName
+          });
+          setError('You do not have access to this company. Please log in with the correct account.');
+          setLoading(false);
+          return;
+        }
+        
+        console.log('[CompanyProfilePage] Fetching profile for company:', companyId);
+        console.log('[CompanyProfilePage] Current user:', {
+          email: user?.email,
+          fullName: user?.fullName,
+          companyId: user?.companyId,
+          isHR: user?.isHR
+        });
+        
         const response = await getCompanyProfile(companyId);
         
         // Debug logging
@@ -57,7 +79,7 @@ function CompanyProfilePage() {
     if (companyId) {
       fetchProfile();
     }
-  }, [companyId]);
+  }, [companyId, user, isAdminView]);
 
   const handleEmployeeClick = (employee) => {
     // Navigate to employee profile page
