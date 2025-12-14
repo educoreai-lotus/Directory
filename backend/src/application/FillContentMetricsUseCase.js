@@ -359,15 +359,20 @@ class FillContentMetricsUseCase {
         try {
           const countParams = this.extractParameters(payload, countQuery);
           const countResult = await this.pool.query(countQuery, countParams);
-          totalRecords = parseInt(countResult.rows[0]?.count || 0, 10);
+          // COUNT(*) returns a column named 'count' (lowercase)
+          totalRecords = parseInt(countResult.rows[0]?.count || countResult.rows[0]?.COUNT || 0, 10);
           console.log('[FillContentMetricsUseCase] Total records:', totalRecords);
         } catch (error) {
-          console.warn('[FillContentMetricsUseCase] COUNT query failed, using returned_records as total:', error.message);
+          console.error('[FillContentMetricsUseCase] COUNT query failed:', error.message);
+          console.error('[FillContentMetricsUseCase] COUNT query:', countQuery);
+          console.error('[FillContentMetricsUseCase] COUNT params:', countParams);
+          console.warn('[FillContentMetricsUseCase] Using returned_records as total (COUNT query failed)');
           // If COUNT fails, use returned_records as total (not ideal but better than 0)
           totalRecords = queryResult.rows.length;
         }
       } else {
         // If no COUNT query, use returned_records as total
+        console.log('[FillContentMetricsUseCase] No COUNT query generated, using returned_records as total');
         totalRecords = queryResult.rows.length;
       }
 

@@ -306,9 +306,12 @@ Generate the SQL query now:`;
     try {
       if (fs.existsSync(migrationJsonPath)) {
         migrationJsonContent = fs.readFileSync(migrationJsonPath, 'utf8');
+      } else {
+        console.warn('[AIQueryGenerator] Migration JSON file not found at:', migrationJsonPath);
       }
     } catch (error) {
       console.warn('[AIQueryGenerator] Could not load migration JSON:', error.message);
+      console.warn('[AIQueryGenerator] Error details:', error.code, error.path);
     }
 
     const businessRules = this.getBusinessRules();
@@ -330,7 +333,13 @@ COUNT QUERY REQUIREMENTS:
 - Generate a SELECT COUNT(*) query
 - Count all records that match the payload filters (if any)
 - Use the same WHERE conditions as the data query (but without cursor or LIMIT)
+- DO NOT use nested aggregate functions (e.g., COUNT(COUNT(*)) or COUNT(json_agg(...)))
+- DO NOT use json_agg, array_agg, or any aggregation functions inside COUNT
+- Simply count the base records: SELECT COUNT(*) FROM table WHERE conditions
+- If the data query uses JOINs, count from the main table only (not aggregated results)
 - Return ONLY the SQL query, nothing else
+
+CRITICAL: The COUNT query must be simple - just COUNT(*) from the base table(s) with WHERE conditions. Do NOT wrap aggregate functions in COUNT.
 
 Generate the COUNT query now:`;
   }
