@@ -36,6 +36,38 @@ class AIQueryGenerator {
   }
 
   /**
+   * Load migration JSON file from multiple possible paths
+   * @returns {string} Migration JSON content or empty string if not found
+   */
+  loadMigrationJson() {
+    // Try multiple possible paths for migration JSON
+    const possiblePaths = [
+      path.join(__dirname, '../../migrations/directory-migration.json'),
+      path.join(__dirname, '../../../migrations/directory-migration.json'),
+      path.join(process.cwd(), 'migrations/directory-migration.json'),
+      path.join(process.cwd(), 'backend/migrations/directory-migration.json'),
+      path.join(__dirname, '../../backend/migrations/directory-migration.json')
+    ];
+    
+    for (const migrationJsonPath of possiblePaths) {
+      try {
+        if (fs.existsSync(migrationJsonPath)) {
+          const content = fs.readFileSync(migrationJsonPath, 'utf8');
+          console.log('[AIQueryGenerator] ✅ Loaded migration JSON from:', migrationJsonPath);
+          return content;
+        }
+      } catch (error) {
+        // Continue to next path
+        continue;
+      }
+    }
+    
+    console.warn('[AIQueryGenerator] ⚠️  Migration JSON file not found in any of these paths:');
+    possiblePaths.forEach(p => console.warn('  -', p));
+    return '';
+  }
+
+  /**
    * Generate SQL query using AI based on payload and response structure
    * @param {Object} payload - Request payload from microservice
    * @param {Object} responseTemplate - Response template structure
@@ -241,15 +273,7 @@ class AIQueryGenerator {
    * @returns {string} Prompt text
    */
   buildBatchPrompt(payload, responseTemplate, requesterService, migrationContent, cursor, pageSize) {
-    const migrationJsonPath = path.join(__dirname, '../../migrations/directory-migration.json');
-    let migrationJsonContent = '';
-    try {
-      if (fs.existsSync(migrationJsonPath)) {
-        migrationJsonContent = fs.readFileSync(migrationJsonPath, 'utf8');
-      }
-    } catch (error) {
-      console.warn('[AIQueryGenerator] Could not load migration JSON:', error.message);
-    }
+    const migrationJsonContent = this.loadMigrationJson();
 
     const cursorClause = cursor 
       ? `WHERE id > $1 ORDER BY id ASC LIMIT ${pageSize}`
@@ -301,18 +325,7 @@ Generate the SQL query now:`;
    * @returns {string} Prompt text
    */
   buildCountPrompt(payload, responseTemplate, requesterService, migrationContent) {
-    const migrationJsonPath = path.join(__dirname, '../../migrations/directory-migration.json');
-    let migrationJsonContent = '';
-    try {
-      if (fs.existsSync(migrationJsonPath)) {
-        migrationJsonContent = fs.readFileSync(migrationJsonPath, 'utf8');
-      } else {
-        console.warn('[AIQueryGenerator] Migration JSON file not found at:', migrationJsonPath);
-      }
-    } catch (error) {
-      console.warn('[AIQueryGenerator] Could not load migration JSON:', error.message);
-      console.warn('[AIQueryGenerator] Error details:', error.code, error.path);
-    }
+    const migrationJsonContent = this.loadMigrationJson();
 
     const businessRules = this.getBusinessRules();
 
@@ -418,15 +431,7 @@ BUSINESS RULES:
    */
   buildPrompt(payload, responseTemplate, requesterService, migrationContent) {
     // Load migration JSON for better schema context
-    const migrationJsonPath = path.join(__dirname, '../../migrations/directory-migration.json');
-    let migrationJsonContent = '';
-    try {
-      if (fs.existsSync(migrationJsonPath)) {
-        migrationJsonContent = fs.readFileSync(migrationJsonPath, 'utf8');
-      }
-    } catch (error) {
-      console.warn('[AIQueryGenerator] Could not load migration JSON:', error.message);
-    }
+    const migrationJsonContent = this.loadMigrationJson();
 
     const businessRules = this.getBusinessRules();
 
