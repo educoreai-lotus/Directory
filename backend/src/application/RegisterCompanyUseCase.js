@@ -5,12 +5,14 @@ const CompanyRepository = require('../infrastructure/CompanyRepository');
 const VerifyCompanyUseCase = require('./VerifyCompanyUseCase');
 const { postToCoordinator } = require('../infrastructure/CoordinatorClient');
 const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+const DomainValidator = require('../infrastructure/DomainValidator');
 
 class RegisterCompanyUseCase {
   constructor() {
     this.companyRepository = new CompanyRepository();
     this.verifyCompanyUseCase = new VerifyCompanyUseCase();
     this.employeeRepository = new EmployeeRepository();
+    this.domainValidator = new DomainValidator();
   }
 
   /**
@@ -42,30 +44,63 @@ class RegisterCompanyUseCase {
       }
     }
 
-    // Step 3: Use transaction to ensure atomicity
+    // Step 3: Perform domain verification BEFORE saving to database
+    // This ensures we only save companies with 'pending' or 'approved' status
+    console.log('[RegisterCompanyUseCase] Performing domain verification before saving...');
+    const domainValidationResult = await this.domainValidator.validate(companyData.domain);
+    console.log('[RegisterCompanyUseCase] Domain validation result:', JSON.stringify(domainValidationResult, null, 2));
+
+    // Determine initial verification status based on validation
+    let initialVerificationStatus = 'pending';
+    if (domainValidationResult.isValid) {
+      initialVerificationStatus = 'approved';
+      console.log('[RegisterCompanyUseCase] ✅ Domain is valid - setting status to approved');
+    } else if (domainValidationResult.errors.length > 0 && !domainValidationResult.hasDNS) {
+      // Reject if DNS is completely invalid
+      initialVerificationStatus = 'rejected';
+      console.log('[RegisterCompanyUseCase] ❌ Domain validation failed - status will be rejected');
+    } else if (domainValidationResult.errors.length > 0) {
+      // If there are errors but DNS exists, keep as pending for manual review
+      initialVerificationStatus = 'pending';
+      console.log('[RegisterCompanyUseCase] ⚠️ Domain has issues but DNS exists - keeping as pending');
+    }
+
+    // CRITICAL: Only save to database if status is 'pending' or 'approved'
+    // Rejected companies should NOT be saved
+    if (initialVerificationStatus === 'rejected') {
+      console.log('[RegisterCompanyUseCase] ❌ Company registration rejected - NOT saving to database');
+      throw new Error(`Company registration rejected: Domain validation failed. ${domainValidationResult.errors.join(', ')}`);
+    }
+
+    // Step 4: Use transaction to ensure atomicity
     // If anything fails after this point, the entire operation is rolled back
     const client = await this.companyRepository.beginTransaction();
     
     try {
-      // Create company within transaction
-      const company = await this.companyRepository.create(companyData, client);
+      // Create company within transaction with determined verification status
+      // Pass verification_status to create method
+      const companyDataWithStatus = {
+        ...companyData,
+        verification_status: initialVerificationStatus
+      };
+      const company = await this.companyRepository.create(companyDataWithStatus, client);
       
       // Commit transaction - only now is the company actually saved
       await this.companyRepository.commitTransaction(client);
       
-      // Step 4: Trigger domain verification automatically (async, don't wait)
-      // This happens AFTER successful commit, so even if it fails, company is saved
-      this.verifyCompanyUseCase.verifyDomain(company.id).catch(error => {
-        console.error('Auto-verification failed:', error);
-        // Don't fail registration if verification fails - company is already created
-      });
+      console.log('[RegisterCompanyUseCase] ✅ Company saved to database with status:', company.verification_status);
 
-      // Step 5: Notify Learner AI microservice via Coordinator about company approval policy
-      // This happens AFTER successful commit, so even if it fails, company is saved
-      this.notifyLearnerAIAboutApprovalPolicy(company).catch(error => {
-        console.error('[RegisterCompanyUseCase] Failed to notify Learner AI about approval policy:', error);
-        // Don't fail registration if notification fails - company is already created
-      });
+      // Step 5: Notify Learner AI microservice via Coordinator ONLY if status is 'approved'
+      // Pending companies are saved but NOT sent to Coordinator until approved
+      if (company.verification_status === 'approved') {
+        console.log('[RegisterCompanyUseCase] Company is approved - sending to Coordinator');
+        this.notifyLearnerAIAboutApprovalPolicy(company).catch(error => {
+          console.error('[RegisterCompanyUseCase] Failed to notify Learner AI about approval policy:', error);
+          // Don't fail registration if notification fails - company is already created
+        });
+      } else {
+        console.log('[RegisterCompanyUseCase] Company is pending - NOT sending to Coordinator (will be sent when approved)');
+      }
 
       return {
         company_id: company.id,

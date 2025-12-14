@@ -40,7 +40,8 @@ class CompanyRepository {
       domain,
       hr_contact_name,
       hr_contact_email,
-      hr_contact_role
+      hr_contact_role,
+      verification_status
     } = companyData;
 
     const query = `
@@ -65,7 +66,7 @@ class CompanyRepository {
       hr_contact_name,
       hr_contact_email,
       hr_contact_role,
-      'pending', // Default verification status
+      verification_status || 'pending', // Use provided status or default to 'pending'
       'Not specified' // Default KPIs - will be updated from CSV
     ];
 

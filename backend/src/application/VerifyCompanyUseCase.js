@@ -122,6 +122,15 @@ class VerifyCompanyUseCase {
       'approved'
     );
 
+    // When company is manually approved, notify Learner AI via Coordinator
+    // Import RegisterCompanyUseCase to reuse the notification logic
+    const RegisterCompanyUseCase = require('./RegisterCompanyUseCase');
+    const registerUseCase = new RegisterCompanyUseCase();
+    registerUseCase.notifyLearnerAIAboutApprovalPolicy(updatedCompany).catch(error => {
+      console.error('[VerifyCompanyUseCase] Failed to notify Learner AI after manual approval:', error);
+      // Don't fail approval if notification fails
+    });
+
     // TODO: Log this action in audit_logs table
     // await auditLogger.log({
     //   action_type: 'company_approved',
