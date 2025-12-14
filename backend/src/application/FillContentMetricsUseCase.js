@@ -328,7 +328,20 @@ class FillContentMetricsUseCase {
       }
 
       // Step 3: Extract parameters from payload
-      const parameters = this.extractParameters(payload, dataQuery);
+      // For batch requests, cursor is the first parameter if present
+      let parameters = [];
+      if (cursor) {
+        parameters.push(cursor); // Cursor is $1
+        // Then add other payload parameters (they will be $2, $3, etc.)
+        // We need to extract parameters but skip the first one since cursor is $1
+        const otherParams = this.extractParameters(payload, dataQuery);
+        // If the query has $1 for cursor, other params start at $2
+        // Otherwise, just use otherParams as-is
+        parameters = parameters.concat(otherParams);
+      } else {
+        // No cursor, extract parameters normally
+        parameters = this.extractParameters(payload, dataQuery);
+      }
 
       // Step 4: Execute data query
       let queryResult;
