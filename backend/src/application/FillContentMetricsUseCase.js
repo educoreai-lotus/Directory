@@ -25,21 +25,22 @@ class FillContentMetricsUseCase {
 
   /**
    * Fill response template with data from Directory database
-   * @param {Object} payload - Request payload from microservice
-   * @param {Object} responseTemplate - Response template to fill
-   * @param {string} requesterService - Name of the requesting microservice
-   * @returns {Promise<Object>} Filled response object
+   * @param {Object} envelope - Full Coordinator request envelope { requester_service, payload, response }
+   * @returns {Promise<Object>} Full envelope with filled response (preserves original payload)
    */
-  async execute(payload, responseTemplate, requesterService) {
+  async execute(envelope) {
     try {
-      console.log('[FillContentMetricsUseCase] Processing request from:', requesterService);
+      // Extract components from envelope
+      const { requester_service, payload, response: responseTemplate } = envelope;
+      
+      console.log('[FillContentMetricsUseCase] Processing request from:', requester_service);
       console.log('[FillContentMetricsUseCase] Payload:', JSON.stringify(payload));
       console.log('[FillContentMetricsUseCase] Response template:', JSON.stringify(responseTemplate));
 
       // Step 1: Generate SQL query using AI
       let sqlQuery;
       try {
-        sqlQuery = await this.aiQueryGenerator.generateQuery(payload, responseTemplate, requesterService);
+        sqlQuery = await this.aiQueryGenerator.generateQuery(payload, responseTemplate, requester_service);
         
         // Validate SQL for safety
         if (!this.aiQueryGenerator.validateSQL(sqlQuery)) {
@@ -47,8 +48,8 @@ class FillContentMetricsUseCase {
         }
       } catch (error) {
         console.error('[FillContentMetricsUseCase] AI query generation failed:', error);
-        // Return empty response template on AI failure
-        return this.buildEmptyResponse(responseTemplate);
+        // Return envelope with empty response template on AI failure
+        return this.buildEnvelopeWithEmptyResponse(envelope);
       }
 
       // Step 2: Extract parameters from payload for parameterized query
@@ -61,20 +62,28 @@ class FillContentMetricsUseCase {
         console.log('[FillContentMetricsUseCase] Query executed successfully. Rows:', queryResult.rows.length);
       } catch (error) {
         console.error('[FillContentMetricsUseCase] SQL execution failed:', error);
-        // Return empty response template on SQL error
-        return this.buildEmptyResponse(responseTemplate);
+        // Return envelope with empty response template on SQL error
+        return this.buildEnvelopeWithEmptyResponse(envelope);
       }
 
       // Step 4: Map query results to response template
       const filledResponse = this.mapResultsToTemplate(queryResult.rows, responseTemplate, payload);
 
+      // Step 5: Return FULL envelope with original payload + filled response
+      const filledEnvelope = {
+        requester_service: requester_service,
+        payload: payload, // Preserve original payload
+        response: filledResponse // Return filled response
+      };
+
       console.log('[FillContentMetricsUseCase] ✅ Response filled successfully');
-      return filledResponse;
+      console.log('[FillContentMetricsUseCase] Returning full envelope with original payload preserved');
+      return filledEnvelope;
 
     } catch (error) {
       console.error('[FillContentMetricsUseCase] Error:', error);
-      // Return empty response template on any error
-      return this.buildEmptyResponse(responseTemplate);
+      // Return envelope with empty response template on any error
+      return this.buildEnvelopeWithEmptyResponse(envelope);
     }
   }
 
@@ -239,6 +248,19 @@ class FillContentMetricsUseCase {
   buildEmptyResponse(template) {
     // Return template as-is (with default/empty values)
     return JSON.parse(JSON.stringify(template));
+  }
+
+  /**
+   * Build envelope with empty response (preserves original payload)
+   * @param {Object} envelope - Original envelope
+   * @returns {Object} Envelope with empty response
+   */
+  buildEnvelopeWithEmptyResponse(envelope) {
+    return {
+      requester_service: envelope.requester_service,
+      payload: envelope.payload, // Preserve original payload
+      response: this.buildEmptyResponse(envelope.response) // Empty response matching template
+    };
   }
 }
 

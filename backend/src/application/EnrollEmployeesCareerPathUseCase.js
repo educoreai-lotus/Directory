@@ -70,14 +70,20 @@ class EnrollEmployeesCareerPathUseCase {
         }
       });
 
-      // Build Coordinator payload with exactly 5 fields per learner
+      // Build Coordinator payload - improved format (no duplicate fields in learners)
       console.log('[EnrollEmployeesCareerPathUseCase] Building Coordinator payload...');
       const payload = {
-        action: 'course_builder_enroll_career_path',
+        action: 'enroll_employees_career_path',
         learning_flow: 'CAREER_PATH_DRIVEN',
         company_id: companyId,
         company_name: company.company_name,
-        learners: employees // Already in the correct format from loadEmployeesWithMetadata
+        learners: employees.map(emp => ({
+          learner_id: emp.learner_id,
+          learner_name: emp.learner_name,
+          preferred_language: emp.preferred_language
+          // Removed company_id from learners (already in payload)
+          // Removed learning_flow_tag from learners (already in payload)
+        }))
       };
 
       console.log('[EnrollEmployeesCareerPathUseCase] Coordinator payload structure:', {
@@ -90,21 +96,13 @@ class EnrollEmployeesCareerPathUseCase {
       console.log('[EnrollEmployeesCareerPathUseCase] First learner example (5 fields):', JSON.stringify(payload.learners[0], null, 2));
       console.log('[EnrollEmployeesCareerPathUseCase] Full payload:', JSON.stringify(payload, null, 2));
 
-      // Build Coordinator envelope with REQUIRED response template
-      // Coordinator's /api/fill-content-metrics/ endpoint REQUIRES:
-      // 1. requester_service (required)
-      // 2. payload (optional but we send it)
-      // 3. response (REQUIRED - defines expected response structure)
+      // Build Coordinator envelope
+      // Note: For outgoing requests, response can be empty {} as we don't need to fill it
       console.log('[EnrollEmployeesCareerPathUseCase] Building Coordinator envelope...');
       const coordinatorRequestBody = {
         requester_service: 'directory-service',
         payload,
-        response: {
-          success: false,
-          message: '',
-          enrollment_batch_id: '',
-          failed_employee_ids: []
-        }
+        response: {} // Empty response for outgoing requests
       };
 
       console.log('[EnrollEmployeesCareerPathUseCase] Coordinator envelope structure:', {

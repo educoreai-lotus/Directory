@@ -168,18 +168,16 @@ class RegisterCompanyUseCase {
 
       // Build Coordinator envelope
       const coordinatorEnvelope = {
-        requester_service: 'directory-service',
+        requester_service: 'directory',
         payload: {
-          action: 'sending_decision_maker_to_approve_learning_path',
+          action: 'sending_new_decision_maker',
           company_id: company.id,
           company_name: company.company_name,
           approval_policy: approvalPolicy,
-          decision_maker: decisionMaker
+          // Only include decision_maker if approval_policy is manual
+          ...(approvalPolicy === 'manual' && decisionMaker ? { decision_maker: decisionMaker } : {})
         },
-        response: {
-          success: false,
-          message: ''
-        }
+        response: {}
       };
 
       console.log('[RegisterCompanyUseCase] Sending to Coordinator:', JSON.stringify(coordinatorEnvelope, null, 2));

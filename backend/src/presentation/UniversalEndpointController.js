@@ -73,22 +73,16 @@ class UniversalEndpointController {
       }
 
       // Execute use case to fill response
-      const filledResponse = await this.fillContentMetricsUseCase.execute(
-        payload,
-        response,
-        requester_service
+      // Pass the FULL envelope so we can return it with filled response
+      const filledEnvelope = await this.fillContentMetricsUseCase.execute(
+        envelope // Pass full envelope, not just payload/response
       );
 
-      // Return response in Coordinator's expected format
-      // Format: { success: true, data: { ... } }
-      const coordinatorResponse = {
-        success: true,
-        data: filledResponse
-      };
-
-      // Return stringified JSON
+      // Return the FULL request object (original payload + filled response)
+      // This matches Coordinator's expected format: same structure as received
+      // Format: { requester_service, payload, response }
       res.setHeader('Content-Type', 'application/json');
-      res.send(JSON.stringify(coordinatorResponse));
+      res.send(JSON.stringify(filledEnvelope));
 
     } catch (error) {
       console.error('[UniversalEndpointController] Error:', error);
