@@ -209,6 +209,15 @@ class FillContentMetricsUseCase {
   mapRowToObject(row, template) {
     const mapped = {};
 
+    // Guard against unexpected null/undefined inputs
+    if (!template || typeof template !== 'object') {
+      console.warn(
+        '[FillContentMetricsUseCase] ⚠️ mapRowToObject called with invalid template. Template type:',
+        typeof template
+      );
+      return {};
+    }
+
     // Common field mappings (Directory → Other services)
     const fieldMappings = {
       'employee_id': ['user_id', 'employee_id'],
@@ -227,8 +236,10 @@ class FillContentMetricsUseCase {
       'github_data': ['github_data']
     };
 
+    const templateKeys = Object.keys(template || {});
+
     // Map each field in template
-    Object.keys(template).forEach(templateKey => {
+    templateKeys.forEach(templateKey => {
       // Try to find matching column in row
       let value = null;
 
@@ -248,22 +259,40 @@ class FillContentMetricsUseCase {
       // Set value (or keep template default structure)
       if (value !== null && value !== undefined) {
         mapped[templateKey] = value;
-      } else if (typeof template[templateKey] === 'object' && !Array.isArray(template[templateKey])) {
-        // Nested object - recurse
-        mapped[templateKey] = this.mapRowToObject(row, template[templateKey]);
+      } else if (template[templateKey] && typeof template[templateKey] === 'object' && !Array.isArray(template[templateKey])) {
+        // Nested object - recurse, ensure we pass a valid object
+        mapped[0] = this.isPlainObject(template[templateKey])
+          ? this.mapRowToObject(row, template[templateKey])
+          : template[templateKey];
       } else if (Array.isArray(template[templateKey])) {
         // Array field - return empty array
         mapped[templateKey] = [];
       } else {
         // Keep template default, but log when we have no matching DB field
-        if (template[templateKey] === null || template[templateKey] === '') {
-          console.warn(
-            '[FillContentMetricsUseCase] ⚠️ No database value found for template field:',
-            templateKey,
-            'Available columns in row:',
-            Object.keys(row)
-          );
+        const hasRow = row && typeof row === 'object';
+        const isDefaultEmpty =
+          template[templateKey] === null ||
+          template[templateKey] === '' ||
+          (Array.isArray(template[templateKey]) && template[templateKey].length === 0);
+
+        if (isDefaultEmpty && hasRow) {
+          try {
+            console.warn(
+              '[FillContentMetricsUseCase] ⚠️ No database value found for template field:',
+              templateKey,
+              'Available columns in row:',
+              Object.keys(row || {})
+            );
+          } catch (logErr) {
+            console.warn(
+              '[FillContentMetricsUseCase] ⚠️ Failed to inspect row keys for field:',
+              templateKey,
+              'Error:',
+              logErr.message
+            );
+          }
         }
+
         mapped[templateKey] = template[templateKey];
       }
     });
@@ -279,6 +308,15 @@ class FillContentMetricsUseCase {
   buildEmptyResponse(template) {
     // Return template as-is (with default/empty values)
     return JSON.parse(JSON.stringify(template));
+  }
+
+  /**
+   * Helper to check if a value is a plain object (and not null/array)
+   * @param {any} value
+   * @returns {boolean}
+   */
+  isPlainObject(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
   }
 
   /**
