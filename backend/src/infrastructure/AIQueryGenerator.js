@@ -496,12 +496,14 @@ Generate the SQL query now:`;
    */
   validateSQL(sql) {
     // Basic validation - prevent dangerous operations
+    // IMPORTANT: Use word boundaries so we don't block column names like "created_at"
     const dangerousKeywords = ['DROP', 'DELETE', 'TRUNCATE', 'ALTER', 'CREATE', 'INSERT', 'UPDATE'];
     const upperSQL = sql.toUpperCase();
     
     for (const keyword of dangerousKeywords) {
-      if (upperSQL.includes(keyword)) {
-        console.error(`[AIQueryGenerator] ⚠️  Dangerous keyword detected: ${keyword}`);
+      const pattern = new RegExp(`\\b${keyword}\\b`, 'i');
+      if (pattern.test(upperSQL)) {
+        console.error(`[AIQueryGenerator] ⚠️  Dangerous keyword detected as standalone word: ${keyword}`);
         return false;
       }
     }
