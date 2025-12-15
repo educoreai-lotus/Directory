@@ -37,9 +37,22 @@ class FillContentMetricsUseCase {
       console.log('[FillContentMetricsUseCase] Payload:', JSON.stringify(payload));
       console.log('[FillContentMetricsUseCase] Response template:', JSON.stringify(responseTemplate));
 
+      // Normalize requester service name for comparisons
+      const requester = (requester_service || '').toString();
+
+      // Special-case handling for ManagementReporting to avoid fragile AI SQL issues
+      const isManagementReporting =
+        requester.toLowerCase() === 'managementreporting'.toLowerCase() ||
+        requester.toLowerCase() === 'management-reporting'.toLowerCase();
+
+      if (isManagementReporting) {
+        console.log('[FillContentMetricsUseCase] 🔎 Detected ManagementReporting request - using dedicated handler');
+        return await this.handleManagementReporting(envelope);
+      }
+
       // Check if this is a batch request from Learning Analytics
       const isBatchRequest = payload?.type === 'batch' && 
-                           (requester_service === 'LearningAnalytics' || requester_service === 'learning-analytics');
+                           (requester === 'LearningAnalytics' || requester === 'learning-analytics');
       
       if (isBatchRequest) {
         console.log('[FillContentMetricsUseCase] 🔄 Detected BATCH request from Learning Analytics');
@@ -242,7 +255,15 @@ class FillContentMetricsUseCase {
         // Array field - return empty array
         mapped[templateKey] = [];
       } else {
-        // Keep template default
+        // Keep template default, but log when we have no matching DB field
+        if (template[templateKey] === null || template[templateKey] === '') {
+          console.warn(
+            '[FillContentMetricsUseCase] ⚠️ No database value found for template field:',
+            templateKey,
+            'Available columns in row:',
+            Object.keys(row)
+          );
+        }
         mapped[templateKey] = template[templateKey];
       }
     });
@@ -271,6 +292,74 @@ class FillContentMetricsUseCase {
       payload: envelope.payload, // Preserve original payload
       response: this.buildEmptyResponse(envelope.response) // Empty response matching template
     };
+  }
+
+  /**
+   * Dedicated handler for ManagementReporting requests.
+   * Uses a deterministic SQL query to fetch company-level management data
+   * instead of relying solely on AI-generated SQL (which can fail with complex aggregates).
+   * @param {Object} envelope - Full Coordinator request envelope
+   * @returns {Promise<Object>} Filled envelope
+   */
+  async handleManagementReporting(envelope) {
+    const { requester_service, payload, response: responseTemplate } = envelope;
+
+    try {
+      // Static, safe SQL for management overview across all companies
+      const sqlQuery = `
+        SELECT 
+          c.id AS company_id,
+          c.company_name,
+          c.industry,
+          COUNT(e.id) AS company_size,
+          c.created_at AS date_registered,
+          CONCAT(c.hr_contact_name, ', ', c.hr_contact_email) AS primary_hr_contact,
+          c.approval_policy,
+          (
+            SELECT CONCAT(dm.full_name, ', ', dm.email)
+            FROM employees dm
+            JOIN employee_roles er ON dm.id = er.employee_id
+            WHERE dm.company_id = c.id
+              AND er.role_type = 'DECISION_MAKER'
+            LIMIT 1
+          ) AS decision_maker,
+          c.kpis,
+          c.max_attempts AS max_test_attempts,
+          c.domain AS website_url,
+          c.verification_status,
+          NULL::jsonb AS hierarchy
+        FROM companies c
+        LEFT JOIN employees e ON e.company_id = c.id
+        GROUP BY 
+          c.id,
+          c.company_name,
+          c.industry,
+          c.created_at,
+          c.hr_contact_name,
+          c.hr_contact_email,
+          c.approval_policy,
+          c.kpis,
+          c.max_attempts,
+          c.domain,
+          c.verification_status
+        ORDER BY c.created_at DESC;
+      `;
+
+      console.log('[FillContentMetricsUseCase] [ManagementReporting] Executing static management query');
+      const queryResult = await this.pool.query(sqlQuery, []);
+      console.log('[FillContentMetricsUseCase] [ManagementReporting] Rows:', queryResult.rows.length);
+
+      const filledResponse = this.mapResultsToTemplate(queryResult.rows, responseTemplate, payload);
+
+      return {
+        requester_service,
+        payload,
+        response: filledResponse
+      };
+    } catch (error) {
+      console.error('[FillContentMetricsUseCase] [ManagementReporting] Error executing static query:', error);
+      return this.buildEnvelopeWithEmptyResponse(envelope);
+    }
   }
 
   /**
