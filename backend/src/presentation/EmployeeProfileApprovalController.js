@@ -3,12 +3,16 @@
 
 const EmployeeProfileApprovalRepository = require('../infrastructure/EmployeeProfileApprovalRepository');
 const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+const CompanyRepository = require('../infrastructure/CompanyRepository');
+const MicroserviceClient = require('../infrastructure/MicroserviceClient');
 const { hrOnlyMiddleware } = require('../shared/authMiddleware');
 
 class EmployeeProfileApprovalController {
   constructor() {
     this.approvalRepository = new EmployeeProfileApprovalRepository();
     this.employeeRepository = new EmployeeRepository();
+    this.companyRepository = new CompanyRepository();
+    this.microserviceClient = new MicroserviceClient();
   }
 
   /**
@@ -124,6 +128,55 @@ class EmployeeProfileApprovalController {
       await this.employeeRepository.updateProfileStatus(employeeUuid, 'approved');
 
       console.log(`[EmployeeProfileApprovalController] ✅ Profile approved for employee: ${employeeUuid}`);
+
+      // After approval, send skills data to Skills Engine via Coordinator
+      // This is non-blocking; errors are logged but won't fail the approval
+      try {
+        const employee = await this.employeeRepository.findById(employeeUuid);
+        const company = await this.companyRepository.findById(approvalCompanyId);
+
+        if (employee && company) {
+          // Determine employee type from roles
+          const rolesQuery = 'SELECT role_type FROM employee_roles WHERE employee_id = $1';
+          const rolesResult = await this.employeeRepository.pool.query(rolesQuery, [employeeUuid]);
+          const roles = rolesResult.rows.map(row => row.role_type);
+          const isTrainer = roles.includes('TRAINER');
+          const employeeType = isTrainer ? 'trainer' : 'regular_employee';
+
+          // Prepare raw_data from stored enrichment sources
+          const linkedinData = employee.linkedin_data 
+            ? (typeof employee.linkedin_data === 'string' ? JSON.parse(employee.linkedin_data) : employee.linkedin_data)
+            : {};
+          
+          const githubData = employee.github_data
+            ? (typeof employee.github_data === 'string' ? JSON.parse(employee.github_data) : employee.github_data)
+            : {};
+
+          const rawData = {
+            linkedin: linkedinData || {},
+            github: githubData || {}
+          };
+
+          console.log('[EmployeeProfileApprovalController] Sending post-approval skills payload to Skills Engine via Coordinator...');
+          await this.microserviceClient.getEmployeeSkills({
+            userId: employee.id,
+            userName: employee.full_name,
+            companyId: employee.company_id.toString(),
+            companyName: company.company_name,
+            roleType: employeeType,
+            pathCareer: employee.target_role_in_company || null,
+            rawData
+          });
+          console.log('[EmployeeProfileApprovalController] ✅ Post-approval skills payload sent to Skills Engine');
+        } else {
+          console.warn('[EmployeeProfileApprovalController] Skipping Skills Engine call: employee or company not found', {
+            hasEmployee: !!employee,
+            hasCompany: !!company
+          });
+        }
+      } catch (skillsError) {
+        console.warn('[EmployeeProfileApprovalController] ⚠️ Skills Engine call after approval failed (non-blocking):', skillsError.message);
+      }
 
       return res.status(200).json({
         success: true,
