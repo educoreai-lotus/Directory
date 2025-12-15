@@ -3,11 +3,13 @@
 
 const EmployeeRepository = require('../infrastructure/EmployeeRepository');
 const MicroserviceClient = require('../infrastructure/MicroserviceClient');
+const CompanyRepository = require('../infrastructure/CompanyRepository');
 
 class GetEmployeeSkillsUseCase {
   constructor() {
     this.employeeRepository = new EmployeeRepository();
     this.microserviceClient = new MicroserviceClient();
+    this.companyRepository = new CompanyRepository();
   }
 
   /**
@@ -41,6 +43,12 @@ class GetEmployeeSkillsUseCase {
       const isTrainer = roles.includes('TRAINER');
       const employeeType = isTrainer ? 'trainer' : 'regular_employee';
 
+      // Fetch company to include company_name in payload
+      const company = await this.companyRepository.findById(companyId);
+      if (!company) {
+        throw new Error('Company not found');
+      }
+
       // Get raw data (LinkedIn and GitHub)
       const linkedinData = employee.linkedin_data 
         ? (typeof employee.linkedin_data === 'string' ? JSON.parse(employee.linkedin_data) : employee.linkedin_data)
@@ -56,13 +64,16 @@ class GetEmployeeSkillsUseCase {
         linkedin: linkedinData
       };
 
-      // Call Skills Engine to get normalized skills
-      const skillsData = await this.microserviceClient.getEmployeeSkills(
-        employee.employee_id, // Use employee_id (string) not UUID
-        employee.company_id.toString(), // Company ID as string
-        employeeType,
+      // Call Skills Engine to get normalized skills with updated payload fields
+      const skillsData = await this.microserviceClient.getEmployeeSkills({
+        userId: employee.id, // UUID
+        userName: employee.full_name,
+        companyId: employee.company_id.toString(),
+        companyName: company.company_name,
+        roleType: employeeType,
+        pathCareer: employee.target_role_in_company || null,
         rawData
-      );
+      });
 
       return {
         success: true,

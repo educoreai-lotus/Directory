@@ -136,27 +136,39 @@ class MicroserviceClient {
 
   /**
    * Get employee skills from Skills Engine
-   * @param {string} employeeId - Employee ID
-   * @param {string} companyId - Company ID
-   * @param {string} roleType - Employee role type
-   * @param {Object} rawData - Raw LinkedIn/GitHub data
+   * @param {Object} params
+   * @param {string} params.userId - Employee UUID (sent as user_id)
+   * @param {string} params.userName - Employee full name (sent as user_name)
+   * @param {string} params.companyId - Company UUID
+   * @param {string} params.companyName - Company name
+   * @param {string} params.roleType - Employee role type (trainer | regular_employee)
+   * @param {string|null} params.pathCareer - Target role (sent as path_career)
+   * @param {Object} params.rawData - Raw LinkedIn/GitHub/CV/form data
    * @returns {Promise<Object>} Skills data with competencies and relevance_score
    */
-  async getEmployeeSkills(employeeId, companyId, roleType, rawData) {
+  async getEmployeeSkills({
+    userId,
+    userName,
+    companyId,
+    companyName,
+    roleType,
+    pathCareer,
+    rawData
+  }) {
     const payload = {
-      employee_id: employeeId,
+      user_id: userId,
+      user_name: userName,
       company_id: companyId,
+      company_name: companyName,
       employee_type: roleType,
+      path_career: pathCareer || null,
       raw_data: rawData || {}
     };
 
     const responseTemplate = {
       user_id: 0,
       competencies: [],
-      relevance_score: 0,
-      gap: {
-        missing_skills: []
-      }
+      relevance_score: 0
     };
 
     return await this.callMicroservice('skillsEngine', payload, responseTemplate, 'normalize-skills');

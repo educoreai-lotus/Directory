@@ -332,12 +332,18 @@ class EnrichProfileUseCase {
         };
 
         console.log('[EnrichProfileUseCase] Sending skills data to Skills Engine...');
-        const skillsResult = await this.microserviceClient.getEmployeeSkills(
-          employee.employee_id,
-          employee.company_id.toString(),
-          employeeType,
+        // Fetch company to include name in payload
+        const company = await this.companyRepository.findById(employee.company_id);
+
+        const skillsResult = await this.microserviceClient.getEmployeeSkills({
+          userId: employee.id,
+          userName: employee.full_name,
+          companyId: employee.company_id.toString(),
+          companyName: company?.company_name || null,
+          roleType: employeeType,
+          pathCareer: employee.target_role_in_company || null,
           rawData
-        );
+        });
         console.log('[EnrichProfileUseCase] ✅ Skills Engine processed data:', {
           competencies_count: skillsResult.competencies?.length || 0,
           relevance_score: skillsResult.relevance_score || 0
