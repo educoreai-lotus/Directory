@@ -365,7 +365,80 @@ class FillContentMetricsUseCase {
           c.max_attempts AS max_test_attempts,
           c.domain AS website_url,
           c.verification_status,
-          NULL::jsonb AS hierarchy
+          -- Build hierarchy: departments → teams → employees as JSON
+          COALESCE(
+            (
+              SELECT json_agg(dept_obj)
+              FROM (
+                SELECT
+                  d.id AS department_id,
+                  d.department_name,
+                  -- Department manager: first employee with DEPARTMENT_MANAGER role in this department
+                  (
+                    SELECT erdm.employee_id
+                    FROM employee_roles erdm
+                    JOIN employees edm ON erdm.employee_id = edm.id
+                    JOIN employee_teams etd ON etd.employee_id = edm.id
+                    JOIN teams tdm ON etd.team_id = tdm.id
+                    WHERE erdm.role_type = 'DEPARTMENT_MANAGER'
+                      AND tdm.department_id = d.id
+                    LIMIT 1
+                  ) AS manager_id,
+                  -- Teams in this department
+                  COALESCE(
+                    (
+                      SELECT json_agg(team_obj)
+                      FROM (
+                        SELECT
+                          t.id AS team_id,
+                          t.team_name,
+                          -- Team manager: first employee with TEAM_MANAGER role in this team
+                          (
+                            SELECT ertm.employee_id
+                            FROM employee_roles ertm
+                            JOIN employees etm ON ertm.employee_id = etm.id
+                            JOIN employee_teams ett ON ett.employee_id = etm.id
+                            WHERE ertm.role_type = 'TEAM_MANAGER'
+                              AND ett.team_id = t.id
+                            LIMIT 1
+                          ) AS manager_id,
+                          -- Employees in this team
+                          COALESCE(
+                            (
+                              SELECT json_agg(emp_obj)
+                              FROM (
+                                SELECT
+                                  e.id AS employee_id,
+                                  e.full_name AS name,
+                                  -- Simplified role_type: trainer vs regular based on roles
+                                  CASE
+                                    WHEN EXISTS (
+                                      SELECT 1 FROM employee_roles er2 
+                                      WHERE er2.employee_id = e.id 
+                                        AND er2.role_type = 'TRAINER'
+                                    ) THEN 'trainer'
+                                    ELSE 'regular'
+                                  END AS role_type
+                                FROM employees e
+                                JOIN employee_teams et ON et.employee_id = e.id
+                                WHERE et.team_id = t.id
+                              ) AS emp_obj
+                            ),
+                            '[]'::json
+                          ) AS employees
+                        FROM teams t
+                        WHERE t.company_id = c.id
+                          AND t.department_id = d.id
+                      ) AS team_obj
+                    ),
+                    '[]'::json
+                  ) AS teams
+                FROM departments d
+                WHERE d.company_id = c.id
+              ) AS dept_obj
+            ),
+            '[]'::json
+          ) AS hierarchy
         FROM companies c
         LEFT JOIN employees e ON e.company_id = c.id
         GROUP BY 
