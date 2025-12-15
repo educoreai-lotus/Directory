@@ -173,36 +173,10 @@ class EnrichProfileUseCase {
       console.log('[EnrichProfileUseCase] mergedDataIsEmpty check result:', mergedDataIsEmpty);
 
       if (mergedDataIsEmpty) {
-        console.warn('[EnrichProfileUseCase] ⚠️  Merged data is completely empty - returning success with empty fields');
-        
-        try {
-          // Update employee to mark enrichment as completed (even with empty data)
-          console.log('[EnrichProfileUseCase] Calling updateEnrichment with empty data...');
-          await this.employeeRepository.updateEnrichment(
-            employeeId,
-            '', // Empty bio
-            [], // Empty project summaries
-            '', // Empty value proposition
-            true // Mark as completed
-          );
-          console.log('[EnrichProfileUseCase] ✅ updateEnrichment completed successfully');
-
-          return {
-            success: true,
-            message: "No enrichment data available",
-            bio: "",
-            skills: [],
-            projects: [],
-            employee: {
-              id: employeeId,
-              enrichment_completed: true
-            }
-          };
-        } catch (updateError) {
-          console.error('[EnrichProfileUseCase] ❌ ERROR in updateEnrichment:', updateError.message);
-          console.error('[EnrichProfileUseCase] Error stack:', updateError.stack);
-          throw updateError; // Re-throw to be caught by controller
-        }
+        console.warn('[EnrichProfileUseCase] ⚠️  Merged data is completely empty - proceeding with minimal enrichment (fallback bio/value proposition).');
+        // Ensure we still have objects to pass into AI generation fallbacks
+        linkedinData = linkedinData || {};
+        githubData = githubData || {};
       }
       
       console.log('[EnrichProfileUseCase] ✅ Proceeding with enrichment (with or without data)...');
