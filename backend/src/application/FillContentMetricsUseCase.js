@@ -57,7 +57,17 @@ class FillContentMetricsUseCase {
       if (isBatchRequest) {
         console.log('[FillContentMetricsUseCase] 🔄 Detected BATCH request from Learning Analytics');
         console.log('[FillContentMetricsUseCase] Cursor:', payload.cursor || 'null (first page)');
-        return await this.handleBatchRequest(envelope);
+        return await this.handleLearningAnalyticsBatch(envelope);
+      }
+
+      // Check if this is an on-demand request from Learning Analytics
+      const isLearningAnalyticsOnDemand = 
+        (requester === 'LearningAnalytics' || requester === 'learning-analytics') &&
+        (payload?.type === 'on-demand' || payload?.action?.includes('on-demand'));
+      
+      if (isLearningAnalyticsOnDemand) {
+        console.log('[FillContentMetricsUseCase] 🔎 Detected LearningAnalytics on-demand request - using dedicated handler');
+        return await this.handleLearningAnalyticsOnDemand(envelope);
       }
 
       // Step 1: Generate SQL query using AI
@@ -469,6 +479,494 @@ class FillContentMetricsUseCase {
       };
     } catch (error) {
       console.error('[FillContentMetricsUseCase] [ManagementReporting] Error executing static query:', error);
+      return this.buildEnvelopeWithEmptyResponse(envelope);
+    }
+  }
+
+  /**
+   * Dedicated handler for LearningAnalytics on-demand requests.
+   * Returns a single company's data with nested hierarchy structure.
+   * @param {Object} envelope - Full Coordinator request envelope
+   * @returns {Promise<Object>} Filled envelope with single company data
+   */
+  async handleLearningAnalyticsOnDemand(envelope) {
+    const { requester_service, payload, response: responseTemplate } = envelope;
+
+    try {
+      const companyId = payload?.company_id;
+      
+      if (!companyId) {
+        console.error('[FillContentMetricsUseCase] [LearningAnalytics] Missing company_id in payload');
+        return this.buildEnvelopeWithEmptyResponse(envelope);
+      }
+
+      console.log('[FillContentMetricsUseCase] [LearningAnalytics] Processing on-demand request for company_id:', companyId);
+
+      // Build WHERE clause - try UUID first, then fallback to company_name or other identifier
+      let whereClause = '';
+      let queryParams = [];
+      
+      // Check if company_id is a UUID
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(companyId);
+      
+      if (isUUID) {
+        whereClause = 'WHERE c.id = $1';
+        queryParams = [companyId];
+      } else {
+        // Try to find by company_name or other identifier
+        whereClause = 'WHERE c.company_name = $1 OR c.id::text = $1';
+        queryParams = [companyId];
+      }
+
+      // Static SQL query for single company with hierarchy
+      const sqlQuery = `
+        SELECT 
+          c.id AS company_id,
+          c.company_name,
+          c.industry,
+          COUNT(DISTINCT e.id) AS company_size,
+          c.hr_contact_name AS primary_hr_contact_name,
+          c.hr_contact_email AS primary_hr_contact_email,
+          c.hr_contact_role AS primary_hr_contact_role,
+          (
+            SELECT CONCAT(er.role_type, ', ', dm.email)
+            FROM employees dm
+            JOIN employee_roles er ON dm.id = er.employee_id
+            WHERE dm.company_id = c.id
+              AND er.role_type = 'DECISION_MAKER'
+            LIMIT 1
+          ) AS approver_info,
+          c.kpis,
+          c.max_attempts AS max_test_attempts,
+          c.num_of_exercises AS exercises_limit,
+          -- Build hierarchy: departments → teams → employees as JSON
+          COALESCE(
+            (
+              SELECT json_agg(dept_obj ORDER BY dept_obj.department_name)
+              FROM (
+                SELECT
+                  d.id AS department_id,
+                  d.department_name,
+                  -- Department manager: first employee with DEPARTMENT_MANAGER role in this department
+                  (
+                    SELECT erdm.employee_id
+                    FROM employee_roles erdm
+                    JOIN employees edm ON erdm.employee_id = edm.id
+                    JOIN employee_teams etd ON etd.employee_id = edm.id
+                    JOIN teams tdm ON etd.team_id = tdm.id
+                    WHERE erdm.role_type = 'DEPARTMENT_MANAGER'
+                      AND tdm.department_id = d.id
+                    LIMIT 1
+                  ) AS manager_id,
+                  -- Teams in this department
+                  COALESCE(
+                    (
+                      SELECT json_agg(team_obj ORDER BY team_obj.team_name)
+                      FROM (
+                        SELECT
+                          t.id AS team_id,
+                          t.team_name,
+                          -- Team manager: first employee with TEAM_MANAGER role in this team
+                          (
+                            SELECT ertm.employee_id
+                            FROM employee_roles ertm
+                            JOIN employees etm ON ertm.employee_id = etm.id
+                            JOIN employee_teams ett ON ett.employee_id = etm.id
+                            WHERE ertm.role_type = 'TEAM_MANAGER'
+                              AND ett.team_id = t.id
+                            LIMIT 1
+                          ) AS manager_id,
+                          -- Employees in this team
+                          COALESCE(
+                            (
+                              SELECT json_agg(emp_obj ORDER BY emp_obj.name)
+                              FROM (
+                                SELECT
+                                  e.employee_id,
+                                  e.full_name AS name,
+                                  -- Simplified role_type: trainer vs regular based on roles
+                                  CASE
+                                    WHEN EXISTS (
+                                      SELECT 1 FROM employee_roles er2 
+                                      WHERE er2.employee_id = e.id 
+                                        AND er2.role_type = 'TRAINER'
+                                    ) THEN 'trainer'
+                                    ELSE 'regular'
+                                  END AS role_type
+                                FROM employees e
+                                JOIN employee_teams et ON et.employee_id = e.id
+                                WHERE et.team_id = t.id
+                                  AND e.status = 'active'
+                              ) AS emp_obj
+                            ),
+                            '[]'::json
+                          ) AS employees
+                        FROM teams t
+                        WHERE t.company_id = c.id
+                          AND t.department_id = d.id
+                      ) AS team_obj
+                    ),
+                    '[]'::json
+                  ) AS teams
+                FROM departments d
+                WHERE d.company_id = c.id
+              ) AS dept_obj
+            ),
+            '[]'::json
+          ) AS hierarchy
+        FROM companies c
+        LEFT JOIN employees e ON e.company_id = c.id
+        ${whereClause}
+        GROUP BY 
+          c.id,
+          c.company_name,
+          c.industry,
+          c.hr_contact_name,
+          c.hr_contact_email,
+          c.hr_contact_role,
+          c.kpis,
+          c.max_attempts,
+          c.num_of_exercises
+        LIMIT 1;
+      `;
+
+      console.log('[FillContentMetricsUseCase] [LearningAnalytics] Executing on-demand query');
+      const queryResult = await this.pool.query(sqlQuery, queryParams);
+      console.log('[FillContentMetricsUseCase] [LearningAnalytics] Rows:', queryResult.rows.length);
+
+      if (queryResult.rows.length === 0) {
+        console.warn('[FillContentMetricsUseCase] [LearningAnalytics] No company found for company_id:', companyId);
+        return this.buildEnvelopeWithEmptyResponse(envelope);
+      }
+
+      const row = queryResult.rows[0];
+
+      // Manually map the row to the response template structure
+      const filledResponse = {
+        version: responseTemplate.version || '',
+        company_id: row.company_id || '',
+        company_name: row.company_name || '',
+        industry: row.industry || '',
+        company_size: parseInt(row.company_size || 0, 10),
+        primary_hr_contact: {
+          name: row.primary_hr_contact_name || '',
+          email: row.primary_hr_contact_email || '',
+          phone: '' // Not stored in database
+        },
+        approver: (() => {
+          if (row.approver_info) {
+            const parts = row.approver_info.split(', ');
+            return {
+              role: parts[0] || '',
+              email: parts[1] || ''
+            };
+          }
+          return {
+            role: '',
+            email: ''
+          };
+        })(),
+        kpis: (() => {
+          try {
+            if (typeof row.kpis === 'string') {
+              return JSON.parse(row.kpis);
+            }
+            return row.kpis || {};
+          } catch (e) {
+            return {};
+          }
+        })(),
+        max_test_attempts: parseInt(row.max_test_attempts || 0, 10),
+        exercises_limit: parseInt(row.exercises_limit || 0, 10),
+        hierarchy: (() => {
+          try {
+            if (typeof row.hierarchy === 'string') {
+              return JSON.parse(row.hierarchy);
+            }
+            return row.hierarchy || [];
+          } catch (e) {
+            console.error('[FillContentMetricsUseCase] [LearningAnalytics] Error parsing hierarchy:', e);
+            return [];
+          }
+        })()
+      };
+
+      return {
+        requester_service,
+        payload,
+        response: filledResponse
+      };
+    } catch (error) {
+      console.error('[FillContentMetricsUseCase] [LearningAnalytics] Error executing on-demand query:', error);
+      return this.buildEnvelopeWithEmptyResponse(envelope);
+    }
+  }
+
+  /**
+   * Dedicated handler for LearningAnalytics batch requests.
+   * Returns paginated company data with nested hierarchy structure.
+   * Uses static SQL query to avoid AI generation errors.
+   * @param {Object} envelope - Full Coordinator request envelope
+   * @returns {Promise<Object>} Full envelope with paginated response
+   */
+  async handleLearningAnalyticsBatch(envelope) {
+    const { requester_service, payload, response: responseTemplate } = envelope;
+    const cursor = payload.cursor || null; // null for first page
+    const pageSize = 1000; // Standard page size for batch requests
+
+    console.log('[FillContentMetricsUseCase] [LearningAnalytics] ========== BATCH REQUEST HANDLING ==========');
+    console.log('[FillContentMetricsUseCase] [LearningAnalytics] Cursor:', cursor || 'null (first page)');
+    console.log('[FillContentMetricsUseCase] [LearningAnalytics] Page size:', pageSize);
+
+    try {
+      // Build WHERE clause and parameters for cursor-based pagination
+      let whereClause = '';
+      let queryParams = [];
+      
+      if (cursor) {
+        // Cursor-based pagination: fetch companies with id > cursor
+        whereClause = 'WHERE c.id > $1';
+        queryParams.push(cursor);
+      }
+
+      // Static SQL query for companies with hierarchy (with pagination)
+      // Use parameterized query: $1 for cursor (if present), $1 or $2 for LIMIT
+      const limitParam = queryParams.length > 0 ? '$2' : '$1';
+      queryParams.push(pageSize);
+
+      const sqlQuery = `
+        SELECT 
+          c.id AS company_id,
+          c.company_name,
+          c.industry,
+          COUNT(DISTINCT e.id) AS company_size,
+          c.hr_contact_name AS primary_hr_contact_name,
+          c.hr_contact_email AS primary_hr_contact_email,
+          c.hr_contact_role AS primary_hr_contact_role,
+          (
+            SELECT CONCAT(er.role_type, ', ', dm.email)
+            FROM employees dm
+            JOIN employee_roles er ON dm.id = er.employee_id
+            WHERE dm.company_id = c.id
+              AND er.role_type = 'DECISION_MAKER'
+            LIMIT 1
+          ) AS approver_info,
+          c.kpis,
+          c.max_attempts AS max_test_attempts,
+          c.num_of_exercises AS exercises_limit,
+          -- Build hierarchy: departments → teams → employees as JSON
+          COALESCE(
+            (
+              SELECT json_agg(dept_obj ORDER BY dept_obj.department_name)
+              FROM (
+                SELECT
+                  d.id AS department_id,
+                  d.department_name,
+                  -- Department manager: first employee with DEPARTMENT_MANAGER role in this department
+                  (
+                    SELECT erdm.employee_id
+                    FROM employee_roles erdm
+                    JOIN employees edm ON erdm.employee_id = edm.id
+                    JOIN employee_teams etd ON etd.employee_id = edm.id
+                    JOIN teams tdm ON etd.team_id = tdm.id
+                    WHERE erdm.role_type = 'DEPARTMENT_MANAGER'
+                      AND tdm.department_id = d.id
+                    LIMIT 1
+                  ) AS manager_id,
+                  -- Teams in this department
+                  COALESCE(
+                    (
+                      SELECT json_agg(team_obj ORDER BY team_obj.team_name)
+                      FROM (
+                        SELECT
+                          t.id AS team_id,
+                          t.team_name,
+                          -- Team manager: first employee with TEAM_MANAGER role in this team
+                          (
+                            SELECT ertm.employee_id
+                            FROM employee_roles ertm
+                            JOIN employees etm ON ertm.employee_id = etm.id
+                            JOIN employee_teams ett ON ett.employee_id = etm.id
+                            WHERE ertm.role_type = 'TEAM_MANAGER'
+                              AND ett.team_id = t.id
+                            LIMIT 1
+                          ) AS manager_id,
+                          -- Employees in this team
+                          COALESCE(
+                            (
+                              SELECT json_agg(emp_obj ORDER BY emp_obj.name)
+                              FROM (
+                                SELECT
+                                  e.employee_id,
+                                  e.full_name AS name,
+                                  -- Simplified role_type: trainer vs regular based on roles
+                                  CASE
+                                    WHEN EXISTS (
+                                      SELECT 1 FROM employee_roles er2 
+                                      WHERE er2.employee_id = e.id 
+                                        AND er2.role_type = 'TRAINER'
+                                    ) THEN 'trainer'
+                                    ELSE 'regular'
+                                  END AS role_type
+                                FROM employees e
+                                JOIN employee_teams et ON et.employee_id = e.id
+                                WHERE et.team_id = t.id
+                                  AND e.status = 'active'
+                              ) AS emp_obj
+                            ),
+                            '[]'::json
+                          ) AS employees
+                        FROM teams t
+                        WHERE t.company_id = c.id
+                          AND t.department_id = d.id
+                      ) AS team_obj
+                    ),
+                    '[]'::json
+                  ) AS teams
+                FROM departments d
+                WHERE d.company_id = c.id
+              ) AS dept_obj
+            ),
+            '[]'::json
+          ) AS hierarchy
+        FROM companies c
+        LEFT JOIN employees e ON e.company_id = c.id
+        ${whereClause}
+        GROUP BY 
+          c.id,
+          c.company_name,
+          c.industry,
+          c.hr_contact_name,
+          c.hr_contact_email,
+          c.hr_contact_role,
+          c.kpis,
+          c.max_attempts,
+          c.num_of_exercises
+        ORDER BY c.id ASC
+        LIMIT ${limitParam};
+      `;
+
+      console.log('[FillContentMetricsUseCase] [LearningAnalytics] Executing batch query');
+      const queryResult = await this.pool.query(sqlQuery, queryParams);
+      console.log('[FillContentMetricsUseCase] [LearningAnalytics] Rows returned:', queryResult.rows.length);
+
+      // Get total count of companies
+      let totalRecords = 0;
+      try {
+        const countQuery = 'SELECT COUNT(*) as count FROM companies';
+        const countResult = await this.pool.query(countQuery, []);
+        totalRecords = parseInt(countResult.rows[0]?.count || 0, 10);
+        console.log('[FillContentMetricsUseCase] [LearningAnalytics] Total companies:', totalRecords);
+      } catch (error) {
+        console.error('[FillContentMetricsUseCase] [LearningAnalytics] COUNT query failed:', error.message);
+        totalRecords = queryResult.rows.length; // Fallback
+      }
+
+      // Map rows to response template structure
+      const companies = queryResult.rows.map(row => {
+        // Parse approver info
+        let approver = { role: '', email: '' };
+        if (row.approver_info) {
+          const parts = row.approver_info.split(', ');
+          approver = {
+            role: parts[0] || '',
+            email: parts[1] || ''
+          };
+        }
+
+        // Parse KPIs
+        let kpis = {};
+        try {
+          if (typeof row.kpis === 'string') {
+            kpis = JSON.parse(row.kpis);
+          } else if (row.kpis) {
+            kpis = row.kpis;
+          }
+        } catch (e) {
+          console.warn('[FillContentMetricsUseCase] [LearningAnalytics] Error parsing KPIs:', e);
+        }
+
+        // Parse hierarchy
+        let hierarchy = [];
+        try {
+          if (typeof row.hierarchy === 'string') {
+            hierarchy = JSON.parse(row.hierarchy);
+          } else if (row.hierarchy) {
+            hierarchy = row.hierarchy;
+          }
+        } catch (e) {
+          console.error('[FillContentMetricsUseCase] [LearningAnalytics] Error parsing hierarchy:', e);
+        }
+
+        return {
+          version: responseTemplate.version || '',
+          company_id: row.company_id || '',
+          company_name: row.company_name || '',
+          industry: row.industry || '',
+          company_size: parseInt(row.company_size || 0, 10),
+          primary_hr_contact: {
+            name: row.primary_hr_contact_name || '',
+            email: row.primary_hr_contact_email || '',
+            hr_user_id: '' // Not stored in database, return empty
+          },
+          approver: {
+            ...approver,
+            approver_id: '' // Not stored in database, return empty
+          },
+          kpis: kpis,
+          max_test_attempts: parseInt(row.max_test_attempts || 0, 10),
+          exercises_limit: parseInt(row.exercises_limit || 0, 10),
+          hierarchy: hierarchy
+        };
+      });
+
+      // Calculate pagination metadata
+      const returnedRecords = companies.length;
+      const lastRecord = queryResult.rows[returnedRecords - 1];
+      
+      // Determine next_cursor (last record's company_id)
+      let nextCursor = null;
+      if (returnedRecords > 0 && lastRecord && lastRecord.company_id) {
+        nextCursor = lastRecord.company_id;
+      }
+
+      // Determine has_more: true if returned_records equals page size AND next_cursor is not null
+      const hasMore = returnedRecords === pageSize && nextCursor !== null;
+
+      // If this is the last page, set next_cursor to null
+      if (!hasMore) {
+        nextCursor = null;
+      }
+
+      // Build response with pagination
+      // For batch requests, return object with pagination and array of companies
+      // Each company object matches the template structure
+      const filledResponse = {
+        version: responseTemplate.version || '',
+        pagination: {
+          total_records: totalRecords,
+          returned_records: returnedRecords,
+          next_cursor: nextCursor,
+          has_more: hasMore
+        },
+        // Array of company objects (each matches the template structure)
+        companies: companies
+      };
+
+      console.log('[FillContentMetricsUseCase] [LearningAnalytics] ✅ Batch response prepared:');
+      console.log('[FillContentMetricsUseCase] [LearningAnalytics]   - Total records:', totalRecords);
+      console.log('[FillContentMetricsUseCase] [LearningAnalytics]   - Returned records:', returnedRecords);
+      console.log('[FillContentMetricsUseCase] [LearningAnalytics]   - Next cursor:', nextCursor || 'null (last page)');
+      console.log('[FillContentMetricsUseCase] [LearningAnalytics]   - Has more:', hasMore);
+
+      return {
+        requester_service,
+        payload,
+        response: filledResponse
+      };
+
+    } catch (error) {
+      console.error('[FillContentMetricsUseCase] [LearningAnalytics] Error handling batch request:', error);
       return this.buildEnvelopeWithEmptyResponse(envelope);
     }
   }
