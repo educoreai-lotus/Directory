@@ -20,6 +20,28 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
     { id: 'requests', label: 'Requests', component: ProfileRequests }
   ];
 
+  const handleTabClick = (tabId) => {
+    if (tabId === 'analytics') {
+      // Redirect to Learning Analytics frontend with user ID
+      const baseUrl = process.env.REACT_APP_LEARNING_ANALYTICS_URL || 'https://learning-analytics-frontend-psi.vercel.app';
+      
+      if (!employeeId) {
+        console.error('[ApprovedProfileTabs] Cannot redirect: Employee ID is missing');
+        alert('Error: Employee ID not found. Please try again.');
+        return;
+      }
+      
+      // Build URL with employee ID as query parameter
+      const analyticsUrl = `${baseUrl}?userId=${encodeURIComponent(employeeId)}`;
+      
+      console.log('[ApprovedProfileTabs] Redirecting to Learning Analytics:', analyticsUrl);
+      console.log('[ApprovedProfileTabs] Employee ID (UUID):', employeeId);
+      window.location.href = analyticsUrl;
+    } else {
+      setActiveTab(tabId);
+    }
+  };
+
   const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component;
 
   return (
@@ -29,7 +51,7 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleTabClick(tab.id)}
             className="px-4 py-2 text-sm font-medium transition-colors"
             style={{
               borderBottom: activeTab === tab.id ? '2px solid #047857' : '2px solid transparent',
