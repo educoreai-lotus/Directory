@@ -155,12 +155,16 @@ class MicroserviceClient {
     pathCareer,
     rawData
   }) {
+    // Map roleType to Skills Engine expected values: "regular" or "trainer"
+    // Skills Engine expects "regular" or "trainer", not "regular_employee"
+    const employeeType = roleType === 'trainer' ? 'trainer' : 'regular';
+    
     const payload = {
       user_id: userId,
       user_name: userName,
       company_id: companyId,
       company_name: companyName,
-      employee_type: roleType,
+      employee_type: employeeType, // Mapped to "regular" or "trainer"
       path_career: pathCareer || null,
       raw_data: rawData || {}
     };

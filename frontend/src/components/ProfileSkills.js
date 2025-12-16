@@ -275,7 +275,20 @@ function ProfileSkills({ employeeId }) {
               e.target.style.background = 'var(--bg-button-primary, #059669)';
             }}
             onClick={() => {
-              // TODO: Implement skills verification functionality
+              // Redirect to Assessment frontend with employee ID
+              if (!employeeId) {
+                console.error('[ProfileSkills] Cannot redirect: employeeId is missing');
+                return;
+              }
+              
+              // Build Assessment URL with employee UUID and exam type
+              const assessmentUrl = `https://assessment-seven-liard.vercel.app/exam-intro?examType=baseline&userId=${encodeURIComponent(employeeId)}`;
+              
+              console.log('[ProfileSkills] Redirecting to Assessment:', assessmentUrl);
+              console.log('[ProfileSkills] Employee ID (UUID):', employeeId);
+              
+              // Navigate to Assessment frontend (direct navigation, not through Coordinator)
+              window.location.href = assessmentUrl;
             }}
           >
             Verify Your Skills
