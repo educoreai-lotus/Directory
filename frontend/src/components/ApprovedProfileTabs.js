@@ -37,6 +37,22 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
       console.log('[ApprovedProfileTabs] Redirecting to Learning Analytics:', analyticsUrl);
       console.log('[ApprovedProfileTabs] Employee ID (UUID):', employeeId);
       window.location.href = analyticsUrl;
+    } else if (tabId === 'courses') {
+      // Redirect to Course Builder frontend with user ID
+      const baseUrl = process.env.REACT_APP_COURSE_BUILDER_URL || 'https://course-builder-alpha-nine.vercel.app/learner/dashboard';
+      
+      if (!employeeId) {
+        console.error('[ApprovedProfileTabs] Cannot redirect: Employee ID is missing');
+        alert('Error: Employee ID not found. Please try again.');
+        return;
+      }
+      
+      // Build URL with employee ID as query parameter
+      const courseBuilderUrl = `${baseUrl}?userId=${encodeURIComponent(employeeId)}`;
+      
+      console.log('[ApprovedProfileTabs] Redirecting to Course Builder:', courseBuilderUrl);
+      console.log('[ApprovedProfileTabs] Employee ID (UUID):', employeeId);
+      window.location.href = courseBuilderUrl;
     } else {
       setActiveTab(tabId);
     }
