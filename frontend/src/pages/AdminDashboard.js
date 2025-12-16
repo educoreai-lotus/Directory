@@ -44,10 +44,22 @@ function AdminDashboard() {
   };
 
   const handleManagementReporting = () => {
-    alert('Redirecting to Management & Reporting microservice...');
-    // TODO: When Management & Reporting microservice is ready:
-    // const mgmtUrl = process.env.REACT_APP_MANAGEMENT_REPORTING_URL;
-    // window.open(mgmtUrl, '_blank');
+    // Redirect to Management & Reporting frontend with admin ID
+    const baseUrl = process.env.REACT_APP_MANAGEMENT_REPORTING_URL || 'https://management-reporting.vercel.app/dashboard';
+    const adminId = user?.id; // Admin UUID from database
+    
+    if (!adminId) {
+      console.error('[AdminDashboard] Cannot redirect: Admin ID is missing');
+      alert('Error: Admin ID not found. Please log in again.');
+      return;
+    }
+    
+    // Build URL with admin ID as query parameter
+    const mgmtUrl = `${baseUrl}?adminId=${encodeURIComponent(adminId)}`;
+    
+    console.log('[AdminDashboard] Redirecting to Management & Reporting:', mgmtUrl);
+    console.log('[AdminDashboard] Admin ID (UUID):', adminId);
+    window.location.href = mgmtUrl;
   };
 
   const getStatusColor = (status) => {
@@ -155,7 +167,7 @@ function AdminDashboard() {
               Requests
             </button>
             <button
-              onClick={() => setActiveTab('management')}
+              onClick={handleManagementReporting}
               className={`px-4 py-2 font-medium transition-colors ${
                 activeTab === 'management'
                   ? 'border-b-2 border-teal-600 text-teal-600'
@@ -163,7 +175,8 @@ function AdminDashboard() {
               }`}
               style={{
                 color: activeTab === 'management' ? 'var(--border-focus)' : 'var(--text-secondary)',
-                borderBottomColor: activeTab === 'management' ? 'var(--border-focus)' : 'transparent'
+                borderBottomColor: activeTab === 'management' ? 'var(--border-focus)' : 'transparent',
+                cursor: 'pointer'
               }}
             >
               Management & Reporting
