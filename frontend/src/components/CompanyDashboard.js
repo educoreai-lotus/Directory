@@ -6,14 +6,12 @@ import CompanyMetrics from './CompanyMetrics';
 import CompanyHierarchy from './CompanyHierarchy';
 import EmployeeList from './EmployeeList';
 import CompanyAnalyticsDashboard from './CompanyAnalyticsDashboard';
-import PendingRequestsSection from './PendingRequestsSection';
 import EnrollmentSection from './EnrollmentSection';
 import PendingProfileApprovals from './PendingProfileApprovals';
 
 function CompanyDashboard({ company, departments, teams, employees, hierarchy, metrics, pendingApprovals = [], onEmployeeClick, companyId, isAdminView = false }) {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'dashboard', 'hierarchy', 'employees', 'enrollment', 'requests', 'approvals'
   const [refreshKey, setRefreshKey] = useState(0);
-  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   return (
     <div className="w-full space-y-6">
@@ -48,7 +46,13 @@ function CompanyDashboard({ company, departments, teams, employees, hierarchy, m
           Hierarchy
         </button>
         <button
-          onClick={() => setActiveTab('dashboard')}
+          onClick={() => {
+            // Redirect to Learning Analytics frontend with company_id
+            const analyticsUrl = process.env.REACT_APP_LEARNING_ANALYTICS_URL || 'https://learning-analytics-frontend-psi.vercel.app';
+            const url = `${analyticsUrl}/?company_id=${encodeURIComponent(companyId)}`;
+            console.log('[CompanyDashboard] Redirecting to Learning Analytics:', url);
+            window.location.href = url;
+          }}
           className={`px-4 py-2 font-medium transition-colors ${
             activeTab === 'dashboard'
               ? 'border-b-2 border-teal-600 text-teal-600'
@@ -87,33 +91,7 @@ function CompanyDashboard({ company, departments, teams, employees, hierarchy, m
             borderBottomColor: activeTab === 'enrollment' ? 'var(--border-focus)' : 'transparent'
           }}
         >
-          Enroll to Courses
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab('requests');
-            // Force refresh of pending requests when tab is clicked
-            setRefreshKey(prev => prev + 1);
-          }}
-          className={`px-4 py-2 font-medium transition-colors relative ${
-            activeTab === 'requests'
-              ? 'border-b-2 border-teal-600 text-teal-600'
-              : 'text-gray-600 hover:text-gray-800'
-          }`}
-          style={{
-            color: activeTab === 'requests' ? 'var(--border-focus)' : 'var(--text-secondary)',
-            borderBottomColor: activeTab === 'requests' ? 'var(--border-focus)' : 'transparent'
-          }}
-        >
-          Pending Requests
-          {pendingRequestsCount > 0 && (
-            <span 
-              className="ml-2 px-2 py-0.5 text-xs rounded-full text-white"
-              style={{ background: 'rgb(239, 68, 68)' }}
-            >
-              {pendingRequestsCount}
-            </span>
-          )}
+          Create Career Paths
         </button>
         <button
           onClick={() => setActiveTab('approvals')}
@@ -189,11 +167,7 @@ function CompanyDashboard({ company, departments, teams, employees, hierarchy, m
           </div>
         )}
 
-        {activeTab === 'dashboard' && (
-          <div>
-            <CompanyAnalyticsDashboard companyId={companyId} />
-          </div>
-        )}
+        {/* Analytics tab now redirects - no content shown */}
 
         {activeTab === 'employees' && (
           <div>
@@ -214,30 +188,6 @@ function CompanyDashboard({ company, departments, teams, employees, hierarchy, m
           </div>
         )}
 
-        {activeTab === 'requests' && (
-          <div>
-            {isAdminView && (
-              <div 
-                className="mb-4 p-4 rounded-lg"
-                style={{
-                  background: 'rgba(59, 130, 246, 0.1)',
-                  border: '1px solid rgb(59, 130, 246)',
-                  color: 'rgb(59, 130, 246)'
-                }}
-              >
-                <p className="text-sm">
-                  <strong>Read-only mode:</strong> You are viewing this company profile as an administrator. You cannot approve or reject requests.
-                </p>
-              </div>
-            )}
-            <PendingRequestsSection 
-              key={`requests-${activeTab}-${refreshKey}`}
-              companyId={companyId} 
-              onRequestsLoaded={(count) => setPendingRequestsCount(count)}
-              isAdminView={isAdminView}
-            />
-          </div>
-        )}
 
         {activeTab === 'approvals' && (
           <div>

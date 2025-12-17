@@ -124,17 +124,26 @@ function CompanyCSVUploadPage() {
           </div>
         )}
 
-        {/* Success Message with Continue Button */}
+        {/* Success Message with Continue Button - Only show Continue button, no summary */}
         {uploadResult && uploadResult.success && (
-          <div className="mt-6 p-6 rounded-lg bg-green-50 border border-green-200 max-w-2xl mx-auto">
-            <p className="text-green-800 font-medium mb-2">Upload Successful!</p>
-            <p className="text-green-600 text-sm mb-4">{uploadResult.message}</p>
+          <div className="mt-6 flex justify-center">
             <button
               onClick={() => navigate(`/company/${companyId}`)}
-              className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium"
+              className="px-8 py-4 rounded-lg font-medium transition-colors text-lg"
               style={{
                 background: 'var(--gradient-primary, linear-gradient(135deg, #059669, #047857))',
-                color: 'var(--text-inverse, #ffffff)'
+                color: 'var(--text-inverse, #ffffff)',
+                border: '2px dashed var(--border-default, #e2e8f0)',
+                minWidth: '300px',
+                boxShadow: 'var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.1))'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.1))';
               }}
             >
               Continue to Company Profile
@@ -142,12 +151,14 @@ function CompanyCSVUploadPage() {
           </div>
         )}
 
-        {/* Progress and Validation Results */}
-        <CSVUploadProgress
-          validation={uploadResult?.validation}
-          created={uploadResult?.created}
-          isProcessing={isUploading}
-        />
+        {/* Progress - Only show when processing, not when complete */}
+        {isUploading && (
+          <CSVUploadProgress
+            validation={null}
+            created={null}
+            isProcessing={isUploading}
+          />
+        )}
 
         {/* Error Display with Correction Interface */}
         {uploadResult && !uploadResult.success && uploadResult.validation && (

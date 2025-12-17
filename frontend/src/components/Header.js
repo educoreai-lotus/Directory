@@ -172,8 +172,8 @@ function Header() {
         <div style={{ flex: 1 }}></div>
         
         <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* User Info - Only show when authenticated */}
-          {isAuthenticated && user && (
+          {/* User Info - Only show when authenticated and user exists */}
+          {isAuthenticated && user && user.id && (
             <div className="user-menu-container" style={{ position: 'relative' }}>
               <button
                 type="button"

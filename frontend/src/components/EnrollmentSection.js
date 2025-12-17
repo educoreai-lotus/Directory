@@ -5,18 +5,12 @@ import React, { useState } from 'react';
 import { enrollCareerPath } from '../services/enrollmentService';
 
 function EnrollmentSection({ employees, companyId }) {
-  const [selectedFlow, setSelectedFlow] = useState(null); // 'career-path', 'skill-driven', 'trainer-led'
+  // Always use career-path flow, show employee list directly
+  const [selectedFlow] = useState('career-path'); // Fixed to career-path
   const [selectedEmployees, setSelectedEmployees] = useState([]);
-  const [showEmployeeList, setShowEmployeeList] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
   const [enrollmentError, setEnrollmentError] = useState(null);
   const [enrollmentSuccess, setEnrollmentSuccess] = useState(null);
-
-  const handleFlowSelect = (flow) => {
-    setSelectedFlow(flow);
-    setShowEmployeeList(true);
-    setSelectedEmployees([]);
-  };
 
   const handleEmployeeToggle = (employeeId) => {
     setSelectedEmployees(prev => {
@@ -98,107 +92,15 @@ function EnrollmentSection({ employees, companyId }) {
     }
   };
 
-  const getFlowDescription = (flow) => {
-    const descriptions = {
-      'career-path': 'Enroll employees based on their career progression path (current role → target role)',
-      'skill-driven': 'Enroll employees based on specific skills they need to learn',
-      'trainer-led': 'Enroll employees to courses taught by trainers in your company'
-    };
-    return descriptions[flow] || '';
-  };
 
   return (
     <div className="space-y-6">
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-          Enroll Employees to Courses
-        </h3>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Select a learning flow and choose employees to enroll
-        </p>
-      </div>
-
-      {/* Learning Flow Selection */}
-      {!showEmployeeList && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div
-            className="p-6 rounded-lg border cursor-pointer hover:bg-opacity-50 transition-colors"
-            style={{
-              background: 'var(--bg-card)',
-              borderColor: 'var(--border-default)'
-            }}
-            onClick={() => handleFlowSelect('career-path')}
-          >
-            <h4 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-              Career-Path-Driven Learning
-            </h4>
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              {getFlowDescription('career-path')}
-            </p>
-          </div>
-
-          <div
-            className="p-6 rounded-lg border cursor-pointer hover:bg-opacity-50 transition-colors"
-            style={{
-              background: 'var(--bg-card)',
-              borderColor: 'var(--border-default)'
-            }}
-            onClick={() => handleFlowSelect('skill-driven')}
-          >
-            <h4 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-              Skill-Driven Learning
-            </h4>
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              {getFlowDescription('skill-driven')}
-            </p>
-          </div>
-
-          <div
-            className="p-6 rounded-lg border cursor-pointer hover:bg-opacity-50 transition-colors"
-            style={{
-              background: 'var(--bg-card)',
-              borderColor: 'var(--border-default)'
-            }}
-            onClick={() => handleFlowSelect('trainer-led')}
-          >
-            <h4 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-              Trainer-Led Learning
-            </h4>
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              {getFlowDescription('trainer-led')}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Employee Selection */}
-      {showEmployeeList && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                Selected Flow: {selectedFlow?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-              </h4>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-                {getFlowDescription(selectedFlow)}
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setShowEmployeeList(false);
-                setSelectedFlow(null);
-                setSelectedEmployees([]);
-              }}
-              className="px-4 py-2 border rounded hover:bg-opacity-50 transition-colors"
-              style={{ borderColor: 'var(--border-default)', color: 'var(--text-primary)' }}
-            >
-              Change Flow
-            </button>
-          </div>
+      {/* Employee Selection - Show directly, no flow selection */}
+      <div className="space-y-4">
 
           <div className="p-4 rounded-lg" style={{ background: 'var(--bg-card)' }}>
             <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
-              Select employees to enroll ({selectedEmployees.length} selected)
+              Select employees to create learning paths ({selectedEmployees.length} selected)
             </p>
             <div className="max-h-96 overflow-y-auto space-y-2">
               {employees && employees.length > 0 ? (
@@ -277,26 +179,14 @@ function EnrollmentSection({ employees, companyId }) {
               {enrolling ? (
                 <>
                   <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></span>
-                  Enrolling...
+                  Creating...
                 </>
               ) : (
-                'Enroll Selected Employees'
+                'Create Learning Path'
               )}
-            </button>
-            <button
-              onClick={() => {
-                setShowEmployeeList(false);
-                setSelectedFlow(null);
-                setSelectedEmployees([]);
-              }}
-              className="px-6 py-2 border rounded hover:bg-opacity-50 transition-colors"
-              style={{ borderColor: 'var(--border-default)', color: 'var(--text-primary)' }}
-            >
-              Cancel
             </button>
           </div>
         </div>
-      )}
     </div>
   );
 }

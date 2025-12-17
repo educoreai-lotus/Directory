@@ -220,12 +220,31 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
             All Employees (0)
           </h3>
           {!isAdminView && (
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors"
-            >
-              + Add Employee
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  // Redirect to Learner AI frontend with company_id
+                  const learnerAIUrl = process.env.REACT_APP_LEARNER_AI_URL || 'https://learner-ai-omega.vercel.app/company';
+                  const url = `${learnerAIUrl}?company_id=${encodeURIComponent(companyId)}`;
+                  console.log('[EmployeeList] Redirecting to Learner AI:', url);
+                  window.location.href = url;
+                }}
+                className="px-4 py-2 border rounded hover:bg-opacity-50 transition-colors"
+                style={{
+                  borderColor: 'var(--border-default)',
+                  color: 'var(--text-primary)',
+                  background: 'var(--bg-card)'
+                }}
+              >
+                Learning Paths
+              </button>
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors"
+              >
+                + Add Employee
+              </button>
+            </div>
           )}
         </div>
         <div className="p-6 rounded-lg text-center" style={{ background: 'var(--bg-card)' }}>
@@ -242,22 +261,40 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
           All Employees ({filteredAndSortedEmployees.length} of {employees?.length || 0})
         </h3>
         
-        {/* Add Employee Button with Dropdown - Hidden in admin view */}
+        {/* Add Employee Button with Dropdown and Learning Paths Button - Hidden in admin view */}
         {!isAdminView && (
-          <div className="relative">
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => setShowAddMenu(!showAddMenu)}
-              className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors flex items-center gap-2"
+              onClick={() => {
+                // Redirect to Learner AI frontend with company_id
+                const learnerAIUrl = process.env.REACT_APP_LEARNER_AI_URL || 'https://learner-ai-omega.vercel.app/company';
+                const url = `${learnerAIUrl}?company_id=${encodeURIComponent(companyId)}`;
+                console.log('[EmployeeList] Redirecting to Learner AI:', url);
+                window.location.href = url;
+              }}
+              className="px-4 py-2 border rounded hover:bg-opacity-50 transition-colors"
               style={{
-                background: 'var(--gradient-primary, linear-gradient(135deg, #059669, #047857))',
-                color: 'var(--text-inverse, #ffffff)'
+                borderColor: 'var(--border-default)',
+                color: 'var(--text-primary)',
+                background: 'var(--bg-card)'
               }}
             >
-              + Add Employee
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              Learning Paths
             </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowAddMenu(!showAddMenu)}
+                className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors flex items-center gap-2"
+                style={{
+                  background: 'var(--gradient-primary, linear-gradient(135deg, #059669, #047857))',
+                  color: 'var(--text-inverse, #ffffff)'
+                }}
+              >
+                + Add Employee
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
             
             {showAddMenu && (
               <>
