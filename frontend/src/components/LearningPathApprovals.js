@@ -50,14 +50,21 @@ function LearningPathApprovals({ employeeId, companyId }) {
   }, [employeeId, companyId]);
 
   const handleViewApproval = (approvalId) => {
-    // TODO: Redirect to Learner AI microservice frontend
-    // For now, show placeholder message
-    const approval = approvals.find(a => a.id === approvalId);
-    if (approval) {
-      alert(`Redirecting to Learner AI microservice to review: ${approval.learning_path_name}\n\nEmployee: ${approval.employee_name} (${approval.employee_email})\n\n(Learner AI integration coming soon)`);
-      // When Learner AI is integrated:
-      // window.open(`${LEARNER_AI_URL}/approvals/${approvalId}`, '_blank');
+    // Redirect to Learner AI microservice frontend with user_id
+    const baseUrl = process.env.REACT_APP_LEARNER_AI_URL || 'https://learner-ai-omega.vercel.app/approvals';
+    
+    if (!employeeId) {
+      console.error('[LearningPathApprovals] Cannot redirect: Employee ID is missing');
+      alert('Error: Employee ID not found. Please try again.');
+      return;
     }
+    
+    // Build URL with user_id as query parameter
+    const learnerAIUrl = `${baseUrl}?user_id=${encodeURIComponent(employeeId)}`;
+    
+    console.log('[LearningPathApprovals] Redirecting to Learner AI:', learnerAIUrl);
+    console.log('[LearningPathApprovals] Employee ID (UUID):', employeeId);
+    window.location.href = learnerAIUrl;
   };
 
   if (loading) {

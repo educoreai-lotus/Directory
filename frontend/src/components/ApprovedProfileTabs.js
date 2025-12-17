@@ -54,8 +54,8 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
       console.log('[ApprovedProfileTabs] Employee ID (UUID):', employeeId);
       window.location.href = courseBuilderUrl;
     } else if (tabId === 'learning-path') {
-      // Redirect to Learner AI frontend with user ID and company ID
-      const baseUrl = process.env.REACT_APP_LEARNER_AI_URL || 'https://learner-ai-omega.vercel.app/approvals';
+      // Redirect to Learner AI frontend with user ID
+      const baseUrl = process.env.REACT_APP_LEARNER_AI_URL || 'https://learner-ai-omega.vercel.app';
       
       if (!employeeId) {
         console.error('[ApprovedProfileTabs] Cannot redirect: Employee ID is missing');
@@ -63,18 +63,11 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
         return;
       }
       
-      if (!user?.companyId) {
-        console.error('[ApprovedProfileTabs] Cannot redirect: Company ID is missing');
-        alert('Error: Company ID not found. Please try again.');
-        return;
-      }
-      
-      // Build URL with user_id and company_id as query parameters
-      const learnerAIUrl = `${baseUrl}?user_id=${encodeURIComponent(employeeId)}&company_id=${encodeURIComponent(user.companyId)}`;
+      // Build URL with user_id as query parameter
+      const learnerAIUrl = `${baseUrl}/?user_id=${encodeURIComponent(employeeId)}`;
       
       console.log('[ApprovedProfileTabs] Redirecting to Learner AI:', learnerAIUrl);
       console.log('[ApprovedProfileTabs] Employee ID (UUID):', employeeId);
-      console.log('[ApprovedProfileTabs] Company ID (UUID):', user.companyId);
       window.location.href = learnerAIUrl;
     } else {
       setActiveTab(tabId);
