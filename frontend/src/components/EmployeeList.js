@@ -229,11 +229,10 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
                   console.log('[EmployeeList] Redirecting to Learner AI:', url);
                   window.location.href = url;
                 }}
-                className="px-4 py-2 border rounded hover:bg-opacity-50 transition-colors"
+                className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors flex items-center gap-2"
                 style={{
-                  borderColor: 'var(--border-default)',
-                  color: 'var(--text-primary)',
-                  background: 'var(--bg-card)'
+                  background: 'var(--gradient-primary, linear-gradient(135deg, #059669, #047857))',
+                  color: 'var(--text-inverse, #ffffff)'
                 }}
               >
                 Learning Paths
@@ -241,6 +240,10 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
               <button
                 onClick={() => setShowAddForm(true)}
                 className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors"
+                style={{
+                  background: 'var(--gradient-primary, linear-gradient(135deg, #059669, #047857))',
+                  color: 'var(--text-inverse, #ffffff)'
+                }}
               >
                 + Add Employee
               </button>
@@ -272,11 +275,10 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
                 console.log('[EmployeeList] Redirecting to Learner AI:', url);
                 window.location.href = url;
               }}
-              className="px-4 py-2 border rounded hover:bg-opacity-50 transition-colors"
+              className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors flex items-center gap-2"
               style={{
-                borderColor: 'var(--border-default)',
-                color: 'var(--text-primary)',
-                background: 'var(--bg-card)'
+                background: 'var(--gradient-primary, linear-gradient(135deg, #059669, #047857))',
+                color: 'var(--text-inverse, #ffffff)'
               }}
             >
               Learning Paths
