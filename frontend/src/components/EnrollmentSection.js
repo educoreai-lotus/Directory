@@ -29,8 +29,7 @@ function EnrollmentSection({ employees, companyId }) {
       selectedEmployees,
       selectedEmployeesCount: selectedEmployees.length,
       companyId,
-      enrolling,
-      showEmployeeList
+      enrolling
     });
 
     if (selectedEmployees.length === 0) {

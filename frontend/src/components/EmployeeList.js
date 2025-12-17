@@ -340,6 +340,7 @@ function EmployeeList({ employees, onEmployeeClick, companyId, departments, team
                 </div>
               </>
             )}
+            </div>
           </div>
         )}
       </div>
