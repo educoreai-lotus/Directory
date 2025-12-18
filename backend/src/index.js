@@ -674,26 +674,61 @@ process.on('unhandledRejection', (reason, promise) => {
   // Log but don't exit - let Railway handle container restarts
 });
 
-// Graceful shutdown handler
-process.on('SIGTERM', () => {
-  console.log('[Process] SIGTERM received, shutting down gracefully...');
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  console.log('[Process] SIGINT received, shutting down gracefully...');
-  process.exit(0);
-});
-
-// Start server
+// GRPC Server (optional - for RAG Service integration via Coordinator)
+// If GRPC fails to start, HTTP server will still work
+let grpcServer = null;
 try {
-  const server = app.listen(PORT, () => {
-    console.log(`[Server] ✅ Server running on port ${PORT}`);
+  const grpcServerModule = require('./grpc/server');
+  grpcServer = grpcServerModule;
+  console.log('[Init] GRPC server module loaded successfully');
+} catch (error) {
+  console.warn('[Init] ⚠️ GRPC server module not available (this is OK if GRPC is not needed):', error.message);
+}
+
+// Graceful shutdown handler
+async function gracefulShutdown(signal) {
+  console.log(`[Process] ${signal} received, shutting down gracefully...`);
+  
+  // Shutdown GRPC server if it was started
+  if (grpcServer && grpcServer.server) {
+    try {
+      await grpcServer.shutdown();
+    } catch (error) {
+      console.error('[Shutdown] Error shutting down GRPC server:', error.message);
+    }
+  }
+  
+  // HTTP server will be closed by process.exit
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Start HTTP server
+try {
+  const server = app.listen(PORT, async () => {
+    console.log(`[Server] ✅ HTTP server running on port ${PORT}`);
     console.log(`[Server] Health check available at http://localhost:${PORT}/health`);
+    
+    // Start GRPC server (optional - non-blocking)
+    // If GRPC fails, HTTP server will continue to work
+    if (grpcServer) {
+      try {
+        await grpcServer.start();
+        console.log(`[Server] ✅ GRPC server started on port ${process.env.GRPC_PORT || 50051}`);
+        console.log(`[Server] ✅ Directory service fully operational (HTTP + GRPC)`);
+      } catch (grpcError) {
+        console.warn('[Server] ⚠️ GRPC server failed to start (HTTP server still works):', grpcError.message);
+        console.warn('[Server] ⚠️ This is OK if GRPC is not needed. HTTP functionality is unaffected.');
+      }
+    } else {
+      console.log(`[Server] ℹ️ GRPC server not available (HTTP server only)`);
+    }
   });
 
   server.on('error', (error) => {
-    console.error('[Server] Error starting server:', error);
+    console.error('[Server] Error starting HTTP server:', error);
     if (error.code === 'EADDRINUSE') {
       console.error(`[Server] Port ${PORT} is already in use`);
       process.exit(1);
@@ -703,7 +738,7 @@ try {
     }
   });
 } catch (error) {
-  console.error('[Server] Failed to start server:', error);
+  console.error('[Server] Failed to start HTTP server:', error);
   console.error('[Server] Stack:', error.stack);
   process.exit(1);
 }
