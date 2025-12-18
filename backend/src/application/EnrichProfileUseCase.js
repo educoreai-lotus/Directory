@@ -379,44 +379,38 @@ class EnrichProfileUseCase {
 
     // Check for valid enrichment sources (GitHub OR CV PDF OR Manual form)
     // LinkedIn is NOT considered a valid enrichment source
+    // All raw data is now stored in employees table columns: github_data, pdf_data, manual_data
     let hasValidSource = false;
-    try {
-      const EmployeeRawDataRepository = require('../infrastructure/EmployeeRawDataRepository');
-      const rawDataRepo = new EmployeeRawDataRepository();
-      
-      // Check for GitHub or CV PDF in new table
-      hasValidSource = await rawDataRepo.hasValidEnrichmentSource(employeeId);
-      console.log('[EnrichProfileUseCase] Has valid enrichment source (GitHub/CV in new table):', hasValidSource);
-      
-      // Also check for manual form data
-      if (!hasValidSource) {
-        const manualData = await rawDataRepo.findByEmployeeIdAndSource(employeeId, 'manual');
-        if (manualData && manualData.data) {
-          const data = typeof manualData.data === 'string' ? JSON.parse(manualData.data) : manualData.data;
-          const hasManualData = 
-            (data.work_experience && data.work_experience.length > 0) ||
-            (data.skills && data.skills.length > 0) ||
-            (data.education && data.education.length > 0);
-          if (hasManualData) {
-            hasValidSource = true;
-            console.log('[EnrichProfileUseCase] Has manual form data');
-          }
-        }
-      }
-      
-      // Backward compatibility: Check old GitHub data in employees table
-      if (!hasValidSource) {
-        const hasOldGitHub = !!employee.github_data;
-        if (hasOldGitHub) {
+    
+    // Check GitHub data (valid source)
+    if (employee.github_data) {
+      hasValidSource = true;
+      console.log('[EnrichProfileUseCase] Has GitHub data (valid source)');
+    }
+    
+    // Check PDF data (valid source)
+    if (!hasValidSource && employee.pdf_data) {
+      hasValidSource = true;
+      console.log('[EnrichProfileUseCase] Has PDF data (valid source)');
+    }
+    
+    // Check manual form data (valid source if has content)
+    if (!hasValidSource && employee.manual_data) {
+      try {
+        const manualData = typeof employee.manual_data === 'string' 
+          ? JSON.parse(employee.manual_data) 
+          : employee.manual_data;
+        const hasManualData = 
+          (manualData.work_experience && manualData.work_experience.length > 0) ||
+          (manualData.skills && manualData.skills.length > 0) ||
+          (manualData.education && manualData.education.length > 0);
+        if (hasManualData) {
           hasValidSource = true;
-          console.log('[EnrichProfileUseCase] Has GitHub data (old OAuth)');
+          console.log('[EnrichProfileUseCase] Has manual form data (valid source)');
         }
+      } catch (error) {
+        console.warn('[EnrichProfileUseCase] Could not parse manual_data:', error.message);
       }
-    } catch (error) {
-      console.warn('[EnrichProfileUseCase] Could not check data sources, using fallback:', error.message);
-      // Fall through to old OAuth check
-      const hasOldGitHub = !!employee.github_data;
-      hasValidSource = hasOldGitHub;
     }
     
     console.log('[EnrichProfileUseCase] Employee:', employee.email);

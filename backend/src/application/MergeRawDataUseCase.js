@@ -1,16 +1,17 @@
 // Application Layer - Merge Raw Data Use Case
 // Intelligently merges raw data from all sources (PDF, manual, LinkedIn, GitHub)
-// PHASE_2: This file is part of the extended enrichment flow
+// All raw data is stored in employees table columns: pdf_data, manual_data, linkedin_data, github_data
 
-const EmployeeRawDataRepository = require('../infrastructure/EmployeeRawDataRepository');
+const EmployeeRepository = require('../infrastructure/EmployeeRepository');
 
 class MergeRawDataUseCase {
   constructor() {
-    this.rawDataRepository = new EmployeeRawDataRepository();
+    this.employeeRepository = new EmployeeRepository();
   }
 
   /**
    * Merge all available raw data sources for an employee
+   * Reads from employees table columns: pdf_data, manual_data, linkedin_data, github_data
    * @param {string} employeeId - Employee UUID
    * @returns {Promise<Object|null>} Merged data object or null if no data exists
    */
@@ -18,21 +19,34 @@ class MergeRawDataUseCase {
     try {
       console.log('[MergeRawDataUseCase] Starting merge for employee:', employeeId);
 
-      // Load all raw data sources
-      const allRawData = await this.rawDataRepository.findByEmployeeId(employeeId);
+      // Load employee with all raw data columns
+      const employee = await this.employeeRepository.findById(employeeId);
       
-      if (!allRawData || allRawData.length === 0) {
-        console.log('[MergeRawDataUseCase] No raw data found for employee');
+      if (!employee) {
+        console.log('[MergeRawDataUseCase] Employee not found');
         return null;
       }
 
-      console.log('[MergeRawDataUseCase] Found', allRawData.length, 'raw data sources');
+      // Parse JSONB data from employees table columns
+      const pdfData = employee.pdf_data 
+        ? (typeof employee.pdf_data === 'string' ? JSON.parse(employee.pdf_data) : employee.pdf_data)
+        : null;
+      const manualData = employee.manual_data
+        ? (typeof employee.manual_data === 'string' ? JSON.parse(employee.manual_data) : employee.manual_data)
+        : null;
+      const linkedinData = employee.linkedin_data
+        ? (typeof employee.linkedin_data === 'string' ? JSON.parse(employee.linkedin_data) : employee.linkedin_data)
+        : null;
+      const githubData = employee.github_data
+        ? (typeof employee.github_data === 'string' ? JSON.parse(employee.github_data) : employee.github_data)
+        : null;
 
-      // Separate by source
-      const pdfData = allRawData.find(r => r.source === 'pdf')?.data || null;
-      const manualData = allRawData.find(r => r.source === 'manual')?.data || null;
-      const linkedinData = allRawData.find(r => r.source === 'linkedin')?.data || null;
-      const githubData = allRawData.find(r => r.source === 'github')?.data || null;
+      console.log('[MergeRawDataUseCase] Raw data sources found:', {
+        has_pdf: !!pdfData,
+        has_manual: !!manualData,
+        has_linkedin: !!linkedinData,
+        has_github: !!githubData
+      });
 
       // Build merged object
       const merged = {
@@ -211,9 +225,7 @@ class MergeRawDataUseCase {
         return merged; // Return empty object instead of null
       }
 
-      // Save merged result to database
-      await this.rawDataRepository.createOrUpdate(employeeId, 'merged', merged);
-
+      // Note: We don't save merged data anymore - it's computed on-the-fly from employees table columns
       console.log('[MergeRawDataUseCase] Merge completed successfully:', {
         work_experience_count: merged.work_experience.length,
         skills_count: merged.skills.length,

@@ -75,9 +75,9 @@ class ManualDataController {
       // CRITICAL VALIDATION LOGIC:
       // Check if employee has valid enrichment sources (GitHub OR CV PDF)
       // LinkedIn is NOT considered a valid enrichment source
-      const EmployeeRawDataRepository = require('../infrastructure/EmployeeRawDataRepository');
-      const rawDataRepo = new EmployeeRawDataRepository();
-      const hasValidSource = await rawDataRepo.hasValidEnrichmentSource(id);
+      const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+      const employeeRepo = new EmployeeRepository();
+      const hasValidSource = await employeeRepo.hasValidEnrichmentSource(id);
       
       console.log('[ManualDataController] Employee has valid enrichment source (GitHub/CV):', hasValidSource);
 

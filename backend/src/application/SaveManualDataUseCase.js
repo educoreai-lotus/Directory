@@ -2,12 +2,10 @@
 // Orchestrates manual profile form data validation and storage
 // PHASE_3: This file is part of the extended enrichment flow
 
-const EmployeeRawDataRepository = require('../infrastructure/EmployeeRawDataRepository');
 const EmployeeRepository = require('../infrastructure/EmployeeRepository');
 
 class SaveManualDataUseCase {
   constructor() {
-    this.rawDataRepository = new EmployeeRawDataRepository();
     this.employeeRepository = new EmployeeRepository();
   }
 
@@ -67,7 +65,7 @@ class SaveManualDataUseCase {
       // CRITICAL: Validation depends on whether employee has valid enrichment sources
       // Check if employee has GitHub OR CV (valid sources)
       // LinkedIn is NOT considered a valid enrichment source
-      const hasValidSource = await this.rawDataRepository.hasValidEnrichmentSource(employeeId);
+      const hasValidSource = await this.employeeRepository.hasValidEnrichmentSource(employeeId);
       
       console.log('[SaveManualDataUseCase] Employee has valid enrichment source (GitHub/CV):', hasValidSource);
 
@@ -105,23 +103,16 @@ class SaveManualDataUseCase {
         education_length: structuredData.education.length
       });
 
-      // Save to employee_raw_data table
-      console.log('[SaveManualDataUseCase] Saving to employee_raw_data table...');
-      const savedData = await this.rawDataRepository.createOrUpdate(
-        employeeId,
-        'manual',
-        structuredData
-      );
+      // Save to employees.manual_data column
+      console.log('[SaveManualDataUseCase] Saving to employees.manual_data column...');
+      await this.employeeRepository.updateManualData(employeeId, structuredData);
 
       console.log('[SaveManualDataUseCase] ✅ Manual data saved successfully');
 
       return {
         success: true,
         data: {
-          id: savedData.id,
-          source: savedData.source,
-          created_at: savedData.created_at,
-          updated_at: savedData.updated_at
+          source: 'manual'
         }
       };
     } catch (error) {

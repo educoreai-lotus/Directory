@@ -143,19 +143,50 @@ class EmployeeProfileApprovalController {
           const isTrainer = roles.includes('TRAINER');
           const employeeType = isTrainer ? 'trainer' : 'regular_employee';
 
-          // Prepare raw_data from stored enrichment sources
-          const linkedinData = employee.linkedin_data 
-            ? (typeof employee.linkedin_data === 'string' ? JSON.parse(employee.linkedin_data) : employee.linkedin_data)
-            : {};
-          
-          const githubData = employee.github_data
-            ? (typeof employee.github_data === 'string' ? JSON.parse(employee.github_data) : employee.github_data)
-            : {};
+          // Prepare raw_data from ALL stored enrichment sources in employees table
+          // Skills Engine extracts data from raw_data JSON - it accepts any keys in the structure
+          // IMPORTANT: Only include sources that have actual data (don't send empty objects)
+          const rawData = {};
 
-          const rawData = {
-            linkedin: linkedinData || {},
-            github: githubData || {}
-          };
+          // Only include linkedin if data exists
+          if (employee.linkedin_data) {
+            const linkedinData = typeof employee.linkedin_data === 'string' 
+              ? JSON.parse(employee.linkedin_data) 
+              : employee.linkedin_data;
+            if (linkedinData && Object.keys(linkedinData).length > 0) {
+              rawData.linkedin = linkedinData;
+            }
+          }
+
+          // Only include github if data exists
+          if (employee.github_data) {
+            const githubData = typeof employee.github_data === 'string' 
+              ? JSON.parse(employee.github_data) 
+              : employee.github_data;
+            if (githubData && Object.keys(githubData).length > 0) {
+              rawData.github = githubData;
+            }
+          }
+
+          // Only include pdf if data exists
+          if (employee.pdf_data) {
+            const pdfData = typeof employee.pdf_data === 'string' 
+              ? JSON.parse(employee.pdf_data) 
+              : employee.pdf_data;
+            if (pdfData && Object.keys(pdfData).length > 0) {
+              rawData.pdf = pdfData;
+            }
+          }
+
+          // Only include manual if data exists
+          if (employee.manual_data) {
+            const manualData = typeof employee.manual_data === 'string' 
+              ? JSON.parse(employee.manual_data) 
+              : employee.manual_data;
+            if (manualData && Object.keys(manualData).length > 0) {
+              rawData.manual = manualData;
+            }
+          }
 
           console.log('[EmployeeProfileApprovalController] Sending post-approval skills payload to Skills Engine via Coordinator...');
           console.log('[EmployeeProfileApprovalController] Payload:', JSON.stringify({
@@ -166,10 +197,11 @@ class EmployeeProfileApprovalController {
             employee_type: employeeType,
             path_career: employee.target_role_in_company || null,
             preferred_language: employee.preferred_language || 'en',
-            raw_data_keys: {
-              linkedin: Object.keys(rawData.linkedin || {}).length,
-              github: Object.keys(rawData.github || {}).length
-            }
+            raw_data_sources_included: Object.keys(rawData), // Only sources with actual data
+            raw_data_keys: Object.keys(rawData).reduce((acc, key) => {
+              acc[key] = Object.keys(rawData[key] || {}).length;
+              return acc;
+            }, {})
           }, null, 2));
           
           const skillsData = await this.microserviceClient.getEmployeeSkills({

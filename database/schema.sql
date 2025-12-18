@@ -68,6 +68,8 @@ CREATE TABLE IF NOT EXISTS employees (
     github_url VARCHAR(500),
     linkedin_data JSONB,
     github_data JSONB,
+    pdf_data JSONB,
+    manual_data JSONB,
     enrichment_completed BOOLEAN DEFAULT FALSE,
     enrichment_completed_at TIMESTAMP,
     profile_status VARCHAR(50) DEFAULT 'basic' CHECK (profile_status IN ('basic', 'enriched', 'approved', 'rejected')),

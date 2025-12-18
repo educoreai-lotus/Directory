@@ -3,13 +3,11 @@
 // PHASE_3: This file is part of the extended enrichment flow
 
 const PDFExtractionService = require('../infrastructure/PDFExtractionService');
-const EmployeeRawDataRepository = require('../infrastructure/EmployeeRawDataRepository');
 const EmployeeRepository = require('../infrastructure/EmployeeRepository');
 
 class UploadCVUseCase {
   constructor() {
     this.pdfExtractionService = new PDFExtractionService();
-    this.rawDataRepository = new EmployeeRawDataRepository();
     this.employeeRepository = new EmployeeRepository();
   }
 
@@ -56,13 +54,9 @@ class UploadCVUseCase {
       console.log('[UploadCVUseCase] Sanitizing PII...');
       const sanitizedData = this.pdfExtractionService.sanitizePII(parsedData);
 
-      // Step 4: Save to employee_raw_data table
-      console.log('[UploadCVUseCase] Saving to employee_raw_data table...');
-      const savedData = await this.rawDataRepository.createOrUpdate(
-        employeeId,
-        'pdf',
-        sanitizedData
-      );
+      // Step 4: Save to employees.pdf_data column
+      console.log('[UploadCVUseCase] Saving to employees.pdf_data column...');
+      await this.employeeRepository.updatePdfData(employeeId, sanitizedData);
 
       console.log('[UploadCVUseCase] ✅ PDF data saved successfully');
 
@@ -81,9 +75,7 @@ class UploadCVUseCase {
       return {
         success: true,
         data: {
-          id: savedData.id,
-          source: savedData.source,
-          created_at: savedData.created_at,
+          source: 'pdf',
           extracted_data: {
             skills_count: sanitizedData.skills?.length || 0,
             languages_count: sanitizedData.languages?.length || 0,

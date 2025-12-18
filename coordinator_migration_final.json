@@ -1,0 +1,298 @@
+{
+  "api": {
+    "endpoints": [
+      {
+        "path": "/api/fill-content-metrics",
+        "method": "POST",
+        "description": "Directory Service is the SINGLE SOURCE OF TRUTH for all organizational, company, and employee structural data in the EduCore platform. It owns and stores company profiles, organizational hierarchy (departments, teams, employees), employee roles, managers, approvers, HR contacts, KPIs, and company-level learning policies. Any request that requires fetching or refreshing company structure, employee hierarchy, approver definitions, KPIs, max test attempts, or exercises limits MUST be routed to Directory. Directory does NOT perform analytics, reporting, skill inference, assessments, or learning outcome calculations; it only provides authoritative organizational data to other services such as Learning Analytics, Management & Reporting, Assessment, Skills Engine, Course Builder, and Learner AI.",
+        "requestSchema": {
+          "required": [
+            "requester_service",
+            "payload",
+            "response"
+          ],
+          "properties": {
+            "payload": {
+              "type": "object"
+            },
+            "response": {
+              "type": "object"
+            },
+            "requester_service": {
+              "type": "string"
+            }
+          }
+        },
+        "responseSchema": {
+          "properties": {
+            "response": {
+              "type": "object"
+            },
+            "requester_service": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "events": {
+    "publishes": [],
+    "subscribes": []
+  },
+  "version": "1.0.0",
+  "database": {
+    "tables": [
+      {
+        "name": "companies",
+        "schema": {
+          "id": "uuid",
+          "kpis": "text",
+          "domain": "string",
+          "industry": "string",
+          "logo_url": "string",
+          "created_at": "timestamp",
+          "updated_at": "timestamp",
+          "company_name": "string",
+          "max_attempts": "integer",
+          "passing_grade": "integer",
+          "approval_policy": "string",
+          "hr_contact_name": "string",
+          "hr_contact_role": "string",
+          "hr_contact_email": "string",
+          "num_of_exercises": "integer",
+          "exercises_limited": "boolean",
+          "verification_status": "string"
+        }
+      },
+      {
+        "name": "departments",
+        "schema": {
+          "id": "uuid",
+          "company_id": "uuid",
+          "created_at": "timestamp",
+          "updated_at": "timestamp",
+          "department_id": "string",
+          "department_name": "string"
+        }
+      },
+      {
+        "name": "teams",
+        "schema": {
+          "id": "uuid",
+          "team_id": "string",
+          "team_name": "string",
+          "company_id": "uuid",
+          "created_at": "timestamp",
+          "updated_at": "timestamp",
+          "department_id": "uuid"
+        }
+      },
+      {
+        "name": "employees",
+        "schema": {
+          "id": "uuid",
+          "bio": "text",
+          "email": "string",
+          "status": "string",
+          "full_name": "string",
+          "company_id": "uuid",
+          "created_at": "timestamp",
+          "github_url": "string",
+          "updated_at": "timestamp",
+          "employee_id": "string",
+          "github_data": "jsonb",
+          "linkedin_url": "string",
+          "linkedin_data": "jsonb",
+          "pdf_data": "jsonb",
+          "manual_data": "jsonb",
+          "password_hash": "string",
+          "profile_status": "string",
+          "profile_photo_url": "string",
+          "value_proposition": "text",
+          "preferred_language": "string",
+          "enrichment_completed": "boolean",
+          "target_role_in_company": "string",
+          "current_role_in_company": "string",
+          "enrichment_completed_at": "timestamp"
+        }
+      },
+      {
+        "name": "employee_roles",
+        "schema": {
+          "id": "uuid",
+          "role_type": "string",
+          "created_at": "timestamp",
+          "employee_id": "uuid"
+        }
+      },
+      {
+        "name": "employee_teams",
+        "schema": {
+          "id": "uuid",
+          "team_id": "uuid",
+          "created_at": "timestamp",
+          "employee_id": "uuid"
+        }
+      },
+      {
+        "name": "employee_managers",
+        "schema": {
+          "id": "uuid",
+          "created_at": "timestamp",
+          "manager_id": "uuid",
+          "employee_id": "uuid",
+          "relationship_type": "string"
+        }
+      },
+      {
+        "name": "employee_project_summaries",
+        "schema": {
+          "id": "uuid",
+          "summary": "text",
+          "created_at": "timestamp",
+          "employee_id": "uuid",
+          "repository_url": "string",
+          "repository_name": "string"
+        }
+      },
+      {
+        "name": "trainer_settings",
+        "schema": {
+          "id": "uuid",
+          "ai_enabled": "boolean",
+          "created_at": "timestamp",
+          "updated_at": "timestamp",
+          "employee_id": "uuid",
+          "public_publish_enable": "boolean"
+        }
+      },
+      {
+        "name": "audit_logs",
+        "schema": {
+          "id": "uuid",
+          "user_id": "uuid",
+          "company_id": "uuid",
+          "created_at": "timestamp",
+          "ip_address": "string",
+          "user_agent": "string",
+          "action_type": "string",
+          "resource_id": "uuid",
+          "resource_type": "string",
+          "action_details": "jsonb"
+        }
+      },
+      {
+        "name": "company_registration_requests",
+        "schema": {
+          "id": "uuid",
+          "domain": "string",
+          "industry": "string",
+          "created_at": "timestamp",
+          "updated_at": "timestamp",
+          "reviewed_at": "timestamp",
+          "reviewed_by": "uuid",
+          "company_name": "string",
+          "hr_contact_name": "string",
+          "hr_contact_role": "string",
+          "hr_contact_email": "string",
+          "verification_notes": "text",
+          "verification_status": "string"
+        }
+      },
+      {
+        "name": "employee_profile_approvals",
+        "schema": {
+          "id": "uuid",
+          "status": "string",
+          "company_id": "uuid",
+          "created_at": "timestamp",
+          "updated_at": "timestamp",
+          "employee_id": "uuid",
+          "enriched_at": "timestamp",
+          "reviewed_at": "timestamp",
+          "reviewed_by": "uuid",
+          "requested_at": "timestamp",
+          "rejection_reason": "text"
+        }
+      },
+      {
+        "name": "employee_requests",
+        "schema": {
+          "id": "uuid",
+          "title": "string",
+          "status": "string",
+          "company_id": "uuid",
+          "created_at": "timestamp",
+          "updated_at": "timestamp",
+          "description": "text",
+          "employee_id": "uuid",
+          "reviewed_at": "timestamp",
+          "reviewed_by": "uuid",
+          "request_type": "string",
+          "requested_at": "timestamp",
+          "response_notes": "text",
+          "rejection_reason": "text"
+        }
+      },
+      {
+        "name": "directory_admins",
+        "schema": {
+          "id": "uuid",
+          "role": "string",
+          "email": "string",
+          "full_name": "string",
+          "is_active": "boolean",
+          "created_at": "timestamp",
+          "updated_at": "timestamp",
+          "password_hash": "string"
+        }
+      },
+      {
+        "name": "employee_skills",
+        "schema": {
+          "id": "uuid",
+          "gap": "jsonb",
+          "updated_at": "timestamp",
+          "employee_id": "uuid",
+          "competencies": "jsonb",
+          "processed_at": "timestamp",
+          "relevance_score": "numeric"
+        }
+      }
+    ],
+    "migrations": [
+      "001_initial_schema"
+    ]
+  },
+  "description": "Manages organizations, employees, trainers, departments, teams, and directory workflows. ROUTING QUICK REFERENCE: Route to directory-service when (1) payload.service_origin='directory' OR (2) request asks for ORGANIZATIONAL STRUCTURE/HIERARCHY data specifically: company profiles (company_name, industry, domain, logo_url), organizational hierarchy (departments structure, teams structure, department-team relationships), company settings (kpis, max_attempts, max_test_attempts, exercises_limit, num_of_exercises, exercises_limited, approval_policy, passing_grade), HR contacts (hr_contact_name, hr_contact_email, hr_contact_role), approvers, manager relationships (employee-manager mappings, manager_id, relationship_type), employee organizational assignments (employee roles in company, employee-team assignments, employee_roles, employee_teams), company structure hierarchy, department/team organizational structure. Directory Service is UNIQUE in providing: (a) Company Profiles & Settings - authoritative company data with industry, domain, logo, KPIs, company-level learning policies (max_attempts, exercises_limit, approval_policy, passing_grade), HR contacts, approvers - this is STRUCTURAL company metadata, not analytics; (b) Organizational Hierarchy Structure - complete organizational tree with departments, teams, hierarchical relationships, employee-team-department assignments, organizational structure mappings; (c) Manager-Employee Relationships - manager hierarchies, employee-manager mappings, relationship types; (d) Employee Organizational Data - employee roles within company structure, team assignments, organizational position data. Note: Other services may reference company_id/employee_id but Directory owns the ORGANIZATIONAL STRUCTURE itself. Request format: Template-based with empty strings (\"\") indicating fields to fill. Response maintains exact request structure with filled data from organizational tables.",
+  "capabilities": [
+    "employee management",
+    "company management",
+    "directory services",
+    "employee profiles",
+    "profile enrichment",
+    "company registration",
+    "employee enrollment",
+    "career path enrollment",
+    "learning flow enrollment",
+    "organizational hierarchy",
+    "department management",
+    "team management",
+    "employee skills",
+    "employee courses",
+    "learning paths",
+    "chatbot integration",
+    "OAuth integration",
+    "profile approvals",
+    "trainer management"
+  ],
+  "dependencies": [
+    "skills-engine",
+    "course-builder",
+    "learner-ai",
+    "learning-analytics",
+    "coordinator"
+  ]
+}
+

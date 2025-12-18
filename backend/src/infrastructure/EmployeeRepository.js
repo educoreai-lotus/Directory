@@ -717,6 +717,80 @@ class EmployeeRepository {
   }
 
   /**
+   * Update PDF data for an employee
+   * @param {string} employeeId - Employee UUID
+   * @param {Object} pdfData - Extracted PDF/CV data (JSON)
+   * @param {Object} client - Optional database client
+   * @returns {Promise<Object>} Updated employee
+   */
+  async updatePdfData(employeeId, pdfData, client = null) {
+    const query = `
+      UPDATE employees
+      SET pdf_data = $1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING *
+    `;
+    const queryRunner = client || this.pool;
+    const result = await queryRunner.query(query, [
+      JSON.stringify(pdfData),
+      employeeId
+    ]);
+    return result.rows[0];
+  }
+
+  /**
+   * Update manual data for an employee
+   * @param {string} employeeId - Employee UUID
+   * @param {Object} manualData - Manually entered form data (JSON)
+   * @param {Object} client - Optional database client
+   * @returns {Promise<Object>} Updated employee
+   */
+  async updateManualData(employeeId, manualData, client = null) {
+    const query = `
+      UPDATE employees
+      SET manual_data = $1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING *
+    `;
+    const queryRunner = client || this.pool;
+    const result = await queryRunner.query(query, [
+      JSON.stringify(manualData),
+      employeeId
+    ]);
+    return result.rows[0];
+  }
+
+  /**
+   * Check if employee has valid enrichment sources (GitHub OR PDF)
+   * LinkedIn is NOT considered a valid enrichment source
+   * @param {string} employeeId - Employee UUID
+   * @param {Object} client - Optional database client
+   * @returns {Promise<boolean>} True if employee has GitHub or PDF data
+   */
+  async hasValidEnrichmentSource(employeeId, client = null) {
+    const query = `
+      SELECT 
+        CASE 
+          WHEN github_data IS NOT NULL THEN TRUE
+          WHEN pdf_data IS NOT NULL THEN TRUE
+          ELSE FALSE
+        END as has_valid_source
+      FROM employees
+      WHERE id = $1
+    `;
+    const queryRunner = client || this.pool;
+    const result = await queryRunner.query(query, [employeeId]);
+    
+    if (result.rows.length === 0) {
+      return false;
+    }
+    
+    return result.rows[0].has_valid_source === true;
+  }
+
+  /**
    * Update employee profile with enrichment data (bio and project summaries)
    * @param {string} employeeId - Employee UUID
    * @param {string} bio - AI-generated bio
