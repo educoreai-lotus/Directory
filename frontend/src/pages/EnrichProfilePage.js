@@ -250,6 +250,7 @@ function EnrichProfilePage() {
       }, 2000); // 2 second delay to show success message
 
       return () => clearTimeout(timer);
+    }
     // Removed old "Both LinkedIn and GitHub connected" message - no longer needed
   }, [linkedinConnected, githubConnected, user, navigate, refreshing, searchParams]);
 
