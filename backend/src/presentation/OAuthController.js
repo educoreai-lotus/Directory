@@ -168,29 +168,15 @@ class OAuthController {
       // Encode user object as base64 JSON for URL
       const userDataEncoded = Buffer.from(JSON.stringify(userObject)).toString('base64');
 
-      // Check if both OAuth connections are complete
-      const isReady = await this.enrichProfileUseCase.isReadyForEnrichment(employeeId);
-      
+      // CRITICAL: Do NOT trigger enrichment automatically in OAuth callback
+      // Enrichment should ONLY happen when user clicks "Continue to Your Profile" button
+      // Just redirect back to enrich page with connection status
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
       
-      if (isReady) {
-        // Both connected - trigger enrichment synchronously (wait for it to complete)
-        console.log('[OAuthController] Both OAuth connections complete, triggering enrichment...');
-        try {
-          const enrichmentResult = await this.enrichProfileUseCase.enrichProfile(employeeId);
-          console.log('[OAuthController] ✅ Profile enrichment completed:', enrichmentResult);
-          
-          // Update user object after enrichment
-          userObject.profileStatus = 'enriched';
-          const updatedUserDataEncoded = Buffer.from(JSON.stringify(userObject)).toString('base64');
-          
-          // After enrichment completes, redirect to enrich page with both connected status, token, and user
-          return res.redirect(`${frontendUrl}/enrich?linkedin=connected&github=connected&enriched=true&token=${encodeURIComponent(dummyToken)}&user=${encodeURIComponent(updatedUserDataEncoded)}`);
-        } catch (error) {
-          console.error('[OAuthController] ❌ Enrichment failed:', error);
-          // Still redirect to enrich page, but with error, token, and user
-          return res.redirect(`${frontendUrl}/enrich?linkedin=connected&github=connected&error=${encodeURIComponent(error.message)}&token=${encodeURIComponent(dummyToken)}&user=${encodeURIComponent(userDataEncoded)}`);
-        }
+      if (hasLinkedIn && hasGitHub) {
+        // Both connected - redirect to enrich page (user will click "Continue" to trigger enrichment)
+        console.log('[OAuthController] Both OAuth connections complete. Redirecting to enrich page - user must click "Continue" to trigger enrichment');
+        return res.redirect(`${frontendUrl}/enrich?linkedin=connected&github=connected&token=${encodeURIComponent(dummyToken)}&user=${encodeURIComponent(userDataEncoded)}`);
       } else {
         // Only LinkedIn connected - go back to enrich page to connect GitHub with token and user
         console.log('[OAuthController] LinkedIn connected, waiting for GitHub. Redirecting back to enrich page');
@@ -400,35 +386,15 @@ class OAuthController {
       // Encode user object as base64 JSON for URL
       const userDataEncoded = Buffer.from(JSON.stringify(userObject)).toString('base64');
 
-      // Check if both OAuth connections are complete
-      console.log('[OAuthController] Checking if ready for enrichment (GitHub callback)...');
-      console.log('[OAuthController] Employee ID:', employeeId);
-      console.log('[OAuthController] Has LinkedIn:', hasLinkedIn);
-      console.log('[OAuthController] Has GitHub:', hasGitHub);
-      
-      const isReady = await this.enrichProfileUseCase.isReadyForEnrichment(employeeId);
-      console.log('[OAuthController] isReadyForEnrichment result:', isReady);
-      
+      // CRITICAL: Do NOT trigger enrichment automatically in OAuth callback
+      // Enrichment should ONLY happen when user clicks "Continue to Your Profile" button
+      // Just redirect back to enrich page with connection status
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
       
-      if (isReady) {
-        // Both connected - trigger enrichment synchronously (wait for it to complete)
-        console.log('[OAuthController] ✅ Both OAuth connections complete, triggering enrichment...');
-        try {
-          const enrichmentResult = await this.enrichProfileUseCase.enrichProfile(employeeId);
-          console.log('[OAuthController] ✅ Profile enrichment completed:', enrichmentResult);
-          
-          // Update user object after enrichment
-          userObject.profileStatus = 'enriched';
-          const updatedUserDataEncoded = Buffer.from(JSON.stringify(userObject)).toString('base64');
-          
-          // After enrichment completes, redirect to enrich page with both connected status, token, and user
-          return res.redirect(`${frontendUrl}/enrich?linkedin=connected&github=connected&enriched=true&token=${encodeURIComponent(dummyToken)}&user=${encodeURIComponent(updatedUserDataEncoded)}`);
-        } catch (error) {
-          console.error('[OAuthController] ❌ Enrichment failed:', error);
-          // Still redirect to enrich page, but with error, token, and user
-          return res.redirect(`${frontendUrl}/enrich?linkedin=connected&github=connected&error=${encodeURIComponent(error.message)}&token=${encodeURIComponent(dummyToken)}&user=${encodeURIComponent(userDataEncoded)}`);
-        }
+      if (hasLinkedIn && hasGitHub) {
+        // Both connected - redirect to enrich page (user will click "Continue" to trigger enrichment)
+        console.log('[OAuthController] Both OAuth connections complete. Redirecting to enrich page - user must click "Continue" to trigger enrichment');
+        return res.redirect(`${frontendUrl}/enrich?linkedin=connected&github=connected&token=${encodeURIComponent(dummyToken)}&user=${encodeURIComponent(userDataEncoded)}`);
       } else {
         // Only GitHub connected - go back to enrich page to connect LinkedIn with token and user
         console.log('[OAuthController] GitHub connected, waiting for LinkedIn. Redirecting back to enrich page');
