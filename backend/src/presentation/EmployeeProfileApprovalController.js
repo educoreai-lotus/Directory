@@ -158,7 +158,7 @@ class EmployeeProfileApprovalController {
           };
 
           console.log('[EmployeeProfileApprovalController] Sending post-approval skills payload to Skills Engine via Coordinator...');
-          await this.microserviceClient.getEmployeeSkills({
+          const skillsData = await this.microserviceClient.getEmployeeSkills({
             userId: employee.id,
             userName: employee.full_name,
             companyId: employee.company_id.toString(),
@@ -169,6 +169,18 @@ class EmployeeProfileApprovalController {
             rawData
           });
           console.log('[EmployeeProfileApprovalController] ✅ Post-approval skills payload sent to Skills Engine');
+          
+          // Store skills data in database to avoid duplicate calls
+          if (skillsData && (skillsData.competencies || skillsData.relevance_score !== undefined)) {
+            try {
+              const EmployeeSkillsRepository = require('../infrastructure/EmployeeSkillsRepository');
+              const skillsRepository = new EmployeeSkillsRepository();
+              await skillsRepository.saveOrUpdate(employee.id, skillsData);
+              console.log('[EmployeeProfileApprovalController] ✅ Skills data stored in database');
+            } catch (storageError) {
+              console.warn('[EmployeeProfileApprovalController] ⚠️ Failed to store skills data (non-blocking):', storageError.message);
+            }
+          }
         } else {
           console.warn('[EmployeeProfileApprovalController] Skipping Skills Engine call: employee or company not found', {
             hasEmployee: !!employee,

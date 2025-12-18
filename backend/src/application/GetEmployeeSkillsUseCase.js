@@ -4,12 +4,14 @@
 const EmployeeRepository = require('../infrastructure/EmployeeRepository');
 const MicroserviceClient = require('../infrastructure/MicroserviceClient');
 const CompanyRepository = require('../infrastructure/CompanyRepository');
+const EmployeeSkillsRepository = require('../infrastructure/EmployeeSkillsRepository');
 
 class GetEmployeeSkillsUseCase {
   constructor() {
     this.employeeRepository = new EmployeeRepository();
     this.microserviceClient = new MicroserviceClient();
     this.companyRepository = new CompanyRepository();
+    this.skillsRepository = new EmployeeSkillsRepository();
   }
 
   /**
@@ -35,6 +37,26 @@ class GetEmployeeSkillsUseCase {
       if (employee.profile_status !== 'approved') {
         throw new Error('Employee profile must be approved to view skills');
       }
+
+      // FIRST: Try to get skills from database (stored when profile was approved)
+      const storedSkills = await this.skillsRepository.findByEmployeeId(employeeId);
+      
+      if (storedSkills && storedSkills.competencies) {
+        console.log('[GetEmployeeSkillsUseCase] ✅ Found stored skills in database, returning cached data');
+        return {
+          success: true,
+          skills: {
+            user_id: storedSkills.employee_id,
+            competencies: storedSkills.competencies,
+            relevance_score: storedSkills.relevance_score || 0,
+            gap: storedSkills.gap || null
+          }
+        };
+      }
+
+      // FALLBACK: If no stored skills found, call Skills Engine (shouldn't happen normally)
+      console.warn('[GetEmployeeSkillsUseCase] ⚠️ No stored skills found, calling Skills Engine as fallback');
+      console.warn('[GetEmployeeSkillsUseCase] This should only happen if skills were not stored during approval');
 
       // Determine employee type from roles
       const rolesQuery = 'SELECT role_type FROM employee_roles WHERE employee_id = $1';
@@ -75,6 +97,16 @@ class GetEmployeeSkillsUseCase {
         preferredLanguage: employee.preferred_language || 'en',
         rawData
       });
+
+      // Store the response in database for future requests
+      if (skillsData && (skillsData.competencies || skillsData.relevance_score !== undefined)) {
+        try {
+          await this.skillsRepository.saveOrUpdate(employeeId, skillsData);
+          console.log('[GetEmployeeSkillsUseCase] ✅ Skills data stored in database for future requests');
+        } catch (storageError) {
+          console.warn('[GetEmployeeSkillsUseCase] ⚠️ Failed to store skills data (non-blocking):', storageError.message);
+        }
+      }
 
       return {
         success: true,

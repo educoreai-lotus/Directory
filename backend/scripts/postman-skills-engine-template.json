@@ -1,0 +1,103 @@
+{
+  "info": {
+    "name": "Skills Engine Request via Coordinator",
+    "description": "Template for testing Skills Engine requests through Coordinator",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Employee Skills from Skills Engine",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "X-Service-Name",
+            "value": "directory-service",
+            "type": "text",
+            "description": "Service name making the request"
+          },
+          {
+            "key": "X-Signature",
+            "value": "{{signature}}",
+            "type": "text",
+            "description": "Digital signature (generate using generate-signature-for-request.js script)"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"requester_service\": \"directory-service\",\n  \"payload\": {\n    \"action\": \"get_employee_skills_for_directory_profile\",\n    \"target_service\": \"skills-engine-service\",\n    \"user_id\": \"{{employee_uuid}}\",\n    \"user_name\": \"{{employee_name}}\",\n    \"company_id\": \"{{company_uuid}}\",\n    \"company_name\": \"{{company_name}}\",\n    \"employee_type\": \"{{employee_type}}\",\n    \"path_career\": \"{{target_role}}\",\n    \"preferred_language\": \"{{preferred_language}}\",\n    \"raw_data\": {\n      \"linkedin\": {},\n      \"github\": {}\n    }\n  },\n  \"response\": {\n    \"user_id\": null,\n    \"competencies\": [],\n    \"relevance_score\": 0\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://coordinator-production-6004.up.railway.app/api/fill-content-metrics/",
+          "protocol": "https",
+          "host": [
+            "coordinator-production-6004",
+            "up",
+            "railway",
+            "app"
+          ],
+          "path": [
+            "api",
+            "fill-content-metrics",
+            ""
+          ]
+        },
+        "description": "Sends employee data to Skills Engine via Coordinator to get normalized skills and competencies.\n\n**Required Variables:**\n- `employee_uuid`: Employee UUID from database\n- `employee_name`: Employee full name\n- `company_uuid`: Company UUID from database\n- `company_name`: Company name\n- `employee_type`: 'regular' or 'trainer'\n- `target_role`: Target role in company (path_career)\n- `preferred_language`: Language code (e.g., 'en', 'ar')\n- `signature`: Digital signature (generate using script)\n\n**Response:**\n- `competencies`: Hierarchical skills structure\n- `relevance_score`: Score from 0-100\n- `gap`: Missing skills data"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "employee_uuid",
+      "value": "YOUR_EMPLOYEE_UUID",
+      "type": "string"
+    },
+    {
+      "key": "employee_name",
+      "value": "Jasmine Mograby",
+      "type": "string"
+    },
+    {
+      "key": "company_uuid",
+      "value": "YOUR_COMPANY_UUID",
+      "type": "string"
+    },
+    {
+      "key": "company_name",
+      "value": "Lotus techhub",
+      "type": "string"
+    },
+    {
+      "key": "employee_type",
+      "value": "regular",
+      "type": "string"
+    },
+    {
+      "key": "target_role",
+      "value": "Training & Development Director",
+      "type": "string"
+    },
+    {
+      "key": "preferred_language",
+      "value": "en",
+      "type": "string"
+    },
+    {
+      "key": "signature",
+      "value": "GENERATE_USING_SCRIPT",
+      "type": "string"
+    }
+  ]
+}
+

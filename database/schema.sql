@@ -191,6 +191,18 @@ CREATE TABLE IF NOT EXISTS employee_requests (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Employee skills table (stores Skills Engine response to avoid duplicate calls)
+CREATE TABLE IF NOT EXISTS employee_skills (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    competencies JSONB NOT NULL,
+    relevance_score NUMERIC DEFAULT 0,
+    gap JSONB, -- Missing skills data
+    processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(employee_id)
+);
+
 -- Directory Admins table (platform-level admins, not tied to any company)
 CREATE TABLE IF NOT EXISTS directory_admins (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -218,4 +230,5 @@ CREATE INDEX IF NOT EXISTS idx_employee_project_summaries_employee ON employee_p
 CREATE INDEX IF NOT EXISTS idx_employee_requests_employee ON employee_requests(employee_id);
 CREATE INDEX IF NOT EXISTS idx_employee_requests_company_status ON employee_requests(company_id, status);
 CREATE INDEX IF NOT EXISTS idx_employee_requests_type ON employee_requests(request_type);
+CREATE INDEX IF NOT EXISTS idx_employee_skills_employee_id ON employee_skills(employee_id);
 CREATE INDEX IF NOT EXISTS idx_directory_admins_email ON directory_admins(email);
