@@ -115,25 +115,33 @@ class EnrichProfileUseCase {
         // Fall through to existing logic below
       }
 
-      // PHASE_2: Fallback to existing OAuth data if merge failed or no new sources exist
-      // This ensures backward compatibility with existing OAuth-only flow
+      // CRITICAL: Fallback to existing OAuth data if merge failed or no new sources exist
+      // LinkedIn is NOT a valid enrichment source by itself, but can be used for data if available
+      // GitHub alone is sufficient for enrichment
       if (!mergedData) {
-        // Check if both LinkedIn and GitHub are connected (existing requirement)
-        if (!employee.linkedin_data || !employee.github_data) {
-          console.warn('[EnrichProfileUseCase] ⚠️  Missing OAuth data - LinkedIn:', !!employee.linkedin_data, 'GitHub:', !!employee.github_data);
-          console.warn('[EnrichProfileUseCase] ⚠️  Proceeding with minimal enrichment (empty fields)');
-          // SAFE FALLBACK: Don't throw, proceed with empty data
-          linkedinData = null;
-          githubData = null;
-        } else {
-          // Parse stored data (existing logic)
+        // Parse LinkedIn data if available (for bio generation, but not required)
+        if (employee.linkedin_data) {
           linkedinData = typeof employee.linkedin_data === 'string' 
             ? JSON.parse(employee.linkedin_data) 
             : employee.linkedin_data;
-          
+          console.log('[EnrichProfileUseCase] Using LinkedIn data from old OAuth (for bio generation)');
+        } else {
+          linkedinData = null;
+        }
+        
+        // Parse GitHub data if available (GitHub is a valid enrichment source)
+        if (employee.github_data) {
           githubData = typeof employee.github_data === 'string'
             ? JSON.parse(employee.github_data)
             : employee.github_data;
+          console.log('[EnrichProfileUseCase] Using GitHub data from old OAuth');
+        } else {
+          githubData = null;
+        }
+        
+        // Note: We don't require LinkedIn - GitHub alone is sufficient
+        if (!githubData && !linkedinData) {
+          console.warn('[EnrichProfileUseCase] ⚠️  No OAuth data available - proceeding with minimal enrichment');
         }
       }
       
@@ -209,7 +217,8 @@ class EnrichProfileUseCase {
       
       let bio;
       try {
-        bio = await this.openAIClient.generateBio(linkedinData, githubData, employeeBasicInfo);
+        // Pass mergedData to bio generation so it can use CV PDF and manual form data
+        bio = await this.openAIClient.generateBio(linkedinData, githubData, employeeBasicInfo, mergedData);
         console.log('[EnrichProfileUseCase] ✅ Bio generated successfully by OpenAI');
         console.log('[EnrichProfileUseCase] Bio length:', bio.length, 'characters');
         console.log('[EnrichProfileUseCase] Bio preview:', bio.substring(0, 200));
@@ -347,7 +356,8 @@ class EnrichProfileUseCase {
 
   /**
    * Check if employee is ready for enrichment
-   * PHASE_2: Now checks for new data sources (PDF, manual) OR existing OAuth data
+   * CRITICAL: LinkedIn is NOT a valid enrichment source
+   * Valid sources: GitHub, CV PDF, or Manual form
    * @param {string} employeeId - Employee UUID
    * @returns {Promise<boolean>} True if ready for enrichment
    */
@@ -361,30 +371,60 @@ class EnrichProfileUseCase {
       return false;
     }
 
-    // PHASE_2: Check for new data sources (PDF, manual, LinkedIn, GitHub in new table)
-    let hasNewDataSources = false;
+    const notCompleted = !employee.enrichment_completed;
+    if (!notCompleted) {
+      console.log('[EnrichProfileUseCase] Enrichment already completed');
+      return false;
+    }
+
+    // Check for valid enrichment sources (GitHub OR CV PDF OR Manual form)
+    // LinkedIn is NOT considered a valid enrichment source
+    let hasValidSource = false;
     try {
       const EmployeeRawDataRepository = require('../infrastructure/EmployeeRawDataRepository');
       const rawDataRepo = new EmployeeRawDataRepository();
-      hasNewDataSources = await rawDataRepo.hasAnyData(employeeId);
-      console.log('[EnrichProfileUseCase] Has new data sources (PDF/manual/OAuth in new table):', hasNewDataSources);
+      
+      // Check for GitHub or CV PDF in new table
+      hasValidSource = await rawDataRepo.hasValidEnrichmentSource(employeeId);
+      console.log('[EnrichProfileUseCase] Has valid enrichment source (GitHub/CV in new table):', hasValidSource);
+      
+      // Also check for manual form data
+      if (!hasValidSource) {
+        const manualData = await rawDataRepo.findByEmployeeIdAndSource(employeeId, 'manual');
+        if (manualData && manualData.data) {
+          const data = typeof manualData.data === 'string' ? JSON.parse(manualData.data) : manualData.data;
+          const hasManualData = 
+            (data.work_experience && data.work_experience.length > 0) ||
+            (data.skills && data.skills.length > 0) ||
+            (data.education && data.education.length > 0);
+          if (hasManualData) {
+            hasValidSource = true;
+            console.log('[EnrichProfileUseCase] Has manual form data');
+          }
+        }
+      }
+      
+      // Backward compatibility: Check old GitHub data in employees table
+      if (!hasValidSource) {
+        const hasOldGitHub = !!employee.github_data;
+        if (hasOldGitHub) {
+          hasValidSource = true;
+          console.log('[EnrichProfileUseCase] Has GitHub data (old OAuth)');
+        }
+      }
     } catch (error) {
-      console.warn('[EnrichProfileUseCase] Could not check new data sources, using fallback:', error.message);
-      // Fall through to existing checks
+      console.warn('[EnrichProfileUseCase] Could not check data sources, using fallback:', error.message);
+      // Fall through to old OAuth check
+      const hasOldGitHub = !!employee.github_data;
+      hasValidSource = hasOldGitHub;
     }
-
-    // Existing OAuth checks (backward compatible)
-    const hasLinkedIn = !!employee.linkedin_data;
-    const hasGitHub = !!employee.github_data;
-    const notCompleted = !employee.enrichment_completed;
     
     console.log('[EnrichProfileUseCase] Employee:', employee.email);
-    console.log('[EnrichProfileUseCase] Has LinkedIn data (old):', hasLinkedIn);
-    console.log('[EnrichProfileUseCase] Has GitHub data (old):', hasGitHub);
+    console.log('[EnrichProfileUseCase] Has valid enrichment source:', hasValidSource);
     console.log('[EnrichProfileUseCase] Enrichment not completed:', notCompleted);
     
-    // PHASE_2: Ready if new sources exist OR both OAuth connected (backward compatible)
-    const isReady = !!(hasNewDataSources || (hasLinkedIn && hasGitHub)) && notCompleted;
+    // Ready if has valid source (GitHub, CV, or Manual) AND not completed
+    const isReady = hasValidSource && notCompleted;
     console.log('[EnrichProfileUseCase] Ready for enrichment:', isReady);
     
     return isReady;

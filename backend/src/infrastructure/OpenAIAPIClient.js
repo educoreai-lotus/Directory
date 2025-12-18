@@ -18,13 +18,14 @@ class OpenAIAPIClient {
   }
 
   /**
-   * Generate professional bio from LinkedIn and GitHub data
-   * @param {Object} linkedinData - LinkedIn profile data
-   * @param {Object} githubData - GitHub profile data
+   * Generate professional bio from LinkedIn, GitHub, CV PDF, and Manual form data
+   * @param {Object} linkedinData - LinkedIn profile data (optional)
+   * @param {Object} githubData - GitHub profile data (optional)
    * @param {Object} employeeBasicInfo - Basic employee info (name, role, etc.)
+   * @param {Object} mergedData - Merged data from all sources (CV PDF, manual form, LinkedIn, GitHub) - optional
    * @returns {Promise<string>} Generated bio
    */
-  async generateBio(linkedinData, githubData, employeeBasicInfo) {
+  async generateBio(linkedinData, githubData, employeeBasicInfo, mergedData = null) {
     console.log('[OpenAIAPIClient] ========== GENERATING BIO ==========');
     console.log('[OpenAIAPIClient] API Key configured:', !!this.apiKey);
     console.log('[OpenAIAPIClient] API Key length:', this.apiKey ? this.apiKey.length : 0);
@@ -35,7 +36,7 @@ class OpenAIAPIClient {
       throw new Error('OpenAI API key not configured');
     }
 
-    const prompt = this.buildBioPrompt(linkedinData, githubData, employeeBasicInfo);
+    const prompt = this.buildBioPrompt(linkedinData, githubData, employeeBasicInfo, mergedData);
     const requestBody = {
       model: 'gpt-4-turbo',
       messages: [{
@@ -304,8 +305,9 @@ class OpenAIAPIClient {
   /**
    * Build prompt for bio generation
    * Improved prompt with clear role, context, and task definitions
+   * Supports data from LinkedIn, GitHub, CV PDF, and Manual form
    */
-  buildBioPrompt(linkedinData, githubData, employeeBasicInfo) {
+  buildBioPrompt(linkedinData, githubData, employeeBasicInfo, mergedData = null) {
     // ROLE: Define AI's role
     let prompt = `You are a professional HR and career development AI assistant specializing in creating compelling, accurate professional bios for employee profiles.\n\n`;
     
@@ -384,10 +386,62 @@ class OpenAIAPIClient {
       console.log('[OpenAIAPIClient] ⚠️  No GitHub data provided');
     }
     
+    // DATA SOURCES: CV PDF and Manual Form data (from mergedData)
+    if (mergedData) {
+      console.log('[OpenAIAPIClient] Merged data fields available:', Object.keys(mergedData).join(', '));
+      
+      // Work Experience from CV PDF or Manual Form
+      if (mergedData.work_experience && mergedData.work_experience.length > 0) {
+        prompt += `WORK EXPERIENCE (from CV PDF or Manual Form):\n`;
+        const workExp = Array.isArray(mergedData.work_experience) 
+          ? mergedData.work_experience 
+          : [mergedData.work_experience];
+        workExp.slice(0, 5).forEach((exp, idx) => {
+          if (typeof exp === 'string' && exp.trim().length > 0) {
+            prompt += `- ${exp.substring(0, 300)}\n`;
+          } else if (exp && typeof exp === 'object') {
+            prompt += `  ${idx + 1}. ${exp.title || exp.jobTitle || 'Position'} at ${exp.companyName || exp.company || 'Company'}`;
+            if (exp.description) prompt += `\n     Description: ${exp.description.substring(0, 200)}`;
+            if (exp.startDate || exp.start_date) prompt += `\n     Duration: ${exp.startDate || exp.start_date}${(exp.endDate || exp.end_date) ? ` - ${exp.endDate || exp.end_date}` : ' (Current)'}`;
+            prompt += '\n';
+          }
+        });
+        prompt += '\n';
+      }
+      
+      // Skills from CV PDF or Manual Form
+      if (mergedData.skills && mergedData.skills.length > 0) {
+        prompt += `SKILLS (from CV PDF or Manual Form):\n`;
+        const skills = Array.isArray(mergedData.skills) 
+          ? mergedData.skills 
+          : [mergedData.skills];
+        prompt += `- ${skills.slice(0, 20).join(', ')}\n\n`;
+      }
+      
+      // Education from CV PDF or Manual Form
+      if (mergedData.education && mergedData.education.length > 0) {
+        prompt += `EDUCATION (from CV PDF or Manual Form):\n`;
+        const education = Array.isArray(mergedData.education) 
+          ? mergedData.education 
+          : [mergedData.education];
+        education.slice(0, 3).forEach((edu, idx) => {
+          if (typeof edu === 'string' && edu.trim().length > 0) {
+            prompt += `- ${edu.substring(0, 200)}\n`;
+          } else if (edu && typeof edu === 'object') {
+            prompt += `  ${idx + 1}. ${edu.degree || edu.school || edu.institution || 'Education'}`;
+            if (edu.field) prompt += ` - ${edu.field}`;
+            if (edu.year) prompt += ` (${edu.year})`;
+            prompt += '\n';
+          }
+        });
+        prompt += '\n';
+      }
+    }
+    
     // TASK: Define what the AI needs to do
     prompt += `TASK:\n`;
     prompt += `Your task is to create a professional, compelling bio that:\n`;
-    prompt += `1. Synthesizes information from both LinkedIn (professional experience) and GitHub (technical expertise)\n`;
+    prompt += `1. Synthesizes information from all available sources (LinkedIn professional experience, GitHub technical expertise, CV PDF data, and Manual form data)\n`;
     prompt += `2. Highlights the employee's professional background, technical skills, and past achievements\n`;
     prompt += `3. Describes their current role and responsibilities at ${companyName}\n`;
     prompt += `4. Showcases their technical contributions and professional accomplishments\n\n`;

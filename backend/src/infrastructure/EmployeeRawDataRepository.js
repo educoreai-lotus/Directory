@@ -187,6 +187,41 @@ class EmployeeRawDataRepository {
     
     return result.rows.map(row => row.source);
   }
+
+  /**
+   * Check if employee has valid enrichment sources (GitHub OR CV PDF)
+   * LinkedIn is NOT considered a valid enrichment source
+   * @param {string} employeeId - Employee UUID
+   * @param {Object} client - Optional database client for transaction
+   * @returns {Promise<boolean>} True if employee has GitHub or PDF data
+   */
+  async hasValidEnrichmentSource(employeeId, client = null) {
+    const query = `
+      SELECT COUNT(*) as count
+      FROM employee_raw_data
+      WHERE employee_id = $1 
+        AND source IN ('github', 'pdf')
+    `;
+
+    const queryRunner = client || this.pool;
+    const result = await queryRunner.query(query, [employeeId]);
+    
+    const hasNewSource = parseInt(result.rows[0].count) > 0;
+    
+    // Also check old OAuth data (backward compatibility)
+    // Check if employee has GitHub data in employees.github_data column
+    const employeeQuery = `
+      SELECT github_data
+      FROM employees
+      WHERE id = $1
+    `;
+    const employeeResult = await queryRunner.query(employeeQuery, [employeeId]);
+    const hasOldGitHub = employeeResult.rows.length > 0 && 
+                         employeeResult.rows[0].github_data !== null &&
+                         employeeResult.rows[0].github_data !== undefined;
+    
+    return hasNewSource || hasOldGitHub;
+  }
 }
 
 module.exports = EmployeeRawDataRepository;

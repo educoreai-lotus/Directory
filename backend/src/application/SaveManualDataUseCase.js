@@ -64,14 +64,39 @@ class SaveManualDataUseCase {
         }
       }
 
+      // CRITICAL: Validation depends on whether employee has valid enrichment sources
+      // Check if employee has GitHub OR CV (valid sources)
+      // LinkedIn is NOT considered a valid enrichment source
+      const hasValidSource = await this.rawDataRepository.hasValidEnrichmentSource(employeeId);
+      
+      console.log('[SaveManualDataUseCase] Employee has valid enrichment source (GitHub/CV):', hasValidSource);
+
       // Validate that at least one field has data
       const hasData = 
         structuredData.work_experience.length > 0 ||
         structuredData.skills.length > 0 ||
         structuredData.education.length > 0;
 
-      if (!hasData) {
+      // Case 1: User HAS GitHub OR CV → Manual form is optional (can be empty)
+      // Case 2: User has NO GitHub AND NO CV → Manual form is mandatory
+      if (!hasData && !hasValidSource) {
         throw new Error('At least one field (work_experience, skills, or education) must be provided');
+      }
+      
+      // If hasData is false but hasValidSource is true, this is a no-op (empty form is OK)
+      if (!hasData && hasValidSource) {
+        console.log('[SaveManualDataUseCase] Empty manual form but user has GitHub/CV - this is a valid no-op');
+        // Return success with empty data (no-op)
+        return {
+          success: true,
+          data: {
+            id: null,
+            source: 'manual',
+            created_at: null,
+            updated_at: null
+          },
+          message: 'No manual data provided; nothing to update (user has GitHub/CV)'
+        };
       }
 
       console.log('[SaveManualDataUseCase] Structured data:', {

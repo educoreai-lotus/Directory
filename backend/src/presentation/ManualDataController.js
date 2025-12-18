@@ -67,8 +67,20 @@ class ManualDataController {
         (skills === undefined || skills === null) &&
         (education === undefined || education === null);
 
-      // On invalid manual data (all fields undefined/null) → return 400
+      // CRITICAL VALIDATION LOGIC:
+      // Check if employee has valid enrichment sources (GitHub OR CV PDF)
+      // LinkedIn is NOT considered a valid enrichment source
+      const EmployeeRawDataRepository = require('../infrastructure/EmployeeRawDataRepository');
+      const rawDataRepo = new EmployeeRawDataRepository();
+      const hasValidSource = await rawDataRepo.hasValidEnrichmentSource(id);
+      
+      console.log('[ManualDataController] Employee has valid enrichment source (GitHub/CV):', hasValidSource);
+
+      // Case 1: User HAS GitHub OR CV → Manual form is optional
+      // Case 2: User has NO GitHub AND NO CV → Manual form is mandatory
+      
       if (noDataProvided) {
+        // All fields undefined/null - invalid request
         return res.status(400).json({
           requester_service: 'directory_service',
           response: {
@@ -79,17 +91,31 @@ class ManualDataController {
         });
       }
 
-      // IF allEmpty === true (all fields are empty strings) → return 200 success (NO-OP)
+      // IF allEmpty === true (all fields are empty strings)
       if (allEmpty) {
-        console.log("[ManualDataController] No manual data provided - treating as no-op success");
-        return res.status(200).json({
-          requester_service: "directory_service",
-          response: {
-            success: true,
-            message: "No manual data provided; nothing to update",
-            data: {}
-          }
-        });
+        if (hasValidSource) {
+          // Case 1: User HAS GitHub OR CV → Manual form is optional → return 200 (NO-OP)
+          console.log("[ManualDataController] Empty manual form but user has GitHub/CV - treating as no-op success");
+          return res.status(200).json({
+            requester_service: "directory_service",
+            response: {
+              success: true,
+              message: "No manual data provided; nothing to update",
+              data: {}
+            }
+          });
+        } else {
+          // Case 2: User has NO GitHub AND NO CV → Manual form is mandatory → return 400
+          console.log("[ManualDataController] Empty manual form and no GitHub/CV - validation failed");
+          return res.status(400).json({
+            requester_service: 'directory_service',
+            response: {
+              success: false,
+              message: 'Please fill at least one field',
+              details: 'To enrich your profile without GitHub or CV, you must fill at least one field (work_experience, skills, or education)'
+            }
+          });
+        }
       }
 
       // Otherwise → call the UseCase as before

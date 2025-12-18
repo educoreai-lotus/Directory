@@ -421,9 +421,11 @@ function EnrichProfilePage() {
       (!manualFormData?.education || (typeof manualFormData.education === 'string' && manualFormData.education.trim() === "")) &&
       (!manualFormData?.work_experience || (typeof manualFormData.work_experience === 'string' && manualFormData.work_experience.trim() === ""));
 
-    // If user has no real data source, manual form becomes required
+    // CRITICAL VALIDATION LOGIC:
+    // Case 1: User HAS GitHub OR CV → Manual form is optional (can be empty)
+    // Case 2: User has NO GitHub AND NO CV → Manual form is mandatory
     if (!hasRealDataSource && isManualFormEmpty) {
-      setError('To enrich your profile without GitHub or CV, you must fill at least one field in the form.');
+      setError('Please fill at least one field');
       return;
     }
 
@@ -432,20 +434,33 @@ function EnrichProfilePage() {
       setError(null);
       setSuccessMessage('Enriching your profile... This may take a moment.');
 
-      // CRITICAL: Save manual form data before enrichment (if form has data)
-      // Ensure manual data is saved to backend before triggering enrichment
-      if (!isManualFormEmpty) {
-        // Normalize form data to ensure all keys are strings
-        const formDataToSave = {
-          skills: (manualFormData?.skills && typeof manualFormData.skills === 'string') ? manualFormData.skills : '',
-          education: (manualFormData?.education && typeof manualFormData.education === 'string') ? manualFormData.education : '',
-          work_experience: (manualFormData?.work_experience && typeof manualFormData.work_experience === 'string') ? manualFormData.work_experience : ''
-        };
+      // CRITICAL: Save manual form data before enrichment
+      // Case 1: If user has GitHub/CV, empty form is OK (no-op)
+      // Case 2: If user has no GitHub/CV, form must have data (already validated above)
+      // Always try to save (backend will handle empty form correctly based on GitHub/CV status)
+      const formDataToSave = {
+        skills: (manualFormData?.skills && typeof manualFormData.skills === 'string') ? manualFormData.skills : '',
+        education: (manualFormData?.education && typeof manualFormData.education === 'string') ? manualFormData.education : '',
+        work_experience: (manualFormData?.work_experience && typeof manualFormData.work_experience === 'string') ? manualFormData.work_experience : ''
+      };
 
-        console.log('Sending manual data:', formDataToSave);
-        
+      console.log('Sending manual data:', formDataToSave);
+      
+      try {
         await saveManualData(user.id, formDataToSave);
-        setManualDataSaved(true);
+        // Only set manualDataSaved if form actually has data
+        if (!isManualFormEmpty) {
+          setManualDataSaved(true);
+        }
+      } catch (saveError) {
+        // If save fails and user has GitHub/CV, it might be a no-op (empty form) - that's OK
+        // If save fails and user has no GitHub/CV, error should have been caught by validation above
+        if (!hasRealDataSource) {
+          // User has no GitHub/CV, so save failure is a real error
+          throw saveError;
+        }
+        // Otherwise, continue (empty form with GitHub/CV is valid)
+        console.log('[EnrichProfilePage] Manual form save skipped (empty form with GitHub/CV)');
       }
 
       // PHASE_4: Trigger enrichment via backend
@@ -842,8 +857,9 @@ function EnrichProfilePage() {
         </div>
 
         {/* Continue Button */}
-        {/* PHASE_4: Updated to check for any source, not just both OAuth */}
-        {(linkedinConnected || githubConnected || pdfUploaded || manualDataSaved) && (
+        {/* CRITICAL: LinkedIn is NOT a valid enrichment source - only GitHub, CV, or Manual form count */}
+        {/* Show button if user has GitHub OR CV OR manual form filled */}
+        {(githubConnected || pdfUploaded || manualDataSaved) && (
           <div className="mt-8">
             <button
               onClick={handleContinue}
@@ -867,22 +883,20 @@ function EnrichProfilePage() {
               className="text-xs text-center mt-4"
               style={{ color: 'var(--text-muted)' }}
             >
-              {linkedinConnected && githubConnected 
-                ? 'Both LinkedIn and GitHub are connected. Your profile will be enriched with AI-generated content.'
-                : 'Your profile will be enriched with AI-generated content using the data you provided.'
-              }
+              Your profile will be enriched with AI-generated content using the data you provided.
             </p>
           </div>
         )}
         
-        {/* PHASE_4: Show message if no sources connected yet */}
-        {!linkedinConnected && !githubConnected && !pdfUploaded && !manualDataSaved && (
+        {/* Show message if no valid sources connected yet */}
+        {/* LinkedIn alone is NOT sufficient - need GitHub, CV, or Manual form */}
+        {!githubConnected && !pdfUploaded && !manualDataSaved && (
           <div className="mt-8">
             <p 
               className="text-sm text-center mb-4"
               style={{ color: 'var(--text-secondary)' }}
             >
-              Please connect at least one data source (LinkedIn, GitHub, upload CV, or fill manual form) to continue.
+              Please connect GitHub, upload CV, or fill the manual form to continue.
             </p>
           </div>
         )}
