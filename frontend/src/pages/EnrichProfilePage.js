@@ -125,20 +125,7 @@ function EnrichProfilePage() {
         setLinkedinConnected(newLinkedinStatus);
         setGithubConnected(newGithubStatus);
         
-        // Show success message based on what was just connected (no longer necessary to prompt for GitHub)
-        const enrichedParam = searchParams.get('enriched');
-        if (linkedinParam === 'connected') {
-          setSuccessMessage('✓ LinkedIn connected successfully!');
-        } else if (githubParam === 'connected') {
-          setSuccessMessage('✓ GitHub connected successfully!');
-        }
-        
-        // Clear success message after 5 seconds (unless both are connected, then redirect will happen)
-        if (!(newLinkedinStatus && newGithubStatus)) {
-          setTimeout(() => {
-            setSuccessMessage(null);
-          }, 5000);
-        }
+        // No success messages needed - button state shows connection status
         
         setRefreshing(false);
         // Clear URL params after processing (but keep token and user in localStorage)
@@ -173,29 +160,15 @@ function EnrichProfilePage() {
             setLinkedinConnected(newLinkedinStatus);
             setGithubConnected(newGithubStatus);
             
-            // Show success message based on what was just connected (no longer necessary to prompt for GitHub)
-            if (linkedinParam === 'connected') {
-              setSuccessMessage('✓ LinkedIn connected successfully!');
-            } else if (githubParam === 'connected') {
-              setSuccessMessage('✓ GitHub connected successfully!');
-            }
-            
-            // Clear success message after 5 seconds (unless both are connected, then redirect will happen)
-            if (!(newLinkedinStatus && newGithubStatus)) {
-              setTimeout(() => {
-                setSuccessMessage(null);
-              }, 5000);
-            }
+            // No success messages needed - button state shows connection status
           } else {
             // No user from refresh or localStorage - fallback to URL params
             console.warn('[EnrichProfilePage] No user available, using URL params as fallback');
             if (linkedinParam === 'connected') {
               setLinkedinConnected(true);
-              setSuccessMessage('✓ LinkedIn connected successfully! Please connect GitHub to continue.');
             }
             if (githubParam === 'connected') {
               setGithubConnected(true);
-              setSuccessMessage('✓ GitHub connected successfully! Please connect LinkedIn to continue.');
             }
           }
         })
@@ -211,11 +184,9 @@ function EnrichProfilePage() {
             // Fallback: set connection status based on URL param
             if (linkedinParam === 'connected') {
               setLinkedinConnected(true);
-              setSuccessMessage('✓ LinkedIn connected successfully!');
             }
             if (githubParam === 'connected') {
               setGithubConnected(true);
-              setSuccessMessage('✓ GitHub connected successfully!');
             }
           }
         })

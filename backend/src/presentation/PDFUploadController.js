@@ -88,7 +88,7 @@ class PDFUploadController {
       const fileBuffer = fs.readFileSync(req.file.path);
 
       // PHASE_3: Process PDF upload
-      await this.uploadCVUseCase.execute(id, fileBuffer);
+      const result = await this.uploadCVUseCase.execute(id, fileBuffer);
       
       console.log('[PDFUploadController] Saved raw data successfully');
 
@@ -101,7 +101,10 @@ class PDFUploadController {
       }
 
       console.log('[PDFUploadController] Sending success response');
-      return res.status(200).json({ success: true });
+      return res.status(200).json({ 
+        success: true,
+        extracted_data: result.data?.extracted_data || null
+      });
     } catch (error) {
       console.error('[PDFUploadController] Error in upload-cv:', error);
       console.error('[PDFUploadController] Error stack:', error.stack);

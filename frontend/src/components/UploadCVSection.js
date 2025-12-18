@@ -203,19 +203,7 @@ function UploadCVSection({ employeeId, onUploaded }) {
         </button>
       )}
 
-      {/* PHASE_4: Success Message */}
-      {uploaded && (
-        <div 
-          className="p-3 rounded-lg"
-          style={{
-            background: 'rgba(34, 197, 94, 0.1)',
-            border: '1px solid rgb(34, 197, 94)',
-            color: 'rgb(34, 197, 94)'
-          }}
-        >
-          <p className="text-sm">✓ CV uploaded successfully! Your profile will use this data for enrichment.</p>
-        </div>
-      )}
+      {/* Success state is shown by the "CV Uploaded" button text - no need for additional message */}
     </div>
   );
 }

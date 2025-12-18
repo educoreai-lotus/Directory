@@ -219,31 +219,49 @@ class EmployeeRawDataRepository {
    * @returns {Promise<boolean>} True if employee has GitHub or PDF data
    */
   async hasValidEnrichmentSource(employeeId, client = null) {
-    const query = `
-      SELECT COUNT(*) as count
-      FROM employee_raw_data
-      WHERE employee_id = $1 
-        AND source IN ('github', 'pdf')
-    `;
-
     const queryRunner = client || this.pool;
-    const result = await queryRunner.query(query, [employeeId]);
     
-    const hasNewSource = parseInt(result.rows[0].count) > 0;
-    
-    // Also check old OAuth data (backward compatibility)
-    // Check if employee has GitHub data in employees.github_data column
-    const employeeQuery = `
-      SELECT github_data
-      FROM employees
-      WHERE id = $1
-    `;
-    const employeeResult = await queryRunner.query(employeeQuery, [employeeId]);
-    const hasOldGitHub = employeeResult.rows.length > 0 && 
-                         employeeResult.rows[0].github_data !== null &&
-                         employeeResult.rows[0].github_data !== undefined;
-    
-    return hasNewSource || hasOldGitHub;
+    try {
+      // Try to query with explicit enum casting to avoid enum mismatch errors
+      const query = `
+        SELECT COUNT(*) as count
+        FROM employee_raw_data
+        WHERE employee_id = $1 
+          AND source::text IN ('github', 'pdf')
+      `;
+
+      const result = await queryRunner.query(query, [employeeId]);
+      const hasNewSource = parseInt(result.rows[0].count) > 0;
+      
+      // Also check old OAuth data (backward compatibility)
+      // Check if employee has GitHub data in employees.github_data column
+      const employeeQuery = `
+        SELECT github_data
+        FROM employees
+        WHERE id = $1
+      `;
+      const employeeResult = await queryRunner.query(employeeQuery, [employeeId]);
+      const hasOldGitHub = employeeResult.rows.length > 0 && 
+                           employeeResult.rows[0].github_data !== null &&
+                           employeeResult.rows[0].github_data !== undefined;
+      
+      return hasNewSource || hasOldGitHub;
+    } catch (error) {
+      // If enum doesn't exist or query fails, fall back to checking old GitHub data only
+      console.warn('[EmployeeRawDataRepository] Error checking valid enrichment source, using fallback:', error.message);
+      
+      const employeeQuery = `
+        SELECT github_data
+        FROM employees
+        WHERE id = $1
+      `;
+      const employeeResult = await queryRunner.query(employeeQuery, [employeeId]);
+      const hasOldGitHub = employeeResult.rows.length > 0 && 
+                           employeeResult.rows[0].github_data !== null &&
+                           employeeResult.rows[0].github_data !== undefined;
+      
+      return hasOldGitHub;
+    }
   }
 }
 

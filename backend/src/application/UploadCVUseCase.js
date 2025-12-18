@@ -66,12 +66,34 @@ class UploadCVUseCase {
 
       console.log('[UploadCVUseCase] ✅ PDF data saved successfully');
 
+      // Log extracted data summary for debugging
+      console.log('[UploadCVUseCase] Extracted CV data summary:', {
+        skills_count: sanitizedData.skills?.length || 0,
+        languages_count: sanitizedData.languages?.length || 0,
+        education_count: sanitizedData.education?.length || 0,
+        work_experience_count: sanitizedData.work_experience?.length || 0,
+        volunteer_count: sanitizedData.volunteer?.length || 0,
+        military_count: sanitizedData.military?.length || 0,
+        courses_count: sanitizedData.courses?.length || 0,
+        projects_count: sanitizedData.projects?.length || 0
+      });
+
       return {
         success: true,
         data: {
           id: savedData.id,
           source: savedData.source,
-          created_at: savedData.created_at
+          created_at: savedData.created_at,
+          extracted_data: {
+            skills_count: sanitizedData.skills?.length || 0,
+            languages_count: sanitizedData.languages?.length || 0,
+            education_count: sanitizedData.education?.length || 0,
+            work_experience_count: sanitizedData.work_experience?.length || 0,
+            volunteer_count: sanitizedData.volunteer?.length || 0,
+            military_count: sanitizedData.military?.length || 0,
+            courses_count: sanitizedData.courses?.length || 0,
+            projects_count: sanitizedData.projects?.length || 0
+          }
         }
       };
     } catch (error) {
