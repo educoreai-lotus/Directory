@@ -77,22 +77,35 @@ class ConnectLinkedInUseCase {
       const profileData = await this.apiClient.getCompleteProfile(tokenResponse.access_token, useLegacyScopes);
 
       // Build LinkedIn profile URL
-      // LinkedIn OAuth2 provides 'id' or 'sub' field, but not the public profile username
-      // We'll use a generic profile URL format, or construct from available data
+      // LinkedIn OAuth2 provides 'id' or 'sub' field, but not the public profile username (vanity name)
+      // The OAuth ID is NOT the same as the public profile slug
+      // We need to try to get the actual public profile URL from the stored data or use a fallback
       let linkedinUrl = null;
-      if (profileData.id) {
-        // Try to construct URL - LinkedIn API doesn't provide public username via OAuth2
-        // The ID from OAuth2 is not the same as the public profile slug
-        // For now, we'll store the ID and let users update it manually if needed
+      
+      // Try to extract public profile URL from profileData if available
+      // LinkedIn API might provide it in different fields depending on scopes
+      if (profileData.publicProfileUrl) {
+        linkedinUrl = profileData.publicProfileUrl;
+      } else if (profileData.vanityName) {
+        linkedinUrl = `https://www.linkedin.com/in/${profileData.vanityName}`;
+      } else if (profileData.url) {
+        linkedinUrl = profileData.url;
+      } else if (profileData.id && !profileData.id.includes('undefined')) {
+        // Fallback: Use OAuth ID (but this won't work as a public URL)
+        // Store it anyway so we have something, but it won't be clickable
         linkedinUrl = `https://www.linkedin.com/in/${profileData.id}`;
-      } else if (profileData.sub) {
+        console.warn('[ConnectLinkedInUseCase] ⚠️  Using OAuth ID for LinkedIn URL - this may not be a valid public profile URL');
+      } else if (profileData.sub && !profileData.sub.includes('undefined')) {
         // OpenID Connect uses 'sub' instead of 'id'
         linkedinUrl = `https://www.linkedin.com/in/${profileData.sub}`;
+        console.warn('[ConnectLinkedInUseCase] ⚠️  Using OAuth sub for LinkedIn URL - this may not be a valid public profile URL');
       }
       
       // If we couldn't construct a valid URL, don't store an invalid one
       if (!linkedinUrl || linkedinUrl.includes('undefined')) {
         console.warn('[ConnectLinkedInUseCase] ⚠️  Could not construct valid LinkedIn URL from profile data');
+        console.warn('[ConnectLinkedInUseCase] LinkedIn OAuth2 does not provide public profile URL directly');
+        console.warn('[ConnectLinkedInUseCase] User will need to update LinkedIn URL manually in profile edit form');
         linkedinUrl = null; // Don't store invalid URLs
       }
 

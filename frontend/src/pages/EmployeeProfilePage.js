@@ -376,13 +376,46 @@ function EmployeeProfilePage() {
               <div className="flex gap-4">
                 {employee.linkedin_url && employee.linkedin_url !== 'undefined' && employee.linkedin_url.trim() !== '' && (
                   <a
-                    href={employee.linkedin_url.startsWith('http') ? employee.linkedin_url : `https://${employee.linkedin_url}`}
+                    href={(() => {
+                      // Try to get actual LinkedIn URL from linkedin_data if available
+                      let url = employee.linkedin_url;
+                      
+                      // Check if linkedin_data has a valid public profile URL
+                      if (employee.linkedin_data) {
+                        try {
+                          const linkedinData = typeof employee.linkedin_data === 'string' 
+                            ? JSON.parse(employee.linkedin_data) 
+                            : employee.linkedin_data;
+                          
+                          // LinkedIn API might provide publicProfileUrl or vanityName
+                          if (linkedinData.publicProfileUrl) {
+                            url = linkedinData.publicProfileUrl;
+                          } else if (linkedinData.vanityName) {
+                            url = `https://www.linkedin.com/in/${linkedinData.vanityName}`;
+                          } else if (linkedinData.url) {
+                            url = linkedinData.url;
+                          }
+                        } catch (e) {
+                          console.warn('[EmployeeProfilePage] Could not parse linkedin_data:', e);
+                        }
+                      }
+                      
+                      // Validate URL - if it contains OAuth ID (numeric) or 'undefined', it's not a valid public URL
+                      // LinkedIn public URLs are like: https://www.linkedin.com/in/username (not numeric IDs)
+                      if (url && !url.includes('undefined') && !url.match(/\/in\/\d+$/)) {
+                        return url.startsWith('http') ? url : `https://${url}`;
+                      }
+                      
+                      // Fallback: return original URL (might not work, but better than nothing)
+                      return url && url.startsWith('http') ? url : `https://${url}`;
+                    })()}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-teal-600 hover:text-teal-700 underline"
                     onClick={(e) => {
                       // Log the URL for debugging
                       console.log('[EmployeeProfilePage] LinkedIn URL:', employee.linkedin_url);
+                      console.log('[EmployeeProfilePage] LinkedIn data:', employee.linkedin_data);
                     }}
                   >
                     LinkedIn Profile
@@ -589,21 +622,6 @@ function EmployeeProfilePage() {
             </div>
           )}
 
-          {/* Enrichment Status */}
-          {!enrichmentComplete && (!employee.bio || projectSummaries.length === 0) && (
-            <div 
-              className="p-4 rounded-lg"
-              style={{
-                background: 'rgba(251, 191, 36, 0.1)',
-                border: '1px solid rgb(251, 191, 36)',
-                color: 'rgb(251, 191, 36)'
-              }}
-            >
-              <p className="text-sm">
-                Profile enrichment is in progress. Bio and project summaries will appear here once enrichment is complete.
-              </p>
-            </div>
-          )}
         </div>
         )}
 

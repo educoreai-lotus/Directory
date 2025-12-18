@@ -244,12 +244,9 @@ function EnrichProfilePage() {
       return;
     }
     
-    // If both OAuth are already connected (but enrichment not yet complete), redirect to profile
-    // This handles the case where enrichment is in progress
-    if (user && linkedinConnected && githubConnected && user.bothOAuthConnected) {
-      console.log('[EnrichProfilePage] Both OAuth already connected, redirecting to profile');
-      navigate(`/employee/${user.id}`);
-    }
+    // REMOVED: Don't redirect if OAuth is connected but enrichment not complete
+    // User should be able to access enrich page to complete the process
+    // The old logic was too aggressive and prevented users from continuing enrichment
   }, [user, navigate, linkedinConnected, githubConnected, searchParams]);
 
   // If no user after loading, redirect to login
