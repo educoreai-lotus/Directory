@@ -158,6 +158,20 @@ class EmployeeProfileApprovalController {
           };
 
           console.log('[EmployeeProfileApprovalController] Sending post-approval skills payload to Skills Engine via Coordinator...');
+          console.log('[EmployeeProfileApprovalController] Payload:', JSON.stringify({
+            user_id: employee.id,
+            user_name: employee.full_name,
+            company_id: employee.company_id.toString(),
+            company_name: company.company_name,
+            employee_type: employeeType,
+            path_career: employee.target_role_in_company || null,
+            preferred_language: employee.preferred_language || 'en',
+            raw_data_keys: {
+              linkedin: Object.keys(rawData.linkedin || {}).length,
+              github: Object.keys(rawData.github || {}).length
+            }
+          }, null, 2));
+          
           const skillsData = await this.microserviceClient.getEmployeeSkills({
             userId: employee.id,
             userName: employee.full_name,
@@ -168,7 +182,15 @@ class EmployeeProfileApprovalController {
             preferredLanguage: employee.preferred_language || 'en',
             rawData
           });
-          console.log('[EmployeeProfileApprovalController] ✅ Post-approval skills payload sent to Skills Engine');
+          
+          console.log('[EmployeeProfileApprovalController] ✅ Skills Engine response received:');
+          console.log('[EmployeeProfileApprovalController] Response:', JSON.stringify({
+            user_id: skillsData?.user_id,
+            competencies_count: skillsData?.competencies?.length || 0,
+            relevance_score: skillsData?.relevance_score,
+            has_gap: !!skillsData?.gap,
+            full_response: skillsData
+          }, null, 2));
           
           // Store skills data in database to avoid duplicate calls
           if (skillsData && (skillsData.competencies || skillsData.relevance_score !== undefined)) {

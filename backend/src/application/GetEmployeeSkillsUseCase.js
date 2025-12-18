@@ -43,6 +43,14 @@ class GetEmployeeSkillsUseCase {
       
       if (storedSkills && storedSkills.competencies) {
         console.log('[GetEmployeeSkillsUseCase] ✅ Found stored skills in database, returning cached data');
+        console.log('[GetEmployeeSkillsUseCase] Stored skills summary:', JSON.stringify({
+          employee_id: storedSkills.employee_id,
+          competencies_count: storedSkills.competencies?.length || 0,
+          relevance_score: storedSkills.relevance_score || 0,
+          has_gap: !!storedSkills.gap,
+          processed_at: storedSkills.processed_at,
+          updated_at: storedSkills.updated_at
+        }, null, 2));
         return {
           success: true,
           skills: {
@@ -97,6 +105,15 @@ class GetEmployeeSkillsUseCase {
         preferredLanguage: employee.preferred_language || 'en',
         rawData
       });
+
+      console.log('[GetEmployeeSkillsUseCase] ✅ Skills Engine response received (fallback):');
+      console.log('[GetEmployeeSkillsUseCase] Response:', JSON.stringify({
+        user_id: skillsData?.user_id,
+        competencies_count: skillsData?.competencies?.length || 0,
+        relevance_score: skillsData?.relevance_score,
+        has_gap: !!skillsData?.gap,
+        full_response: skillsData
+      }, null, 2));
 
       // Store the response in database for future requests
       if (skillsData && (skillsData.competencies || skillsData.relevance_score !== undefined)) {

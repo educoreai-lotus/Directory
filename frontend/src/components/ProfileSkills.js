@@ -26,12 +26,19 @@ function ProfileSkills({ employeeId }) {
         // Call Skills Engine via Coordinator (no timeout - let it complete)
         const response = await getEmployeeSkills(user.companyId, employeeId);
         
-        console.log('[ProfileSkills] Raw response:', response);
+        console.log('[ProfileSkills] ===== SKILLS ENGINE RESPONSE =====');
+        console.log('[ProfileSkills] Raw response:', JSON.stringify(response, null, 2));
         // Handle envelope structure: { requester_service: 'directory_service', response: { success: true, skills: {...} } }
         // The middleware wraps the controller response, so we need response.response.skills
         const skills = response?.response?.skills || response?.skills || response?.response || response;
-        console.log('[ProfileSkills] Extracted skills:', skills);
-        console.log('[ProfileSkills] Skills competencies:', skills?.competencies?.length || 0);
+        console.log('[ProfileSkills] Extracted skills:', JSON.stringify(skills, null, 2));
+        console.log('[ProfileSkills] Skills summary:', {
+          competencies_count: skills?.competencies?.length || 0,
+          relevance_score: skills?.relevance_score,
+          has_gap: !!skills?.gap,
+          user_id: skills?.user_id
+        });
+        console.log('[ProfileSkills] ===== END SKILLS ENGINE RESPONSE =====');
         setSkillsData(skills);
       } catch (err) {
         console.error('[ProfileSkills] Error fetching skills:', err);
