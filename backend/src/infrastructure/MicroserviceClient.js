@@ -161,6 +161,19 @@ class MicroserviceClient {
     // Skills Engine expects "regular" or "trainer", not "regular_employee"
     const employeeType = roleType === 'trainer' ? 'trainer' : 'regular';
     
+    // Payload structure must match Skills Engine's expected format exactly:
+    // {
+    //   "user_id": "uuid",
+    //   "user_name": "string",
+    //   "company_id": "uuid",
+    //   "company_name": "string",
+    //   "employee_type": "regular" | "trainer",
+    //   "path_career": "string" | null,
+    //   "preferred_language": "string",
+    //   "raw_data": { "github": {...}, "linkedin": {...} }
+    // }
+    // Note: Coordinator will add "action" and "target_service" to envelope,
+    // but these should be stripped before forwarding to Skills Engine
     const payload = {
       user_id: userId,
       user_name: userName,
@@ -169,8 +182,23 @@ class MicroserviceClient {
       employee_type: employeeType, // Mapped to "regular" or "trainer"
       path_career: pathCareer || null,
       preferred_language: preferredLanguage || 'en',
-      raw_data: rawData || {}
+      raw_data: rawData || {} // Must have "github" and "linkedin" keys
     };
+    
+    // Log payload structure for verification (without sensitive data)
+    console.log('[MicroserviceClient] Skills Engine payload structure:', {
+      user_id: payload.user_id,
+      user_name: payload.user_name,
+      company_id: payload.company_id,
+      company_name: payload.company_name,
+      employee_type: payload.employee_type,
+      path_career: payload.path_career,
+      preferred_language: payload.preferred_language,
+      raw_data_keys: {
+        github: Object.keys(payload.raw_data?.github || {}).length,
+        linkedin: Object.keys(payload.raw_data?.linkedin || {}).length
+      }
+    });
 
     const responseTemplate = {
       user_id: 0,
