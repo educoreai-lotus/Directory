@@ -130,7 +130,7 @@ function ManualProfileForm({ employeeId, onSaved, isRequired = false, onFormData
         >
             <span className="flex items-center justify-between">
             <span className="text-sm font-medium">
-              ▼ Fill Manual Details {isRequired ? '(required)' : '(optional)'}
+              ▼ Fill Manual Details {isRequired ? '(required)' : ''}
             </span>
             {saved && (
               <span 
@@ -162,7 +162,7 @@ function ManualProfileForm({ employeeId, onSaved, isRequired = false, onFormData
               className="text-lg font-semibold"
               style={{ color: 'var(--text-primary)' }}
             >
-              Fill Manual Details {isRequired ? '(required)' : '(optional)'}
+              Fill Manual Details {isRequired ? '(required)' : ''}
             </h3>
             <button
               type="button"

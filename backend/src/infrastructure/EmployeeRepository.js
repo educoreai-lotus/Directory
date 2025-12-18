@@ -859,20 +859,46 @@ class EmployeeRepository {
       // Insert new project summaries
       if (projectSummaries && projectSummaries.length > 0) {
         // Use parameterized query to prevent SQL injection
+        // Use explicit SELECT then UPDATE/INSERT to avoid ON CONFLICT issues
         for (const ps of projectSummaries) {
-          await queryRunner.query(
-            `INSERT INTO employee_project_summaries (employee_id, repository_name, repository_url, summary)
-             VALUES ($1, $2, $3, $4)
-             ON CONFLICT (employee_id, repository_name) DO UPDATE SET
-               repository_url = EXCLUDED.repository_url,
-               summary = EXCLUDED.summary`,
-            [
-              employeeId,
-              ps.repository_name,
-              ps.repository_url || null,
-              ps.summary
-            ]
-          );
+          // Check if summary already exists
+          const existingQuery = `
+            SELECT id FROM employee_project_summaries
+            WHERE employee_id = $1 AND repository_name = $2
+          `;
+          const existingResult = await queryRunner.query(existingQuery, [
+            employeeId,
+            ps.repository_name
+          ]);
+
+          if (existingResult.rows.length > 0) {
+            // Update existing summary
+            await queryRunner.query(
+              `UPDATE employee_project_summaries
+               SET repository_url = $3,
+                   summary = $4,
+                   created_at = CURRENT_TIMESTAMP
+               WHERE employee_id = $1 AND repository_name = $2`,
+              [
+                employeeId,
+                ps.repository_name,
+                ps.repository_url || null,
+                ps.summary
+              ]
+            );
+          } else {
+            // Insert new summary
+            await queryRunner.query(
+              `INSERT INTO employee_project_summaries (employee_id, repository_name, repository_url, summary)
+               VALUES ($1, $2, $3, $4)`,
+              [
+                employeeId,
+                ps.repository_name,
+                ps.repository_url || null,
+                ps.summary
+              ]
+            );
+          }
         }
       }
 
