@@ -12,7 +12,7 @@ class MicroserviceClient {
     // Map microservice names to target service names and actions
     this.microserviceMapping = {
       'skillsEngine': {
-        targetService: 'skills-engine',
+        targetService: 'skills-engine-service',
         action: 'get_employee_skills_for_directory_profile'
       },
       'courseBuilder': {
