@@ -125,18 +125,12 @@ function EnrichProfilePage() {
         setLinkedinConnected(newLinkedinStatus);
         setGithubConnected(newGithubStatus);
         
-        // Show success message based on what was just connected
+        // Show success message based on what was just connected (no longer necessary to prompt for GitHub)
         const enrichedParam = searchParams.get('enriched');
-        if (linkedinParam === 'connected' && !newGithubStatus) {
-          setSuccessMessage('✓ LinkedIn connected successfully! Please connect GitHub to continue.');
-        } else if (githubParam === 'connected' && !newLinkedinStatus) {
-          setSuccessMessage('✓ GitHub connected successfully! Please connect LinkedIn to continue.');
-        } else if (newLinkedinStatus && newGithubStatus) {
-          if (enrichedParam === 'true') {
-            setSuccessMessage('✓ Both LinkedIn and GitHub connected! Profile enriched successfully. Redirecting...');
-          } else {
-            setSuccessMessage('✓ Both LinkedIn and GitHub connected! Enriching your profile...');
-          }
+        if (linkedinParam === 'connected') {
+          setSuccessMessage('✓ LinkedIn connected successfully!');
+        } else if (githubParam === 'connected') {
+          setSuccessMessage('✓ GitHub connected successfully!');
         }
         
         // Clear success message after 5 seconds (unless both are connected, then redirect will happen)
@@ -179,18 +173,11 @@ function EnrichProfilePage() {
             setLinkedinConnected(newLinkedinStatus);
             setGithubConnected(newGithubStatus);
             
-            // Show success message based on what was just connected
-            const enrichedParam = searchParams.get('enriched');
-            if (linkedinParam === 'connected' && !newGithubStatus) {
-              setSuccessMessage('✓ LinkedIn connected successfully! Please connect GitHub to continue.');
-            } else if (githubParam === 'connected' && !newLinkedinStatus) {
-              setSuccessMessage('✓ GitHub connected successfully! Please connect LinkedIn to continue.');
-            } else if (newLinkedinStatus && newGithubStatus) {
-              if (enrichedParam === 'true') {
-                setSuccessMessage('✓ Both LinkedIn and GitHub connected! Profile enriched successfully. Redirecting...');
-              } else {
-                setSuccessMessage('✓ Both LinkedIn and GitHub connected! Enriching your profile...');
-              }
+            // Show success message based on what was just connected (no longer necessary to prompt for GitHub)
+            if (linkedinParam === 'connected') {
+              setSuccessMessage('✓ LinkedIn connected successfully!');
+            } else if (githubParam === 'connected') {
+              setSuccessMessage('✓ GitHub connected successfully!');
             }
             
             // Clear success message after 5 seconds (unless both are connected, then redirect will happen)
@@ -224,11 +211,11 @@ function EnrichProfilePage() {
             // Fallback: set connection status based on URL param
             if (linkedinParam === 'connected') {
               setLinkedinConnected(true);
-              setSuccessMessage('✓ LinkedIn connected successfully! Please connect GitHub to continue.');
+              setSuccessMessage('✓ LinkedIn connected successfully!');
             }
             if (githubParam === 'connected') {
               setGithubConnected(true);
-              setSuccessMessage('✓ GitHub connected successfully! Please connect LinkedIn to continue.');
+              setSuccessMessage('✓ GitHub connected successfully!');
             }
           }
         })
@@ -263,13 +250,7 @@ function EnrichProfilePage() {
       }, 2000); // 2 second delay to show success message
 
       return () => clearTimeout(timer);
-    } else if (linkedinConnected && githubConnected && user && !refreshing && !isEnriched) {
-      // Both connected but enrichment not yet complete - show waiting message
-      // But only if we're not in the middle of an OAuth callback
-      if (!isOAuthCallback) {
-        setSuccessMessage('✓ Both LinkedIn and GitHub connected! Enriching your profile...');
-      }
-    }
+    // Removed old "Both LinkedIn and GitHub connected" message - no longer needed
   }, [linkedinConnected, githubConnected, user, navigate, refreshing, searchParams]);
 
   // CRITICAL: Check if user has already completed enrichment - redirect immediately
@@ -605,20 +586,6 @@ function EnrichProfilePage() {
                 </p>
               </div>
             </div>
-            {linkedinConnected && (
-              <div className="flex items-center gap-2">
-                <span 
-                  className="text-sm px-3 py-1 rounded-full flex items-center gap-2"
-                  style={{
-                    background: 'rgba(34, 197, 94, 0.1)',
-                    color: 'rgb(34, 197, 94)'
-                  }}
-                >
-                  <span className="text-green-600 font-bold">✓</span>
-                  Connected
-                </span>
-              </div>
-            )}
           </div>
           <div className="mt-4">
             <LinkedInConnectButton 
@@ -671,27 +638,13 @@ function EnrichProfilePage() {
                 </p>
               </div>
             </div>
-            {githubConnected && (
-              <div className="flex items-center gap-2">
-                <span 
-                  className="text-sm px-3 py-1 rounded-full flex items-center gap-2"
-                  style={{
-                    background: 'rgba(34, 197, 94, 0.1)',
-                    color: 'rgb(34, 197, 94)'
-                  }}
-                >
-                  <span className="text-green-600 font-bold">✓</span>
-                  Connected
-                </span>
-              </div>
-            )}
           </div>
           <div className="mt-4">
             <GitHubConnectButton 
               disabled={githubConnected}
               onConnected={() => {
                 setGithubConnected(true);
-                setSuccessMessage('GitHub connected successfully! Please connect LinkedIn to continue.');
+                setSuccessMessage('✓ GitHub connected successfully!');
               }}
               alreadyConnected={githubConnected}
             />

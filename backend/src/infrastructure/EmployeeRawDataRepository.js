@@ -29,32 +29,55 @@ class EmployeeRawDataRepository {
    * @returns {Promise<Object>} Created/updated raw data entry
    */
   async createOrUpdate(employeeId, source, data, client = null) {
-    const query = `
-      INSERT INTO employee_raw_data (employee_id, source, data, updated_at)
-      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-      ON CONFLICT (employee_id, source)
-      DO UPDATE SET
-        data = EXCLUDED.data,
-        updated_at = CURRENT_TIMESTAMP
-      RETURNING *
+    // First, try to find existing record
+    const existingQuery = `
+      SELECT id FROM employee_raw_data
+      WHERE employee_id = $1 AND source = $2
     `;
-
-    const values = [
-      employeeId,
-      source,
-      JSON.stringify(data)
-    ];
-
+    
     const queryRunner = client || this.pool;
-    const result = await queryRunner.query(query, values);
+    const existingResult = await queryRunner.query(existingQuery, [employeeId, source]);
     
-    // Parse JSONB data back to object
-    const row = result.rows[0];
-    if (row && typeof row.data === 'string') {
-      row.data = JSON.parse(row.data);
+    if (existingResult.rows.length > 0) {
+      // Update existing record
+      const updateQuery = `
+        UPDATE employee_raw_data
+        SET data = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE employee_id = $2 AND source = $3
+        RETURNING *
+      `;
+      
+      const updateResult = await queryRunner.query(updateQuery, [
+        JSON.stringify(data),
+        employeeId,
+        source
+      ]);
+      
+      const row = updateResult.rows[0];
+      if (row && typeof row.data === 'string') {
+        row.data = JSON.parse(row.data);
+      }
+      return row;
+    } else {
+      // Insert new record
+      const insertQuery = `
+        INSERT INTO employee_raw_data (employee_id, source, data, updated_at)
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+        RETURNING *
+      `;
+      
+      const insertResult = await queryRunner.query(insertQuery, [
+        employeeId,
+        source,
+        JSON.stringify(data)
+      ]);
+      
+      const row = insertResult.rows[0];
+      if (row && typeof row.data === 'string') {
+        row.data = JSON.parse(row.data);
+      }
+      return row;
     }
-    
-    return row;
   }
 
   /**

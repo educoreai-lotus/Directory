@@ -54,6 +54,11 @@ class ManualDataController {
       const allEmpty = !hasWork && !hasSkills && !hasEducation;
 
       console.log('[ManualDataController] Processing manual data for employee:', id);
+      console.log('[ManualDataController] Raw field values:', {
+        work_experience: work_experience ? `${work_experience.substring(0, 50)}...` : 'empty',
+        skills: skills ? `${skills.substring(0, 50)}...` : 'empty',
+        education: education ? `${education.substring(0, 50)}...` : 'empty'
+      });
       console.log('[ManualDataController] Field status:', {
         has_work_experience: hasWork,
         has_skills: hasSkills,
