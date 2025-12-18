@@ -67,27 +67,36 @@ class EmployeeSkillsRepository {
    * @returns {Promise<Object|null>} Skills data or null if not found
    */
   async findByEmployeeId(employeeId) {
-    const query = `
-      SELECT * FROM employee_skills
-      WHERE employee_id = $1
-    `;
+    try {
+      const query = `
+        SELECT * FROM employee_skills
+        WHERE employee_id = $1
+      `;
 
-    const result = await this.pool.query(query, [employeeId]);
-    
-    if (result.rows.length === 0) {
-      return null;
-    }
+      const result = await this.pool.query(query, [employeeId]);
+      
+      if (result.rows.length === 0) {
+        return null;
+      }
 
-    const row = result.rows[0];
-    // Parse JSONB data back to object
-    if (row && typeof row.competencies === 'string') {
-      row.competencies = JSON.parse(row.competencies);
+      const row = result.rows[0];
+      // Parse JSONB data back to object
+      if (row && typeof row.competencies === 'string') {
+        row.competencies = JSON.parse(row.competencies);
+      }
+      if (row && row.gap && typeof row.gap === 'string') {
+        row.gap = JSON.parse(row.gap);
+      }
+      
+      return row;
+    } catch (error) {
+      // If table doesn't exist (migration not run), return null to trigger fallback
+      if (error.code === '42P01') { // relation does not exist
+        console.warn('[EmployeeSkillsRepository] employee_skills table does not exist. Run migration 003_add_employee_skills_table.sql');
+        return null;
+      }
+      throw error;
     }
-    if (row && row.gap && typeof row.gap === 'string') {
-      row.gap = JSON.parse(row.gap);
-    }
-    
-    return row;
   }
 
   /**

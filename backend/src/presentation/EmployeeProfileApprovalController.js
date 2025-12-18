@@ -197,10 +197,16 @@ class EmployeeProfileApprovalController {
             try {
               const EmployeeSkillsRepository = require('../infrastructure/EmployeeSkillsRepository');
               const skillsRepository = new EmployeeSkillsRepository();
+              // Store original Skills Engine response (before transformation)
               await skillsRepository.saveOrUpdate(employee.id, skillsData);
               console.log('[EmployeeProfileApprovalController] ✅ Skills data stored in database');
             } catch (storageError) {
-              console.warn('[EmployeeProfileApprovalController] ⚠️ Failed to store skills data (non-blocking):', storageError.message);
+              // If table doesn't exist, log warning but don't fail approval
+              if (storageError.code === '42P01') {
+                console.warn('[EmployeeProfileApprovalController] ⚠️ employee_skills table does not exist. Run migration 003_add_employee_skills_table.sql');
+              } else {
+                console.warn('[EmployeeProfileApprovalController] ⚠️ Failed to store skills data (non-blocking):', storageError.message);
+              }
             }
           }
         } else {

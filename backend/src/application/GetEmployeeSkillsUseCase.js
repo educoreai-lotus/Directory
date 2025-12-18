@@ -38,6 +38,54 @@ class GetEmployeeSkillsUseCase {
         throw new Error('Employee profile must be approved to view skills');
       }
 
+      // Helper function to transform Skills Engine response to component format
+      const transformSkillsResponse = (skillsData) => {
+        if (!skillsData) return null;
+        
+        // If competencies is already in the expected format, return as-is
+        if (Array.isArray(skillsData.competencies)) {
+          // Check if it needs transformation (has competencyName instead of name)
+          const needsTransform = skillsData.competencies.some(c => c.competencyName && !c.name);
+          
+          if (needsTransform) {
+            // Transform Skills Engine format to component format
+            const transformNode = (node) => {
+              const transformed = {
+                name: node.competencyName || node.name || 'Unknown',
+                id: node.competencyId || node.id,
+                coverage: node.coverage,
+                level: node.level,
+                verified: node.verified
+              };
+              
+              // Transform children if they exist
+              if (node.children && Array.isArray(node.children) && node.children.length > 0) {
+                transformed.nested_competencies = node.children.map(transformNode);
+              } else if (node.nested_competencies && Array.isArray(node.nested_competencies)) {
+                transformed.nested_competencies = node.nested_competencies.map(transformNode);
+              }
+              
+              // Transform skills if they exist
+              if (node.skills && Array.isArray(node.skills)) {
+                transformed.skills = node.skills.map(skill => ({
+                  name: skill.name || skill.skillName || 'Unknown',
+                  verified: skill.verified === true || skill.verified === 'verified' || String(skill.verified).toLowerCase() === 'true'
+                }));
+              }
+              
+              return transformed;
+            };
+            
+            return {
+              ...skillsData,
+              competencies: skillsData.competencies.map(transformNode)
+            };
+          }
+        }
+        
+        return skillsData;
+      };
+
       // FIRST: Try to get skills from database (stored when profile was approved)
       const storedSkills = await this.skillsRepository.findByEmployeeId(employeeId);
       
@@ -51,14 +99,17 @@ class GetEmployeeSkillsUseCase {
           processed_at: storedSkills.processed_at,
           updated_at: storedSkills.updated_at
         }, null, 2));
+        
+        const transformed = transformSkillsResponse({
+          user_id: storedSkills.employee_id,
+          competencies: storedSkills.competencies,
+          relevance_score: storedSkills.relevance_score || 0,
+          gap: storedSkills.gap || null
+        });
+        
         return {
           success: true,
-          skills: {
-            user_id: storedSkills.employee_id,
-            competencies: storedSkills.competencies,
-            relevance_score: storedSkills.relevance_score || 0,
-            gap: storedSkills.gap || null
-          }
+          skills: transformed
         };
       }
 
@@ -115,6 +166,9 @@ class GetEmployeeSkillsUseCase {
         full_response: skillsData
       }, null, 2));
 
+      // Transform response to component format
+      const transformed = transformSkillsResponse(skillsData);
+
       // Store the response in database for future requests
       if (skillsData && (skillsData.competencies || skillsData.relevance_score !== undefined)) {
         try {
@@ -127,7 +181,7 @@ class GetEmployeeSkillsUseCase {
 
       return {
         success: true,
-        skills: skillsData
+        skills: transformed || skillsData
       };
     } catch (error) {
       console.error('[GetEmployeeSkillsUseCase] Error:', error);

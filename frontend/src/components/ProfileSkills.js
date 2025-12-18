@@ -79,10 +79,11 @@ function ProfileSkills({ employeeId }) {
     return expandedNodes.has(getNodeKey(path));
   };
 
-  // Check if node has children (nested_competencies or skills)
+  // Check if node has children (nested_competencies, skills, or children)
   const hasChildren = (node) => {
     return (node.nested_competencies && node.nested_competencies.length > 0) ||
-           (node.skills && node.skills.length > 0);
+           (node.skills && node.skills.length > 0) ||
+           (node.children && node.children.length > 0);
   };
 
   // Render a single tree node
@@ -130,18 +131,27 @@ function ProfileSkills({ employeeId }) {
               fontWeight: level === 0 ? '600' : level === 1 ? '500' : '400'
             }}
           >
-            {node.name}
+            {node.name || node.competencyName || 'Unknown'}
           </span>
         </div>
 
-        {/* Render Children (nested competencies or skills) */}
+        {/* Render Children (nested competencies, children, or skills) */}
         {hasChildrenNodes && isNodeExpanded && (
           <div className="mt-1">
             {/* Render nested competencies */}
-            {node.nested_competencies && node.nested_competencies.length > 0 && (
+            {(node.nested_competencies && node.nested_competencies.length > 0) && (
               <div>
                 {node.nested_competencies.map((child, idx) =>
                   renderTreeNode(child, [...path, 'nested', idx], level + 1)
+                )}
+              </div>
+            )}
+            
+            {/* Render children (alternative structure from Skills Engine) */}
+            {(node.children && node.children.length > 0) && (
+              <div>
+                {node.children.map((child, idx) =>
+                  renderTreeNode(child, [...path, 'child', idx], level + 1)
                 )}
               </div>
             )}
