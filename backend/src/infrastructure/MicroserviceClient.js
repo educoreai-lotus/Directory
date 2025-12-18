@@ -143,6 +143,7 @@ class MicroserviceClient {
    * @param {string} params.companyName - Company name
    * @param {string} params.roleType - Employee role type (trainer | regular_employee)
    * @param {string|null} params.pathCareer - Target role (sent as path_career)
+   * @param {string} params.preferredLanguage - Preferred language (e.g., 'en', 'ar')
    * @param {Object} params.rawData - Raw LinkedIn/GitHub/CV/form data
    * @returns {Promise<Object>} Skills data with competencies and relevance_score
    */
@@ -153,6 +154,7 @@ class MicroserviceClient {
     companyName,
     roleType,
     pathCareer,
+    preferredLanguage,
     rawData
   }) {
     // Map roleType to Skills Engine expected values: "regular" or "trainer"
@@ -166,6 +168,7 @@ class MicroserviceClient {
       company_name: companyName,
       employee_type: employeeType, // Mapped to "regular" or "trainer"
       path_career: pathCareer || null,
+      preferred_language: preferredLanguage || 'en',
       raw_data: rawData || {}
     };
 

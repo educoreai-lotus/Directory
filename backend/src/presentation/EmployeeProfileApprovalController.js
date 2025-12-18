@@ -165,6 +165,7 @@ class EmployeeProfileApprovalController {
             companyName: company.company_name,
             roleType: employeeType,
             pathCareer: employee.target_role_in_company || null,
+            preferredLanguage: employee.preferred_language || 'en',
             rawData
           });
           console.log('[EmployeeProfileApprovalController] ✅ Post-approval skills payload sent to Skills Engine');

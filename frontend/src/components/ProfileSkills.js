@@ -19,7 +19,13 @@ function ProfileSkills({ employeeId }) {
       try {
         setLoading(true);
         setError(null);
+        
+        console.log('[ProfileSkills] Fetching skills from Skills Engine via Coordinator...');
+        console.log('[ProfileSkills] This may take a moment as Skills Engine processes the data.');
+        
+        // Call Skills Engine via Coordinator (no timeout - let it complete)
         const response = await getEmployeeSkills(user.companyId, employeeId);
+        
         console.log('[ProfileSkills] Raw response:', response);
         // Handle envelope structure: { requester_service: 'directory_service', response: { success: true, skills: {...} } }
         // The middleware wraps the controller response, so we need response.response.skills
@@ -33,34 +39,8 @@ function ProfileSkills({ employeeId }) {
         if (err.response?.status === 403) {
           setError('Your profile must be approved by HR to view skills.');
         } else {
-          // Try to use fallback mock data structure
-          console.warn('[ProfileSkills] Using fallback mock data structure');
-          // The mock data structure uses nested_competencies
-          setSkillsData({
-            competencies: [
-              {
-                name: "Data Analysis",
-                nested_competencies: [
-                  {
-                    name: "Data Processing",
-                    skills: [
-                      { name: "Python", verified: false },
-                      { name: "SQL", verified: false }
-                    ]
-                  },
-                  {
-                    name: "Data Visualization",
-                    skills: [
-                      { name: "Power BI", verified: false },
-                      { name: "Tableau", verified: false }
-                    ]
-                  }
-                ]
-              }
-            ],
-            relevance_score: 0,
-            gap: { missing_skills: [] }
-          });
+          // Show error but don't use mock data - user wants to test real flow
+          setError(err.response?.data?.error || err.message || 'Failed to load skills from Skills Engine. Please try again.');
         }
       } finally {
         setLoading(false);
@@ -169,27 +149,106 @@ function ProfileSkills({ employeeId }) {
                 }}
               >
                 <div className="flex flex-wrap gap-2 mt-2 mb-3">
-                  {node.skills.map((skill, skillIdx) => (
-                    <span
-                      key={skillIdx}
-                      className="px-3 py-1.5 rounded-full text-sm"
-                      style={{
-                        background: skill.verified
-                          ? 'rgba(34, 197, 94, 0.1)'
-                          : 'var(--bg-primary, #f8fafc)',
-                        border: `1px solid ${skill.verified ? 'rgb(34, 197, 94)' : 'var(--border-default, #e2e8f0)'}`,
-                        color: skill.verified
-                          ? 'rgb(34, 197, 94)'
-                          : 'var(--text-secondary, #64748b)',
-                        fontWeight: '500'
-                      }}
-                    >
-                      {skill.name}
-                      {skill.verified && (
-                        <span className="ml-1.5" title="Verified">✓</span>
-                      )}
-                    </span>
-                  ))}
+                  {node.skills.map((skill, skillIdx) => {
+                    // Check if skill is verified - could be boolean field or "verified" in name
+                    const isVerified = skill.verified === true || 
+                                      skill.verified === 'verified' || 
+                                      String(skill.verified).toLowerCase() === 'true' ||
+                                      skill.name?.toLowerCase().includes('verified');
+                    // Clean skill name (remove "verified" text if present)
+                    const skillName = skill.name?.replace(/\s*verified\s*/i, '').trim() || skill.name || '';
+                    
+                    return (
+                      <div
+                        key={skillIdx}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm"
+                        style={{
+                          background: isVerified
+                            ? 'rgba(34, 197, 94, 0.1)'
+                            : 'var(--bg-primary, #f8fafc)',
+                          border: `1px solid ${isVerified ? 'rgb(34, 197, 94)' : 'var(--border-default, #e2e8f0)'}`,
+                          color: isVerified
+                            ? 'rgb(34, 197, 94)'
+                            : 'var(--text-secondary, #64748b)',
+                          fontWeight: '500'
+                        }}
+                      >
+                        <span>{skillName}</span>
+                        
+                        {/* Verification Icon */}
+                        {isVerified ? (
+                          <span 
+                            className="ml-1" 
+                            title="Verified"
+                            style={{ 
+                              color: 'rgb(34, 197, 94)',
+                              fontSize: '14px',
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            ✓
+                          </span>
+                        ) : (
+                          <span 
+                            className="ml-1" 
+                            title="Not Verified"
+                            style={{ 
+                              color: 'var(--text-muted, #94a3b8)',
+                              fontSize: '12px'
+                            }}
+                          >
+                            ○
+                          </span>
+                        )}
+                        
+                        {/* Assessment Icon */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!employeeId) {
+                              console.error('[ProfileSkills] Cannot redirect: employeeId is missing');
+                              return;
+                            }
+                            
+                            // Redirect to Assessment with user_id and skill name
+                            const assessmentUrl = `https://assessment-seven-liard.vercel.app/exam-intro?examType=baseline&userId=${encodeURIComponent(employeeId)}&skillName=${encodeURIComponent(skillName)}`;
+                            
+                            console.log('[ProfileSkills] Redirecting to Assessment:', assessmentUrl);
+                            console.log('[ProfileSkills] Employee ID (UUID):', employeeId);
+                            console.log('[ProfileSkills] Skill Name:', skillName);
+                            
+                            window.location.href = assessmentUrl;
+                          }}
+                          className="ml-1 hover:opacity-70 transition-opacity"
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '2px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                          title="Take Assessment"
+                        >
+                          <svg 
+                            width="14" 
+                            height="14" 
+                            viewBox="0 0 16 16" 
+                            fill="none" 
+                            style={{ color: 'var(--text-secondary, #64748b)' }}
+                          >
+                            <path 
+                              d="M8 0L10.5 5.5L16 8L10.5 10.5L8 16L5.5 10.5L0 8L5.5 5.5L8 0Z" 
+                              stroke="currentColor" 
+                              strokeWidth="1.5" 
+                              fill="none"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -209,8 +268,11 @@ function ProfileSkills({ employeeId }) {
           background: 'var(--bg-secondary)',
           borderColor: 'var(--border-default)'
         }}>
-          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            Loading skills...
+          <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+            Loading skills from Skills Engine...
+          </p>
+          <p className="text-xs" style={{ color: 'var(--text-muted, #94a3b8)' }}>
+            This may take a moment as Skills Engine processes your profile data.
           </p>
         </div>
       </div>
