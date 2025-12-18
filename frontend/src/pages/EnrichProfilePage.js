@@ -665,28 +665,12 @@ function EnrichProfilePage() {
                 </p>
               </div>
             </div>
-            {pdfUploaded && (
-              <div className="flex items-center gap-2">
-                <span 
-                  className="text-sm px-3 py-1 rounded-full flex items-center gap-2"
-                  style={{
-                    background: 'rgba(34, 197, 94, 0.1)',
-                    color: 'rgb(34, 197, 94)'
-                  }}
-                >
-                  <span className="text-green-600 font-bold">✓</span>
-                  Uploaded
-                </span>
-              </div>
-            )}
           </div>
           <div className="mt-4">
             <UploadCVSection 
               employeeId={user?.id}
               onUploaded={(result) => {
                 setPdfUploaded(true);
-                setSuccessMessage('✓ CV uploaded successfully!');
-                setTimeout(() => setSuccessMessage(null), 3000);
               }}
             />
           </div>
@@ -755,8 +739,6 @@ function EnrichProfilePage() {
               isRequired={!githubConnected && !pdfUploaded}
               onSaved={(result) => {
                 setManualDataSaved(true);
-                setSuccessMessage('✓ Manual data saved successfully!');
-                setTimeout(() => setSuccessMessage(null), 3000);
               }}
               onFormDataChange={(formData) => {
                 // Track manual form data state for validation
