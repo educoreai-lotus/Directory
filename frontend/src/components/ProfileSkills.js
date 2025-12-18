@@ -133,6 +133,56 @@ function ProfileSkills({ employeeId }) {
           >
             {node.name || node.competencyName || 'Unknown'}
           </span>
+
+          {/* Assessment Icon - Only show on leaf nodes (no children) */}
+          {!hasChildrenNodes && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!employeeId) {
+                  console.error('[ProfileSkills] Cannot redirect: employeeId is missing');
+                  return;
+                }
+                
+                const skillName = node.name || node.competencyName || '';
+                
+                // Redirect to Assessment with user_id and skill name
+                const assessmentUrl = `https://assessment-seven-liard.vercel.app/exam-intro?examType=baseline&userId=${encodeURIComponent(employeeId)}&skillName=${encodeURIComponent(skillName)}`;
+                
+                console.log('[ProfileSkills] Redirecting to Assessment:', assessmentUrl);
+                console.log('[ProfileSkills] Employee ID (UUID):', employeeId);
+                console.log('[ProfileSkills] Skill Name:', skillName);
+                
+                window.location.href = assessmentUrl;
+              }}
+              className="ml-2 hover:opacity-70 transition-opacity"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              title="Take Assessment for this skill"
+            >
+              <svg 
+                width="16" 
+                height="16" 
+                viewBox="0 0 16 16" 
+                fill="none" 
+                style={{ color: 'var(--text-secondary, #64748b)' }}
+              >
+                <path 
+                  d="M8 0L10.5 5.5L16 8L10.5 10.5L8 16L5.5 10.5L0 8L5.5 5.5L8 0Z" 
+                  stroke="currentColor" 
+                  strokeWidth="1.5" 
+                  fill="none"
+                />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Render Children (nested competencies, children, or skills) */}
@@ -339,40 +389,6 @@ function ProfileSkills({ employeeId }) {
           </p>
         )}
 
-        {/* Verify Your Skills Button */}
-        <div className="flex gap-2 mt-6 pt-4 border-t" style={{ borderColor: 'var(--border-default)' }}>
-          <button
-            className="px-4 py-2 rounded-md text-sm font-medium transition-colors"
-            style={{
-              background: 'var(--bg-button-primary, #059669)',
-              color: 'var(--text-button-primary, #ffffff)'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.background = 'var(--bg-button-primary-hover, #047857)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = 'var(--bg-button-primary, #059669)';
-            }}
-            onClick={() => {
-              // Redirect to Assessment frontend with employee ID
-              if (!employeeId) {
-                console.error('[ProfileSkills] Cannot redirect: employeeId is missing');
-                return;
-              }
-              
-              // Build Assessment URL with employee UUID and exam type
-              const assessmentUrl = `https://assessment-seven-liard.vercel.app/exam-intro?examType=baseline&userId=${encodeURIComponent(employeeId)}`;
-              
-              console.log('[ProfileSkills] Redirecting to Assessment:', assessmentUrl);
-              console.log('[ProfileSkills] Employee ID (UUID):', employeeId);
-              
-              // Navigate to Assessment frontend (direct navigation, not through Coordinator)
-              window.location.href = assessmentUrl;
-            }}
-          >
-            Verify Your Skills
-          </button>
-        </div>
       </div>
     </div>
   );
