@@ -304,20 +304,6 @@ function ManualProfileForm({ employeeId, onSaved, isRequired = false, onFormData
               </button>
             </div>
           </form>
-
-          {/* PHASE_4: Success Message */}
-          {saved && (
-            <div 
-              className="mt-4 p-3 rounded-lg"
-              style={{
-                background: 'rgba(34, 197, 94, 0.1)',
-                border: '1px solid rgb(34, 197, 94)',
-                color: 'rgb(34, 197, 94)'
-              }}
-            >
-              <p className="text-sm">✓ Manual data saved successfully! Your profile will use this data for enrichment.</p>
-            </div>
-          )}
         </div>
       )}
     </div>
