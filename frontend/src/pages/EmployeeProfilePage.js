@@ -571,8 +571,8 @@ function EmployeeProfilePage() {
           </div>
         )}
 
-        {/* Learning Path Approvals - Only visible for Decision Makers */}
-        {employee.roles && Array.isArray(employee.roles) && employee.roles.includes('DECISION_MAKER') && (
+        {/* Learning Path Approvals - Only visible for Decision Makers when profile is approved */}
+        {isApproved && employee.roles && Array.isArray(employee.roles) && employee.roles.includes('DECISION_MAKER') && (
           <div 
             className="rounded-lg shadow-lg border p-8 mb-6"
             style={{
@@ -595,8 +595,8 @@ function EmployeeProfilePage() {
           </div>
         )}
 
-        {/* Trainer Sections - Only visible for trainers */}
-        {employee.is_trainer && (
+        {/* Trainer Sections - Only visible for trainers when profile is approved */}
+        {isApproved && employee.is_trainer && (
           <div 
             className="rounded-lg shadow-lg border p-8 mb-6"
             style={{
