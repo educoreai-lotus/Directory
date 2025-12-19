@@ -1,16 +1,12 @@
 // Component - Enrollment Section
-// Allows company to enroll employees to courses via three learning flows
+// Allows company to create career paths for employees by redirecting to Skills Engine frontend
 
 import React, { useState } from 'react';
-import { enrollCareerPath } from '../services/enrollmentService';
 
 function EnrollmentSection({ employees, companyId }) {
   // Always use career-path flow, show employee list directly
   const [selectedFlow] = useState('career-path'); // Fixed to career-path
   const [selectedEmployee, setSelectedEmployee] = useState(null); // Single selection only
-  const [enrolling, setEnrolling] = useState(false);
-  const [enrollmentError, setEnrollmentError] = useState(null);
-  const [enrollmentSuccess, setEnrollmentSuccess] = useState(null);
 
   // Filter employees to only show approved profiles
   const approvedEmployees = employees ? employees.filter(emp => emp.profile_status === 'approved') : [];
@@ -20,13 +16,12 @@ function EnrollmentSection({ employees, companyId }) {
     setSelectedEmployee(selectedEmployee === employeeId ? null : employeeId);
   };
 
-  const handleEnroll = async () => {
+  const handleEnroll = () => {
     console.log('[EnrollmentSection] handleEnroll START');
     console.log('[EnrollmentSection] Current state:', {
       selectedFlow,
       selectedEmployee,
-      companyId,
-      enrolling
+      companyId
     });
 
     if (!selectedEmployee) {
@@ -35,58 +30,21 @@ function EnrollmentSection({ employees, companyId }) {
       return;
     }
 
-    // Only implement career-path flow for now
-    if (selectedFlow !== 'career-path') {
-      console.warn('[EnrollmentSection] Wrong flow selected:', selectedFlow);
-      alert(`${selectedFlow} enrollment is not yet implemented`);
+    if (!companyId) {
+      console.error('[EnrollmentSection] Cannot redirect: Company ID is missing');
+      alert('Error: Company ID not found. Please try again.');
       return;
     }
 
-    console.log('[EnrollmentSection] Validation passed, proceeding with enrollment');
-
-    try {
-      console.log('[EnrollmentSection] Setting enrolling state to true');
-      setEnrolling(true);
-      setEnrollmentError(null);
-      setEnrollmentSuccess(null);
-
-      console.log('[EnrollmentSection] Creating career path for employee:', {
-        flow: selectedFlow,
-        employee: selectedEmployee,
-        companyId
-      });
-
-      console.log('[EnrollmentSection] Calling enrollCareerPath NOW...');
-      console.log('[EnrollmentSection] enrollCareerPath function:', typeof enrollCareerPath);
-      
-      // Pass as array with single employee
-      const result = await enrollCareerPath(companyId, [selectedEmployee]);
-      console.log('[EnrollmentSection] enrollCareerPath returned:', result);
-
-      if (result.success) {
-        setEnrollmentSuccess(result.message || 'Career path creation request sent successfully');
-        // Clear selection after successful enrollment
-        setTimeout(() => {
-          setSelectedEmployee(null);
-          setEnrollmentSuccess(null);
-        }, 3000);
-      } else {
-        throw new Error(result.message || 'Career path creation failed');
-      }
-    } catch (error) {
-      console.error('[EnrollmentSection] Enrollment error caught:', error);
-      console.error('[EnrollmentSection] Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-        response: error.response
-      });
-      setEnrollmentError(error.message || 'Failed to create career path. Please try again.');
-    } finally {
-      console.log('[EnrollmentSection] handleEnroll FINALLY block - setting enrolling to false');
-      setEnrolling(false);
-      console.log('[EnrollmentSection] handleEnroll END');
-    }
+    // Redirect to Skills Engine frontend with company_id and learner_id
+    const skillsEngineUrl = process.env.REACT_APP_SKILLS_ENGINE_URL || 'https://skills-engine-frontend.vercel.app/career-path';
+    const url = `${skillsEngineUrl}?company_id=${encodeURIComponent(companyId)}&learner_id=${encodeURIComponent(selectedEmployee)}`;
+    
+    console.log('[EnrollmentSection] Redirecting to Skills Engine:', url);
+    console.log('[EnrollmentSection] Company ID:', companyId);
+    console.log('[EnrollmentSection] Learner ID (Employee ID):', selectedEmployee);
+    
+    window.location.href = url;
   };
 
 
@@ -135,56 +93,20 @@ function EnrollmentSection({ employees, companyId }) {
             </div>
           </div>
 
-          {/* Success Message */}
-          {enrollmentSuccess && (
-            <div 
-              className="p-3 rounded-lg mb-4"
-              style={{
-                background: 'rgba(34, 197, 94, 0.1)',
-                border: '1px solid rgb(34, 197, 94)',
-                color: 'rgb(34, 197, 94)'
-              }}
-            >
-              <p className="text-sm">{enrollmentSuccess}</p>
-            </div>
-          )}
-
-          {/* Error Message */}
-          {enrollmentError && (
-            <div 
-              className="p-3 rounded-lg mb-4"
-              style={{
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid var(--border-error)',
-                color: 'var(--text-error)'
-              }}
-            >
-              <p className="text-sm">{enrollmentError}</p>
-            </div>
-          )}
-
           <div className="flex gap-2">
             <button
               onClick={(e) => {
                 console.log('[EnrollmentSection] Button clicked!', {
                   selectedFlow,
                   selectedEmployee,
-                  enrolling,
-                  disabled: !selectedEmployee || enrolling
+                  companyId
                 });
                 handleEnroll();
               }}
-              disabled={!selectedEmployee || enrolling}
+              disabled={!selectedEmployee}
               className="px-6 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {enrolling ? (
-                <>
-                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></span>
-                  Creating...
-                </>
-              ) : (
-                'Create Career Path'
-              )}
+              Create Career Path
             </button>
           </div>
         </div>
