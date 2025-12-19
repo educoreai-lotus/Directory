@@ -343,6 +343,14 @@ class EmployeeRepository {
       updates.push(`preferred_language = $${paramIndex++}`);
       values.push(updateData.preferred_language);
     }
+    if (updateData.bio !== undefined) {
+      updates.push(`bio = $${paramIndex++}`);
+      values.push(updateData.bio);
+    }
+    if (updateData.value_proposition !== undefined) {
+      updates.push(`value_proposition = $${paramIndex++}`);
+      values.push(updateData.value_proposition);
+    }
     if (updateData.status !== undefined) {
       updates.push(`status = $${paramIndex++}`);
       values.push(updateData.status);
@@ -359,6 +367,50 @@ class EmployeeRepository {
       UPDATE employees
       SET ${updates.join(', ')}
       WHERE company_id = $${paramIndex++} AND employee_id = $${paramIndex}
+      RETURNING *
+    `;
+
+    const queryRunner = client || this.pool;
+    const result = await queryRunner.query(query, values);
+    return result.rows[0];
+  }
+
+  /**
+   * Update employee by UUID (for profile edits)
+   * @param {string} employeeId - Employee UUID
+   * @param {Object} updateData - Data to update
+   * @param {Object} client - Optional database client
+   * @returns {Promise<Object>} Updated employee
+   */
+  async updateById(employeeId, updateData, client = null) {
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (updateData.preferred_language !== undefined) {
+      updates.push(`preferred_language = $${paramIndex++}`);
+      values.push(updateData.preferred_language);
+    }
+    if (updateData.bio !== undefined) {
+      updates.push(`bio = $${paramIndex++}`);
+      values.push(updateData.bio);
+    }
+    if (updateData.value_proposition !== undefined) {
+      updates.push(`value_proposition = $${paramIndex++}`);
+      values.push(updateData.value_proposition);
+    }
+
+    if (updates.length === 0) {
+      return await this.findById(employeeId);
+    }
+
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(employeeId);
+
+    const query = `
+      UPDATE employees
+      SET ${updates.join(', ')}
+      WHERE id = $${paramIndex}
       RETURNING *
     `;
 

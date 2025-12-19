@@ -50,8 +50,8 @@ function TrainerSettings({ employeeId, onUpdate, isViewOnly = false }) {
       };
 
       await updateTrainerSettings(employeeId, {
-        aiEnabled: newSettings.aiEnabled,
-        publicPublishEnable: newSettings.publicPublishEnable
+        aiEnabled: Boolean(newSettings.aiEnabled),
+        publicPublishEnable: Boolean(newSettings.publicPublishEnable)
       });
 
       setSettings(newSettings);

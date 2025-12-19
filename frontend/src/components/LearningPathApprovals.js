@@ -28,9 +28,9 @@ function LearningPathApprovals({ employeeId, companyId }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-          Learning Paths Approvals
-        </h3>
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+          Approve learning paths in the company
+        </p>
         <button
           onClick={handleReview}
           className="px-4 py-2 rounded text-sm font-medium transition-colors"

@@ -24,13 +24,48 @@ class UpdateEmployeeUseCase {
    * @returns {Promise<Object>} Updated employee
    */
   async execute(companyId, employeeId, employeeData) {
-    // Verify employee exists and belongs to company
-    const existingEmployee = await this.employeeRepository.findByCompanyAndEmployeeId(companyId, employeeData.employee_id || '');
-    if (!existingEmployee && employeeId !== existingEmployee?.id) {
+    // First, try to find employee by UUID (for profile edits)
+    let existingEmployee = await this.employeeRepository.findById(employeeId);
+    
+    // If not found by UUID, try to find by employee_id (for admin updates)
+    if (!existingEmployee && employeeData.employee_id) {
+      existingEmployee = await this.employeeRepository.findByCompanyAndEmployeeId(companyId, employeeData.employee_id);
+    }
+    
+    if (!existingEmployee) {
       throw new Error('Employee not found');
     }
 
-    // Validate and normalize employee data
+    // Verify employee belongs to company
+    if (existingEmployee.company_id !== companyId) {
+      throw new Error('Employee does not belong to this company');
+    }
+
+    // If this is a profile edit (only bio, value_proposition, preferred_language), use simpler update
+    const isProfileEdit = employeeData.bio !== undefined || 
+                         employeeData.value_proposition !== undefined || 
+                         (employeeData.preferred_language !== undefined && 
+                          !employeeData.full_name && 
+                          !employeeData.email && 
+                          !employeeData.employee_id);
+    
+    if (isProfileEdit) {
+      // Simple profile update - no validation needed for bio/value_proposition
+      const updateData = {};
+      if (employeeData.preferred_language !== undefined) {
+        updateData.preferred_language = employeeData.preferred_language;
+      }
+      if (employeeData.bio !== undefined) {
+        updateData.bio = employeeData.bio;
+      }
+      if (employeeData.value_proposition !== undefined) {
+        updateData.value_proposition = employeeData.value_proposition;
+      }
+      
+      return await this.employeeRepository.updateById(employeeId, updateData);
+    }
+
+    // Full employee update - validate and normalize employee data
     const validatedData = this.dbConstraintValidator.validateEmployeeRow({
       ...employeeData,
       employee_id: existingEmployee.employee_id // Keep original employee_id
@@ -59,6 +94,8 @@ class UpdateEmployeeUseCase {
           current_role_in_company: validatedData.current_role_in_company,
           target_role_in_company: validatedData.target_role_in_company,
           preferred_language: validatedData.preferred_language,
+          bio: validatedData.bio,
+          value_proposition: validatedData.value_proposition,
           status: validatedData.status
         },
         client
