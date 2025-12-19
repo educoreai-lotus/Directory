@@ -217,13 +217,15 @@ function ProfileSkills({ employeeId }) {
               >
                 <div className="flex flex-wrap gap-2 mt-2 mb-3">
                   {node.skills.map((skill, skillIdx) => {
-                    // Check if skill is verified - could be boolean field or "verified" in name
-                    const isVerified = skill.verified === true || 
-                                      skill.verified === 'verified' || 
-                                      String(skill.verified).toLowerCase() === 'true' ||
-                                      skill.name?.toLowerCase().includes('verified');
-                    // Clean skill name (remove "verified" text if present)
-                    const skillName = skill.name?.replace(/\s*verified\s*/i, '').trim() || skill.name || '';
+                    // Check if skill is verified based on level field
+                    // If level is undefined/null/empty, skill is NOT verified
+                    // If level has a value (beginner, intermediate, advanced, etc.), skill IS verified
+                    const isVerified = skill.level !== undefined && 
+                                      skill.level !== null && 
+                                      skill.level !== '' && 
+                                      String(skill.level).toLowerCase() !== 'undefined';
+                    // Use skill name as-is (no cleaning needed)
+                    const skillName = skill.name || '';
                     
                     return (
                       <div
