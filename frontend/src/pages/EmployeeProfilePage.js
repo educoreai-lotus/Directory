@@ -66,6 +66,19 @@ function EmployeeProfilePage() {
           throw new Error('Employee data not found');
         }
 
+        // Debug: Log employee data to help diagnose section visibility issues
+        console.log('[EmployeeProfilePage] Employee data loaded:', {
+          id: employeeData.id,
+          full_name: employeeData.full_name,
+          email: employeeData.email,
+          profile_status: employeeData.profile_status,
+          is_trainer: employeeData.is_trainer,
+          roles: employeeData.roles,
+          roles_type: typeof employeeData.roles,
+          roles_is_array: Array.isArray(employeeData.roles),
+          enrichment_completed: employeeData.enrichment_completed
+        });
+
         setEmployee(employeeData);
       } catch (err) {
         console.error('Error fetching employee profile:', err);
