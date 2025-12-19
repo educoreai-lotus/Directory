@@ -28,6 +28,25 @@ function EmployeeProfilePage() {
                      user?.isAdmin || 
                      user?.role === 'DIRECTORY_ADMIN';
 
+  // Auto-dismiss success messages after 5 seconds
+  useEffect(() => {
+    if (enrichmentComplete && showEnrichmentSuccess) {
+      const timer = setTimeout(() => {
+        setShowEnrichmentSuccess(false);
+      }, 5000); // 5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [enrichmentComplete, showEnrichmentSuccess]);
+
+  useEffect(() => {
+    if (profileStatus === 'approved' && showApprovalSuccess) {
+      const timer = setTimeout(() => {
+        setShowApprovalSuccess(false);
+      }, 5000); // 5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [profileStatus, showApprovalSuccess]);
+
   useEffect(() => {
     const fetchEmployee = async () => {
       try {
@@ -164,8 +183,8 @@ function EmployeeProfilePage() {
           </div>
         )}
 
-        {/* Success Message */}
-        {enrichmentStatus === 'complete' && (
+        {/* Enrichment Success Message - Auto-dismiss after 5 seconds */}
+        {enrichmentComplete && showEnrichmentSuccess && (
           <div 
             className="mb-6 p-4 rounded-lg"
             style={{
