@@ -20,6 +20,8 @@ function EmployeeProfilePage() {
   const [error, setError] = useState(null);
   const [employee, setEmployee] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [showEnrichmentSuccess, setShowEnrichmentSuccess] = useState(true);
+  const [showApprovalSuccess, setShowApprovalSuccess] = useState(true);
 
   // Determine if this is an admin view (must be defined before useEffect)
   const isAdminView = searchParams.get('admin') === 'true' || 
@@ -209,7 +211,8 @@ function EmployeeProfilePage() {
           </div>
         )}
 
-        {profileStatus === 'approved' && (
+        {/* Profile Approved Message - Auto-dismiss after 5 seconds */}
+        {profileStatus === 'approved' && showApprovalSuccess && (
           <div 
             className="mb-6 p-4 rounded-lg"
             style={{
@@ -428,63 +431,22 @@ function EmployeeProfilePage() {
                   const sentences = valueProp.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
                   
                   if (sentences.length > 0) {
-                    // Place READ MORE at the end of all sentences
+                    // Display all sentences without READ MORE
                     return (
                       <>
                         {sentences.map((sentence, idx) => (
                           <p key={idx} className={idx < sentences.length - 1 ? 'mb-2' : 'mb-2'}>
                             {sentence.trim()}
-                            {idx === sentences.length - 1 && (
-                              <>
-                                {' '}
-                                {isOwnProfile && (
-                                  <button
-                                    onClick={() => {
-                                      alert('You are being redirected to the Skills Engine page.');
-                                      // TODO: When Skills Engine frontend is available, redirect to it
-                                      // navigate('/skills-engine');
-                                    }}
-                                    className="text-teal-600 hover:text-teal-700 underline font-medium cursor-pointer"
-                                    style={{
-                                      background: 'transparent',
-                                      border: 'none',
-                                      padding: 0,
-                                      textDecoration: 'underline'
-                                    }}
-                                  >
-                                    READ MORE
-                                  </button>
-                                )}
-                              </>
-                            )}
                           </p>
                         ))}
                       </>
                     );
                   }
                   
-                  // Fallback: Just add READ MORE at the end
+                  // Fallback: Just display the value proposition
                   return (
                     <p>
-                      {valueProp.trim()}{' '}
-                      {isOwnProfile && (
-                        <button
-                          onClick={() => {
-                            alert('You are being redirected to the Skills Engine page.');
-                            // TODO: When Skills Engine frontend is available, redirect to it
-                            // navigate('/skills-engine');
-                          }}
-                          className="text-teal-600 hover:text-teal-700 underline font-medium cursor-pointer"
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            padding: 0,
-                            textDecoration: 'underline'
-                          }}
-                        >
-                          READ MORE
-                        </button>
-                      )}
+                      {valueProp.trim()}
                     </p>
                   );
                 })()}

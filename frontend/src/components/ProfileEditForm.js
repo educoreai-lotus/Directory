@@ -8,14 +8,9 @@ import { updateEmployee } from '../services/employeeService';
 function ProfileEditForm({ employee, onSave, onCancel }) {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
-    full_name: '',
-    email: '',
-    current_role_in_company: '',
-    target_role_in_company: '',
     preferred_language: '',
     bio: '',
-    linkedin_url: '',
-    github_url: ''
+    value_proposition: ''
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,14 +19,9 @@ function ProfileEditForm({ employee, onSave, onCancel }) {
   useEffect(() => {
     if (employee) {
       setFormData({
-        full_name: employee.full_name || '',
-        email: employee.email || '',
-        current_role_in_company: employee.current_role_in_company || '',
-        target_role_in_company: employee.target_role_in_company || '',
         preferred_language: employee.preferred_language || '',
         bio: employee.bio || '',
-        linkedin_url: employee.linkedin_url || '',
-        github_url: employee.github_url || ''
+        value_proposition: employee.value_proposition || ''
       });
     }
   }, [employee]);
@@ -54,24 +44,6 @@ function ProfileEditForm({ employee, onSave, onCancel }) {
 
   const validate = () => {
     const newErrors = {};
-
-    if (!formData.full_name.trim()) {
-      newErrors.full_name = 'Full name is required';
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
-    }
-
-    if (!formData.current_role_in_company.trim()) {
-      newErrors.current_role_in_company = 'Current role is required';
-    }
-
-    if (!formData.target_role_in_company.trim()) {
-      newErrors.target_role_in_company = 'Target role is required';
-    }
 
     if (!formData.preferred_language.trim()) {
       newErrors.preferred_language = 'Preferred language is required';
@@ -148,98 +120,6 @@ function ProfileEditForm({ employee, onSave, onCancel }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-              Full Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="full_name"
-              value={formData.full_name}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-md border"
-              style={{
-                background: 'var(--bg-primary)',
-                borderColor: errors.full_name ? 'rgb(239, 68, 68)' : 'var(--border-default)',
-                color: 'var(--text-primary)'
-              }}
-            />
-            {errors.full_name && (
-              <p className="text-xs mt-1" style={{ color: 'rgb(239, 68, 68)' }}>
-                {errors.full_name}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-              Email <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-md border"
-              style={{
-                background: 'var(--bg-primary)',
-                borderColor: errors.email ? 'rgb(239, 68, 68)' : 'var(--border-default)',
-                color: 'var(--text-primary)'
-              }}
-            />
-            {errors.email && (
-              <p className="text-xs mt-1" style={{ color: 'rgb(239, 68, 68)' }}>
-                {errors.email}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-              Current Role in Company <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="current_role_in_company"
-              value={formData.current_role_in_company}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-md border"
-              style={{
-                background: 'var(--bg-primary)',
-                borderColor: errors.current_role_in_company ? 'rgb(239, 68, 68)' : 'var(--border-default)',
-                color: 'var(--text-primary)'
-              }}
-            />
-            {errors.current_role_in_company && (
-              <p className="text-xs mt-1" style={{ color: 'rgb(239, 68, 68)' }}>
-                {errors.current_role_in_company}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-              Target Role in Company <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="target_role_in_company"
-              value={formData.target_role_in_company}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-md border"
-              style={{
-                background: 'var(--bg-primary)',
-                borderColor: errors.target_role_in_company ? 'rgb(239, 68, 68)' : 'var(--border-default)',
-                color: 'var(--text-primary)'
-              }}
-            />
-            {errors.target_role_in_company && (
-              <p className="text-xs mt-1" style={{ color: 'rgb(239, 68, 68)' }}>
-                {errors.target_role_in_company}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
               Preferred Language <span className="text-red-500">*</span>
             </label>
             <select
@@ -255,16 +135,34 @@ function ProfileEditForm({ employee, onSave, onCancel }) {
             >
               <option value="">Select language...</option>
               <option value="en">English</option>
-              <option value="es">Spanish</option>
-              <option value="fr">French</option>
-              <option value="de">German</option>
-              <option value="it">Italian</option>
-              <option value="pt">Portuguese</option>
-              <option value="ar">Arabic</option>
-              <option value="zh">Chinese</option>
-              <option value="ja">Japanese</option>
-              <option value="ko">Korean</option>
-              <option value="ru">Russian</option>
+              <option value="ar">Arabic (العربية)</option>
+              <option value="he">Hebrew (עברית)</option>
+              <option value="ru">Russian (Русский)</option>
+              <option value="es">Spanish (Español)</option>
+              <option value="fr">French (Français)</option>
+              <option value="de">German (Deutsch)</option>
+              <option value="it">Italian (Italiano)</option>
+              <option value="pt">Portuguese (Português)</option>
+              <option value="zh">Chinese (中文)</option>
+              <option value="ja">Japanese (日本語)</option>
+              <option value="ko">Korean (한국어)</option>
+              <option value="hi">Hindi (हिन्दी)</option>
+              <option value="tr">Turkish (Türkçe)</option>
+              <option value="pl">Polish (Polski)</option>
+              <option value="nl">Dutch (Nederlands)</option>
+              <option value="sv">Swedish (Svenska)</option>
+              <option value="da">Danish (Dansk)</option>
+              <option value="fi">Finnish (Suomi)</option>
+              <option value="no">Norwegian (Norsk)</option>
+              <option value="cs">Czech (Čeština)</option>
+              <option value="ro">Romanian (Română)</option>
+              <option value="hu">Hungarian (Magyar)</option>
+              <option value="el">Greek (Ελληνικά)</option>
+              <option value="th">Thai (ไทย)</option>
+              <option value="vi">Vietnamese (Tiếng Việt)</option>
+              <option value="id">Indonesian (Bahasa Indonesia)</option>
+              <option value="ms">Malay (Bahasa Melayu)</option>
+              <option value="uk">Ukrainian (Українська)</option>
             </select>
             {errors.preferred_language && (
               <p className="text-xs mt-1" style={{ color: 'rgb(239, 68, 68)' }}>
@@ -275,13 +173,13 @@ function ProfileEditForm({ employee, onSave, onCancel }) {
 
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-              Bio (Optional)
+              Bio
             </label>
             <textarea
               name="bio"
               value={formData.bio}
               onChange={handleChange}
-              rows={4}
+              rows={6}
               className="w-full px-3 py-2 rounded-md border"
               style={{
                 background: 'var(--bg-primary)',
@@ -294,39 +192,20 @@ function ProfileEditForm({ employee, onSave, onCancel }) {
 
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-              LinkedIn URL (Optional)
+              Value Proposition
             </label>
-            <input
-              type="url"
-              name="linkedin_url"
-              value={formData.linkedin_url}
+            <textarea
+              name="value_proposition"
+              value={formData.value_proposition}
               onChange={handleChange}
+              rows={6}
               className="w-full px-3 py-2 rounded-md border"
               style={{
                 background: 'var(--bg-primary)',
                 borderColor: 'var(--border-default)',
                 color: 'var(--text-primary)'
               }}
-              placeholder="https://linkedin.com/in/yourprofile"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-              GitHub URL (Optional)
-            </label>
-            <input
-              type="url"
-              name="github_url"
-              value={formData.github_url}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-md border"
-              style={{
-                background: 'var(--bg-primary)',
-                borderColor: 'var(--border-default)',
-                color: 'var(--text-primary)'
-              }}
-              placeholder="https://github.com/yourusername"
+              placeholder="Describe your value proposition..."
             />
           </div>
 
