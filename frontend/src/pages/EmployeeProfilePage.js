@@ -115,6 +115,25 @@ function EmployeeProfilePage() {
   const profileStatus = employee.profile_status || 'basic';
   const enrichmentStatus = searchParams.get('enrichment');
 
+  // Auto-dismiss success messages after 5 seconds (moved here after employee is loaded)
+  useEffect(() => {
+    if (enrichmentComplete && showEnrichmentSuccess) {
+      const timer = setTimeout(() => {
+        setShowEnrichmentSuccess(false);
+      }, 5000); // 5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [enrichmentComplete, showEnrichmentSuccess]);
+
+  useEffect(() => {
+    if (profileStatus === 'approved' && showApprovalSuccess) {
+      const timer = setTimeout(() => {
+        setShowApprovalSuccess(false);
+      }, 5000); // 5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [profileStatus, showApprovalSuccess]);
+
   // Debug: Log roles and profile status for Management section
   const isManager = employee.roles && 
                    Array.isArray(employee.roles) && 
