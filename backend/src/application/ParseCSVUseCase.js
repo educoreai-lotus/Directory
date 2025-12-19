@@ -256,11 +256,18 @@ class ParseCSVUseCase {
         createdEmployees.set(validatedRow.employee_id, employee.id);
         employeeIdToUuid.set(validatedRow.employee_id, employee.id);
 
+        // CRITICAL: Delete all existing roles first to ensure CSV roles are accurate
+        // This prevents old roles from persisting when CSV is re-uploaded
+        const deleteRolesQuery = 'DELETE FROM employee_roles WHERE employee_id = $1';
+        await client.query(deleteRolesQuery, [employee.id]);
+        console.log(`[ParseCSVUseCase] Deleted existing roles for employee ${validatedRow.employee_id} before adding CSV roles`);
+
         // Parse and create roles (using validated roles from validator)
         const roles = validatedRow.validatedRoles || this.dbConstraintValidator.validateRoleType(validatedRow.role_type);
         for (const role of roles) {
           await this.employeeRepository.createRole(employee.id, role, client);
         }
+        console.log(`[ParseCSVUseCase] Created roles for employee ${validatedRow.employee_id}:`, roles);
 
         // Assign employee to team
         await this.employeeRepository.assignToTeam(employee.id, team.id, client);
