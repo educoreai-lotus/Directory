@@ -71,7 +71,10 @@ class TrainerController {
   async updateTrainerSettings(req, res, next) {
     try {
       const { employeeId } = req.params;
-      const { aiEnabled, publicPublishEnable } = req.body;
+      
+      // Extract data from envelope structure (payload) or direct body
+      const requestData = req.body.payload || req.body;
+      const { aiEnabled, publicPublishEnable } = requestData;
       
       // Verify employee ID matches authenticated user (unless HR)
       const authenticatedEmployeeId = req.user?.id || req.user?.employeeId;
@@ -85,6 +88,13 @@ class TrainerController {
 
       // Validate input
       if (typeof aiEnabled !== 'boolean' || typeof publicPublishEnable !== 'boolean') {
+        console.error('[TrainerController] Invalid input types:', {
+          aiEnabled,
+          aiEnabledType: typeof aiEnabled,
+          publicPublishEnable,
+          publicPublishEnableType: typeof publicPublishEnable,
+          requestBody: req.body
+        });
         return res.status(400).json({
           error: 'aiEnabled and publicPublishEnable must be booleans'
         });
