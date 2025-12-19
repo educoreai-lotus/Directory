@@ -148,13 +148,17 @@ function EmployeeProfilePage() {
   const isViewOnly = !isOwnProfile || isAdminView; // Read-only mode when viewing someone else's profile or when admin
   
   if (process.env.NODE_ENV === 'development') {
-    console.log('[EmployeeProfilePage] Management Section Debug:', {
+    console.log('[EmployeeProfilePage] Section Visibility Debug:', {
       employeeName: employee.full_name,
       profileStatus,
       isApproved,
       roles: employee.roles,
       isManager,
+      isTrainer: employee.is_trainer,
+      isDecisionMaker: employee.roles && Array.isArray(employee.roles) && employee.roles.includes('DECISION_MAKER'),
       willShowManagement: isApproved && isManager,
+      willShowTrainer: employee.is_trainer,
+      willShowLearningPaths: employee.roles && Array.isArray(employee.roles) && employee.roles.includes('DECISION_MAKER'),
       isOwnProfile,
       isViewOnly
     });
@@ -567,8 +571,8 @@ function EmployeeProfilePage() {
           </div>
         )}
 
-        {/* Learning Path Approvals - Only visible for Decision Makers */}
-        {employee.roles && Array.isArray(employee.roles) && employee.roles.includes('DECISION_MAKER') && (
+        {/* Learning Path Approvals - Only visible for Decision Makers when approved */}
+        {isApproved && employee.roles && Array.isArray(employee.roles) && employee.roles.includes('DECISION_MAKER') && (
           <div 
             className="rounded-lg shadow-lg border p-8 mb-6"
             style={{
@@ -591,8 +595,8 @@ function EmployeeProfilePage() {
           </div>
         )}
 
-        {/* Trainer Sections - Only visible for trainers */}
-        {employee.is_trainer && (
+        {/* Trainer Sections - Only visible for trainers when approved */}
+        {isApproved && employee.is_trainer && (
           <div 
             className="rounded-lg shadow-lg border p-8 mb-6"
             style={{

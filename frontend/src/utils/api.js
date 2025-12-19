@@ -10,7 +10,8 @@ const api = axios.create({
   baseURL: config.apiBaseUrl,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  timeout: 180000 // 3 minutes timeout - allows Skills Engine to process data
 });
 
 // Request interceptor: Add auth token and wrap request body

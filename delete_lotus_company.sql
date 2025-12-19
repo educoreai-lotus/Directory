@@ -11,75 +11,108 @@ BEGIN;
 -- EXPLICIT DELETION ORDER (Required - CASCADE may not be working)
 -- ============================================
 -- Delete in reverse dependency order (most dependent first)
--- Company ID: ba3dff4a-9177-4b74-b77e-6bdd6488de86
+-- Dynamically find company ID by name
 
--- Step 1: Delete audit logs (references company_id and user_id)
-DELETE FROM audit_logs 
-WHERE company_id = 'ba3dff4a-9177-4b74-b77e-6bdd6488de86';
+DO $$
+DECLARE
+    _company_id UUID;
+BEGIN
+    -- Find company ID by name or domain
+    SELECT id INTO _company_id 
+    FROM companies 
+    WHERE company_name = 'Lotus techhub' 
+       OR company_name ILIKE '%lotus%'
+       OR domain ILIKE '%lotus%'
+    LIMIT 1;
 
--- Step 2: Delete employee requests (references employee_id and company_id)
-DELETE FROM employee_requests 
-WHERE company_id = 'ba3dff4a-9177-4b74-b77e-6bdd6488de86';
+    IF _company_id IS NULL THEN
+        RAISE NOTICE 'Company "Lotus techhub" not found. Please check the company name.';
+        RETURN;
+    END IF;
 
--- Step 3: Delete employee profile approvals (references employee_id and company_id)
-DELETE FROM employee_profile_approvals 
-WHERE company_id = 'ba3dff4a-9177-4b74-b77e-6bdd6488de86';
+    RAISE NOTICE 'Found company ID: %', _company_id;
 
--- Step 4: Delete employee project summaries (references employee_id)
-DELETE FROM employee_project_summaries 
-WHERE employee_id IN (
-    SELECT id FROM employees WHERE company_id = 'ba3dff4a-9177-4b74-b77e-6bdd6488de86'
-);
+    -- Step 1: Delete audit logs (references company_id and user_id)
+    DELETE FROM audit_logs 
+    WHERE company_id = _company_id;
+    RAISE NOTICE 'Deleted audit logs';
 
--- Step 5: Delete trainer settings (references employee_id)
-DELETE FROM trainer_settings 
-WHERE employee_id IN (
-    SELECT id FROM employees WHERE company_id = 'ba3dff4a-9177-4b74-b77e-6bdd6488de86'
-);
+    -- Step 2: Delete employee requests (references employee_id and company_id)
+    DELETE FROM employee_requests 
+    WHERE company_id = _company_id;
+    RAISE NOTICE 'Deleted employee requests';
 
--- Step 6: Delete employee managers (references employee_id and manager_id)
-DELETE FROM employee_managers 
-WHERE employee_id IN (
-    SELECT id FROM employees WHERE company_id = 'ba3dff4a-9177-4b74-b77e-6bdd6488de86'
-)
-OR manager_id IN (
-    SELECT id FROM employees WHERE company_id = 'ba3dff4a-9177-4b74-b77e-6bdd6488de86'
-);
+    -- Step 3: Delete employee profile approvals (references employee_id and company_id)
+    DELETE FROM employee_profile_approvals 
+    WHERE company_id = _company_id;
+    RAISE NOTICE 'Deleted employee profile approvals';
 
--- Step 7: Delete employee teams (references employee_id and team_id)
-DELETE FROM employee_teams 
-WHERE employee_id IN (
-    SELECT id FROM employees WHERE company_id = 'ba3dff4a-9177-4b74-b77e-6bdd6488de86'
-);
+    -- Step 4: Delete employee project summaries (references employee_id)
+    DELETE FROM employee_project_summaries 
+    WHERE employee_id IN (
+        SELECT id FROM employees WHERE company_id = _company_id
+    );
+    RAISE NOTICE 'Deleted employee project summaries';
 
--- Step 8: Delete employee roles (references employee_id)
-DELETE FROM employee_roles 
-WHERE employee_id IN (
-    SELECT id FROM employees WHERE company_id = 'ba3dff4a-9177-4b74-b77e-6bdd6488de86'
-);
+    -- Step 5: Delete trainer settings (references employee_id)
+    DELETE FROM trainer_settings 
+    WHERE employee_id IN (
+        SELECT id FROM employees WHERE company_id = _company_id
+    );
+    RAISE NOTICE 'Deleted trainer settings';
 
--- Step 9: Delete employees (references company_id)
-DELETE FROM employees 
-WHERE company_id = 'ba3dff4a-9177-4b74-b77e-6bdd6488de86';
+    -- Step 6: Delete employee managers (references employee_id and manager_id)
+    DELETE FROM employee_managers 
+    WHERE employee_id IN (
+        SELECT id FROM employees WHERE company_id = _company_id
+    )
+    OR manager_id IN (
+        SELECT id FROM employees WHERE company_id = _company_id
+    );
+    RAISE NOTICE 'Deleted employee managers';
 
--- Step 10: Delete teams (references company_id and department_id)
-DELETE FROM teams 
-WHERE company_id = 'ba3dff4a-9177-4b74-b77e-6bdd6488de86';
+    -- Step 7: Delete employee teams (references employee_id and team_id)
+    DELETE FROM employee_teams 
+    WHERE employee_id IN (
+        SELECT id FROM employees WHERE company_id = _company_id
+    );
+    RAISE NOTICE 'Deleted employee teams';
 
--- Step 11: Delete departments (references company_id)
-DELETE FROM departments 
-WHERE company_id = 'ba3dff4a-9177-4b74-b77e-6bdd6488de86';
+    -- Step 8: Delete employee roles (references employee_id)
+    DELETE FROM employee_roles 
+    WHERE employee_id IN (
+        SELECT id FROM employees WHERE company_id = _company_id
+    );
+    RAISE NOTICE 'Deleted employee roles';
 
--- Step 12: Delete company registration requests (if exists)
-DELETE FROM company_registration_requests 
-WHERE company_name = 'Lotus techhub' 
-   OR domain LIKE '%lotus%';
+    -- Step 9: Delete employees (references company_id)
+    DELETE FROM employees 
+    WHERE company_id = _company_id;
+    RAISE NOTICE 'Deleted employees';
 
--- Step 13: Finally, delete the company itself
-DELETE FROM companies 
-WHERE id = 'ba3dff4a-9177-4b74-b77e-6bdd6488de86'
-   OR company_name = 'Lotus techhub'
-   OR domain LIKE '%lotus%';
+    -- Step 10: Delete teams (references company_id and department_id)
+    DELETE FROM teams 
+    WHERE company_id = _company_id;
+    RAISE NOTICE 'Deleted teams';
+
+    -- Step 11: Delete departments (references company_id)
+    DELETE FROM departments 
+    WHERE company_id = _company_id;
+    RAISE NOTICE 'Deleted departments';
+
+    -- Step 12: Delete company registration requests (if exists)
+    DELETE FROM company_registration_requests 
+    WHERE company_name = 'Lotus techhub' 
+       OR domain LIKE '%lotus%';
+    RAISE NOTICE 'Deleted company registration requests';
+
+    -- Step 13: Finally, delete the company itself
+    DELETE FROM companies 
+    WHERE id = _company_id;
+    RAISE NOTICE 'Deleted company';
+
+    RAISE NOTICE '✅ Successfully deleted all Lotus techhub company data';
+END $$;
 
 COMMIT;
 

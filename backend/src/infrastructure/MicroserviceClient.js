@@ -182,7 +182,7 @@ class MicroserviceClient {
       employee_type: employeeType, // Mapped to "regular" or "trainer"
       path_career: pathCareer || null,
       preferred_language: preferredLanguage || 'en',
-      raw_data: rawData || {} // Must have "github" and "linkedin" keys
+      raw_data: rawData || {} // Can contain any keys (linkedin, github, pdf, manual) - Skills Engine extracts from all
     };
     
     // Log payload structure for verification (without sensitive data)
@@ -194,10 +194,11 @@ class MicroserviceClient {
       employee_type: payload.employee_type,
       path_career: payload.path_career,
       preferred_language: payload.preferred_language,
-      raw_data_keys: {
-        github: Object.keys(payload.raw_data?.github || {}).length,
-        linkedin: Object.keys(payload.raw_data?.linkedin || {}).length
-      }
+      raw_data_sources: Object.keys(payload.raw_data || {}), // Only sources with actual data
+      raw_data_keys: Object.keys(payload.raw_data || {}).reduce((acc, key) => {
+        acc[key] = Object.keys(payload.raw_data[key] || {}).length;
+        return acc;
+      }, {})
     });
 
     const responseTemplate = {

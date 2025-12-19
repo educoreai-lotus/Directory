@@ -42,12 +42,17 @@ class UpdateEmployeeUseCase {
     }
 
     // If this is a profile edit (only bio, value_proposition, preferred_language), use simpler update
-    const isProfileEdit = employeeData.bio !== undefined || 
-                         employeeData.value_proposition !== undefined || 
-                         (employeeData.preferred_language !== undefined && 
-                          !employeeData.full_name && 
-                          !employeeData.email && 
-                          !employeeData.employee_id);
+    // Check if ONLY profile edit fields are present (no admin fields like full_name, email, employee_id)
+    const hasProfileEditFields = employeeData.bio !== undefined || 
+                                 employeeData.value_proposition !== undefined || 
+                                 employeeData.preferred_language !== undefined;
+    const hasAdminFields = employeeData.full_name !== undefined || 
+                          employeeData.email !== undefined || 
+                          employeeData.employee_id !== undefined ||
+                          employeeData.current_role_in_company !== undefined ||
+                          employeeData.target_role_in_company !== undefined ||
+                          employeeData.status !== undefined;
+    const isProfileEdit = hasProfileEditFields && !hasAdminFields;
     
     if (isProfileEdit) {
       // Simple profile update - no validation needed for bio/value_proposition
