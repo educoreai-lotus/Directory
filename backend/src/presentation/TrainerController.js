@@ -96,7 +96,14 @@ class TrainerController {
         publicPublishEnable
       });
 
-      return res.status(200).json(result);
+      // Return response in expected format
+      return res.status(200).json({
+        requester_service: 'directory_service',
+        response: {
+          success: true,
+          settings: result.settings || result
+        }
+      });
     } catch (error) {
       console.error('[TrainerController] Error updating trainer settings:', error);
       

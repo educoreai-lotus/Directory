@@ -65,7 +65,8 @@ function TrainerSettings({ employeeId, onUpdate, isViewOnly = false }) {
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error('Error updating trainer settings:', err);
-      setError(err.response?.data?.error || 'Failed to update settings');
+      // Error message is already extracted in trainerService
+      setError(err.message || 'Failed to update settings');
     } finally {
       setSaving(false);
     }

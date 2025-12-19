@@ -7,7 +7,6 @@ import ProfileCourses from './ProfileCourses';
 import LearningPath from './LearningPath';
 import ProfileAnalytics from './ProfileAnalytics';
 import ProfileDashboard from './ProfileDashboard';
-import ProfileRequests from './ProfileRequests';
 
 function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false }) {
   const [activeTab, setActiveTab] = useState('skills');
@@ -16,8 +15,7 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
     { id: 'skills', label: 'Skills', component: ProfileSkills },
     { id: 'courses', label: 'Courses', component: ProfileCourses },
     { id: 'learning-path', label: 'Learning Path', component: LearningPath },
-    { id: 'analytics', label: 'Analytics', component: ProfileAnalytics },
-    { id: 'requests', label: 'Requests', component: ProfileRequests }
+    { id: 'analytics', label: 'Analytics', component: ProfileAnalytics }
   ];
 
   const handleTabClick = (tabId) => {

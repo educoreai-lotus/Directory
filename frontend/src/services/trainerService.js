@@ -34,15 +34,22 @@ export const updateTrainerSettings = async (employeeId, settings) => {
   try {
     const response = await api.put(`/employees/${employeeId}/trainer-settings`, settings);
     
-    // Handle response format
+    // Handle response format - backend returns { requester_service, response: { success, settings } }
     if (response.data && response.data.response) {
-      return response.data.response;
+      // Return the settings object directly
+      return response.data.response.settings || response.data.response;
     }
     
-    return response.data;
+    // Fallback for direct response
+    return response.data.settings || response.data;
   } catch (error) {
     console.error('Update trainer settings error:', error);
-    throw error;
+    // Extract error message from response
+    const errorMessage = error.response?.data?.response?.error || 
+                        error.response?.data?.error || 
+                        error.message || 
+                        'Failed to update settings';
+    throw new Error(errorMessage);
   }
 };
 
