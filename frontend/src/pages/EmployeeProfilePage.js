@@ -28,6 +28,28 @@ function EmployeeProfilePage() {
                      user?.isAdmin || 
                      user?.role === 'DIRECTORY_ADMIN';
 
+  // Auto-dismiss success messages after 5 seconds
+  // Use employee data if available, otherwise use defaults
+  useEffect(() => {
+    const enrichmentComplete = employee?.enrichment_completed || false;
+    if (enrichmentComplete && showEnrichmentSuccess) {
+      const timer = setTimeout(() => {
+        setShowEnrichmentSuccess(false);
+      }, 5000); // 5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [employee?.enrichment_completed, showEnrichmentSuccess]);
+
+  useEffect(() => {
+    const profileStatus = employee?.profile_status || 'basic';
+    if (profileStatus === 'approved' && showApprovalSuccess) {
+      const timer = setTimeout(() => {
+        setShowApprovalSuccess(false);
+      }, 5000); // 5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [employee?.profile_status, showApprovalSuccess]);
+
   useEffect(() => {
     const fetchEmployee = async () => {
       try {
@@ -114,25 +136,6 @@ function EmployeeProfilePage() {
   const enrichmentComplete = employee.enrichment_completed || false;
   const profileStatus = employee.profile_status || 'basic';
   const enrichmentStatus = searchParams.get('enrichment');
-
-  // Auto-dismiss success messages after 5 seconds (moved here after employee is loaded)
-  useEffect(() => {
-    if (enrichmentComplete && showEnrichmentSuccess) {
-      const timer = setTimeout(() => {
-        setShowEnrichmentSuccess(false);
-      }, 5000); // 5 seconds
-      return () => clearTimeout(timer);
-    }
-  }, [enrichmentComplete, showEnrichmentSuccess]);
-
-  useEffect(() => {
-    if (profileStatus === 'approved' && showApprovalSuccess) {
-      const timer = setTimeout(() => {
-        setShowApprovalSuccess(false);
-      }, 5000); // 5 seconds
-      return () => clearTimeout(timer);
-    }
-  }, [profileStatus, showApprovalSuccess]);
 
   // Debug: Log roles and profile status for Management section
   const isManager = employee.roles && 
