@@ -66,9 +66,16 @@ class EmployeeController {
   async updateEmployee(req, res, next) {
     try {
       const { id: companyId, employeeId } = req.params;
-      const employeeData = req.body;
-
+      
+      // Extract data from envelope structure (payload) or direct body
+      const employeeData = req.body.payload || req.body;
+      
       console.log(`[EmployeeController] Updating employee ${employeeId} for company ${companyId}`);
+      console.log(`[EmployeeController] Employee data received:`, {
+        preferred_language: employeeData.preferred_language,
+        bio: employeeData.bio ? `${employeeData.bio.substring(0, 50)}...` : undefined,
+        value_proposition: employeeData.value_proposition ? `${employeeData.value_proposition.substring(0, 50)}...` : undefined
+      });
 
       const employee = await this.updateEmployeeUseCase.execute(companyId, employeeId, employeeData);
 

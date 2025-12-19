@@ -264,10 +264,16 @@ class ParseCSVUseCase {
 
         // Parse and create roles (using validated roles from validator)
         const roles = validatedRow.validatedRoles || this.dbConstraintValidator.validateRoleType(validatedRow.role_type);
+        console.log(`[ParseCSVUseCase] Role parsing for employee ${validatedRow.employee_id}:`, {
+          original_role_type: validatedRow.role_type,
+          validatedRoles_from_row: validatedRow.validatedRoles,
+          roles_to_create: roles,
+          roles_count: roles.length
+        });
         for (const role of roles) {
           await this.employeeRepository.createRole(employee.id, role, client);
         }
-        console.log(`[ParseCSVUseCase] Created roles for employee ${validatedRow.employee_id}:`, roles);
+        console.log(`[ParseCSVUseCase] ✅ Created ${roles.length} roles for employee ${validatedRow.employee_id}:`, roles);
 
         // Assign employee to team
         await this.employeeRepository.assignToTeam(employee.id, team.id, client);
