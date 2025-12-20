@@ -174,14 +174,6 @@ function LoginForm() {
       >
         {loading ? 'Logging in...' : 'LOGIN'}
       </button>
-
-      {/* Dummy Mode Notice */}
-      <p 
-        className="text-xs text-center mt-4"
-        style={{ color: 'var(--text-muted)' }}
-      >
-        ⚠️ Using dummy authentication for testing
-      </p>
     </form>
   );
 }
