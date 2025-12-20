@@ -611,6 +611,11 @@ class FillContentMetricsUseCase {
                                 SELECT
                                   e.id AS employee_id,
                                   e.full_name AS name,
+                                  e.email,
+                                  e.current_role_in_company,
+                                  e.target_role_in_company,
+                                  e.preferred_language,
+                                  e.profile_status,
                                   -- Simplified role_type: trainer vs regular based on roles
                                   CASE
                                     WHEN EXISTS (
@@ -668,55 +673,69 @@ class FillContentMetricsUseCase {
 
       const row = queryResult.rows[0];
 
-      // Manually map the row to the response template structure
-      const filledResponse = {
-        version: responseTemplate.version || '',
-        company_id: row.company_id || '',
-        company_name: row.company_name || '',
-        industry: row.industry || '',
-        company_size: parseInt(row.company_size || 0, 10),
+      // Use mapResultsToTemplate to fill all fields from responseTemplate, then override with specific mappings
+      let filledResponse = this.mapResultsToTemplate([row], responseTemplate, payload);
+
+      // Override with specific field mappings for Learning Analytics
+      filledResponse = {
+        ...filledResponse,
+        version: responseTemplate.version || filledResponse.version || '',
+        company_id: row.company_id || filledResponse.company_id || '',
+        company_name: row.company_name || filledResponse.company_name || '',
+        industry: row.industry || filledResponse.industry || '',
+        company_size: parseInt(row.company_size || filledResponse.company_size || 0, 10),
         primary_hr_contact: {
-          name: row.primary_hr_contact_name || '',
-          email: row.primary_hr_contact_email || '',
-          phone: '', // Not stored in database
-          hr_user_id: row.hr_employee_id || ''
+          ...(filledResponse.primary_hr_contact || {}),
+          name: row.primary_hr_contact_name || filledResponse.primary_hr_contact?.name || '',
+          email: row.primary_hr_contact_email || filledResponse.primary_hr_contact?.email || '',
+          phone: filledResponse.primary_hr_contact?.phone || '', // Not stored in database
+          hr_user_id: row.hr_employee_id || filledResponse.primary_hr_contact?.hr_user_id || ''
         },
         approver: (() => {
+          const existingApprover = filledResponse.approver || {};
           if (row.approver_info) {
             const parts = row.approver_info.split(', ');
             return {
-              role: parts[0] || '',
-              email: parts[1] || '',
-              approver_id: row.approver_id || ''
+              ...existingApprover,
+              role: parts[0] || existingApprover.role || '',
+              email: parts[1] || existingApprover.email || '',
+              approver_id: row.approver_id || existingApprover.approver_id || ''
             };
           }
           return {
-            role: '',
-            email: '',
-            approver_id: row.approver_id || ''
+            ...existingApprover,
+            role: existingApprover.role || '',
+            email: existingApprover.email || '',
+            approver_id: row.approver_id || existingApprover.approver_id || ''
           };
         })(),
         kpis: (() => {
           try {
-            if (typeof row.kpis === 'string') {
-              return JSON.parse(row.kpis);
+            if (row.kpis) {
+              if (typeof row.kpis === 'string') {
+                return JSON.parse(row.kpis);
+              }
+              return row.kpis;
             }
-            return row.kpis || {};
+            return filledResponse.kpis || {};
           } catch (e) {
-            return {};
+            return filledResponse.kpis || {};
           }
         })(),
-        max_test_attempts: parseInt(row.max_test_attempts || 0, 10),
-        exercises_limit: parseInt(row.exercises_limit || 0, 10),
+        max_test_attempts: parseInt(row.max_test_attempts || filledResponse.max_test_attempts || 0, 10),
+        exercises_limit: parseInt(row.exercises_limit || filledResponse.exercises_limit || 0, 10),
         hierarchy: (() => {
           try {
-            if (typeof row.hierarchy === 'string') {
-              return JSON.parse(row.hierarchy);
+            if (row.hierarchy) {
+              if (typeof row.hierarchy === 'string') {
+                return JSON.parse(row.hierarchy);
+              }
+              return row.hierarchy;
             }
-            return row.hierarchy || [];
+            return filledResponse.hierarchy || [];
           } catch (e) {
             console.error('[FillContentMetricsUseCase] [LearningAnalytics] Error parsing hierarchy:', e);
-            return [];
+            return filledResponse.hierarchy || [];
           }
         })()
       };
@@ -844,6 +863,11 @@ class FillContentMetricsUseCase {
                                 SELECT
                                   e.id AS employee_id,
                                   e.full_name AS name,
+                                  e.email,
+                                  e.current_role_in_company,
+                                  e.target_role_in_company,
+                                  e.preferred_language,
+                                  e.profile_status,
                                   -- Simplified role_type: trainer vs regular based on roles
                                   CASE
                                     WHEN EXISTS (
@@ -908,7 +932,11 @@ class FillContentMetricsUseCase {
       }
 
       // Map rows to response template structure
+      // First use mapResultsToTemplate to fill all fields from responseTemplate
       const companies = queryResult.rows.map(row => {
+        // Use mapResultsToTemplate to get base structure from template
+        const baseResponse = this.mapResultsToTemplate([row], responseTemplate, payload);
+        
         // Parse approver info
         let approver = { role: '', email: '' };
         if (row.approver_info) {
@@ -943,25 +971,30 @@ class FillContentMetricsUseCase {
           console.error('[FillContentMetricsUseCase] [LearningAnalytics] Error parsing hierarchy:', e);
         }
 
+        // Merge template-based response with specific Learning Analytics fields
         return {
-          version: responseTemplate.version || '',
-          company_id: row.company_id || '',
-          company_name: row.company_name || '',
-          industry: row.industry || '',
-          company_size: parseInt(row.company_size || 0, 10),
+          ...baseResponse, // Include all fields from responseTemplate
+          version: responseTemplate.version || baseResponse.version || '',
+          company_id: row.company_id || baseResponse.company_id || '',
+          company_name: row.company_name || baseResponse.company_name || '',
+          industry: row.industry || baseResponse.industry || '',
+          company_size: parseInt(row.company_size || baseResponse.company_size || 0, 10),
           primary_hr_contact: {
-            name: row.primary_hr_contact_name || '',
-            email: row.primary_hr_contact_email || '',
-            hr_user_id: row.hr_employee_id || ''
+            ...(baseResponse.primary_hr_contact || {}),
+            name: row.primary_hr_contact_name || baseResponse.primary_hr_contact?.name || '',
+            email: row.primary_hr_contact_email || baseResponse.primary_hr_contact?.email || '',
+            phone: baseResponse.primary_hr_contact?.phone || '', // Not stored in database
+            hr_user_id: row.hr_employee_id || baseResponse.primary_hr_contact?.hr_user_id || ''
           },
           approver: {
+            ...(baseResponse.approver || {}),
             ...approver,
-            approver_id: row.approver_id || ''
+            approver_id: row.approver_id || baseResponse.approver?.approver_id || ''
           },
-          kpis: kpis,
-          max_test_attempts: parseInt(row.max_test_attempts || 0, 10),
-          exercises_limit: parseInt(row.exercises_limit || 0, 10),
-          hierarchy: hierarchy
+          kpis: Object.keys(kpis).length > 0 ? kpis : (baseResponse.kpis || {}),
+          max_test_attempts: parseInt(row.max_test_attempts || baseResponse.max_test_attempts || 0, 10),
+          exercises_limit: parseInt(row.exercises_limit || baseResponse.exercises_limit || 0, 10),
+          hierarchy: hierarchy.length > 0 ? hierarchy : (baseResponse.hierarchy || [])
         };
       });
 
