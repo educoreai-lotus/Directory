@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import ProfileSkills from './ProfileSkills';
+import ProfileCareerPath from './ProfileCareerPath';
 import ProfileCourses from './ProfileCourses';
 import LearningPath from './LearningPath';
 import ProfileAnalytics from './ProfileAnalytics';
@@ -13,6 +14,7 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
 
   const tabs = [
     { id: 'skills', label: 'Skills', component: ProfileSkills },
+    { id: 'career-path', label: 'Career Path', component: ProfileCareerPath },
     { id: 'courses', label: 'Courses', component: ProfileCourses },
     { id: 'learning-path', label: 'Learning Path', component: LearningPath },
     { id: 'analytics', label: 'Analytics', component: ProfileAnalytics }

@@ -366,6 +366,10 @@ apiRouter.get('/companies/:id/employees/:employeeId/skills', authMiddleware, (re
   employeeController.getEmployeeSkills(req, res, next);
 });
 
+apiRouter.get('/companies/:id/employees/:employeeId/career-path-competencies', authMiddleware, (req, res, next) => {
+  employeeController.getEmployeeCareerPathCompetencies(req, res, next);
+});
+
 apiRouter.get('/companies/:id/employees/:employeeId/courses', authMiddleware, (req, res, next) => {
   employeeController.getEmployeeCourses(req, res, next);
 });

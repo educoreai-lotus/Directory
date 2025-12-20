@@ -5,6 +5,7 @@ const AddEmployeeUseCase = require('../application/AddEmployeeUseCase');
 const UpdateEmployeeUseCase = require('../application/UpdateEmployeeUseCase');
 const DeleteEmployeeUseCase = require('../application/DeleteEmployeeUseCase');
 const GetEmployeeSkillsUseCase = require('../application/GetEmployeeSkillsUseCase');
+const GetEmployeeCareerPathCompetenciesUseCase = require('../application/GetEmployeeCareerPathCompetenciesUseCase');
 const GetEmployeeCoursesUseCase = require('../application/GetEmployeeCoursesUseCase');
 const GetEmployeeLearningPathUseCase = require('../application/GetEmployeeLearningPathUseCase');
 const GetEmployeeDashboardUseCase = require('../application/GetEmployeeDashboardUseCase');
@@ -18,6 +19,7 @@ class EmployeeController {
     this.updateEmployeeUseCase = new UpdateEmployeeUseCase();
     this.deleteEmployeeUseCase = new DeleteEmployeeUseCase();
     this.getEmployeeSkillsUseCase = new GetEmployeeSkillsUseCase();
+    this.getEmployeeCareerPathCompetenciesUseCase = new GetEmployeeCareerPathCompetenciesUseCase();
     this.getEmployeeCoursesUseCase = new GetEmployeeCoursesUseCase();
     this.getEmployeeLearningPathUseCase = new GetEmployeeLearningPathUseCase();
     this.getEmployeeDashboardUseCase = new GetEmployeeDashboardUseCase();
@@ -231,6 +233,32 @@ class EmployeeController {
       
       res.status(statusCode).json({
         error: error.message || 'An error occurred while fetching employee skills'
+      });
+    }
+  }
+
+  /**
+   * Get employee career path competencies
+   * GET /api/v1/companies/:id/employees/:employeeId/career-path-competencies
+   */
+  async getEmployeeCareerPathCompetencies(req, res, next) {
+    try {
+      const { id: companyId, employeeId } = req.params;
+
+      const result = await this.getEmployeeCareerPathCompetenciesUseCase.execute(employeeId, companyId);
+
+      res.status(200).json({
+        success: true,
+        competencies: result.competencies
+      });
+    } catch (error) {
+      console.error('[EmployeeController] Error fetching career path competencies:', error);
+      const statusCode = error.message.includes('not found') ? 404 
+        : error.message.includes('approved') ? 403 
+        : 500;
+      
+      res.status(statusCode).json({
+        error: error.message || 'An error occurred while fetching career path competencies'
       });
     }
   }

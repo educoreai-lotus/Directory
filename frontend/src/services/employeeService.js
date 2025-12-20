@@ -49,6 +49,16 @@ export const getEmployee = async (companyId, employeeId) => {
   }
 };
 
+export const getEmployeeCareerPathCompetencies = async (companyId, employeeId) => {
+  try {
+    const response = await api.get(`/companies/${companyId}/employees/${employeeId}/career-path-competencies`);
+    return response.data;
+  } catch (error) {
+    console.error('Get career path competencies error:', error);
+    throw error;
+  }
+};
+
 export const getEmployeeSkills = async (companyId, employeeId) => {
   try {
     const response = await api.get(`/companies/${companyId}/employees/${employeeId}/skills`);

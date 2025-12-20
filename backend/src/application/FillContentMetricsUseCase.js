@@ -2,6 +2,8 @@
 // Handles requests from other microservices to fill response templates with Directory data
 
 const AIQueryGenerator = require('../infrastructure/AIQueryGenerator');
+const EmployeeCareerPathRepository = require('../infrastructure/EmployeeCareerPathRepository');
+const EmployeeRepository = require('../infrastructure/EmployeeRepository');
 const { Pool } = require('pg');
 const config = require('../config');
 
@@ -68,6 +70,16 @@ class FillContentMetricsUseCase {
       if (isLearningAnalyticsOnDemand) {
         console.log('[FillContentMetricsUseCase] 🔎 Detected LearningAnalytics on-demand request - using dedicated handler');
         return await this.handleLearningAnalyticsOnDemand(envelope);
+      }
+
+      // Check if this is a career path competencies update from Skills Engine
+      const isCareerPathUpdate = 
+        (requester === 'skills-engine-service' || requester === 'skills-engine') &&
+        payload?.action === 'Update user career path competencies';
+      
+      if (isCareerPathUpdate) {
+        console.log('[FillContentMetricsUseCase] 🎯 Detected career path competencies update from Skills Engine');
+        return await this.handleCareerPathCompetenciesUpdate(envelope);
       }
 
       // Step 1: Generate SQL query using AI
@@ -1174,6 +1186,125 @@ class FillContentMetricsUseCase {
     } catch (error) {
       console.error('[FillContentMetricsUseCase] Error handling batch request:', error);
       return this.buildEnvelopeWithEmptyResponse(envelope);
+    }
+  }
+
+  /**
+   * Handle career path competencies update from Skills Engine via Coordinator
+   * @param {Object} envelope - Full Coordinator request envelope
+   * @returns {Promise<Object>} Filled envelope with success response
+   */
+  async handleCareerPathCompetenciesUpdate(envelope) {
+    const { requester_service, payload, response: responseTemplate } = envelope;
+
+    try {
+      console.log('[FillContentMetricsUseCase] [CareerPath] Processing career path competencies update');
+      console.log('[FillContentMetricsUseCase] [CareerPath] Payload:', JSON.stringify(payload));
+
+      const userId = payload?.user_id;
+      const competencies = payload?.career_path_competencies || [];
+
+      if (!userId) {
+        console.error('[FillContentMetricsUseCase] [CareerPath] Missing user_id in payload');
+        return {
+          requester_service: requester_service,
+          payload: payload,
+          response: {
+            success: false,
+            error: 'Missing user_id in payload'
+          }
+        };
+      }
+
+      if (!Array.isArray(competencies) || competencies.length === 0) {
+        console.warn('[FillContentMetricsUseCase] [CareerPath] No competencies provided or empty array');
+        // Still return success, but with empty competencies
+        return {
+          requester_service: requester_service,
+          payload: payload,
+          response: {
+            success: true,
+            message: 'No competencies to update'
+          }
+        };
+      }
+
+      // Find employee by user_id (could be UUID or employee_id string)
+      const employeeRepository = new EmployeeRepository();
+      let employee = null;
+
+      // Try to find by UUID first
+      try {
+        employee = await employeeRepository.findById(userId);
+      } catch (err) {
+        console.log('[FillContentMetricsUseCase] [CareerPath] user_id is not a UUID, trying employee_id');
+      }
+
+      // If not found by UUID, try by employee_id string
+      if (!employee) {
+        // Get all companies and search for employee
+        const allEmployeesQuery = `
+          SELECT id, employee_id, company_id 
+          FROM employees 
+          WHERE employee_id = $1
+          LIMIT 1
+        `;
+        const result = await this.pool.query(allEmployeesQuery, [userId]);
+        if (result.rows.length > 0) {
+          employee = await employeeRepository.findById(result.rows[0].id);
+        }
+      }
+
+      if (!employee) {
+        console.error('[FillContentMetricsUseCase] [CareerPath] Employee not found for user_id:', userId);
+        return {
+          requester_service: requester_service,
+          payload: payload,
+          response: {
+            success: false,
+            error: `Employee not found for user_id: ${userId}`
+          }
+        };
+      }
+
+      console.log('[FillContentMetricsUseCase] [CareerPath] Found employee:', {
+        id: employee.id,
+        employee_id: employee.employee_id,
+        full_name: employee.full_name
+      });
+
+      // Save competencies to database
+      const careerPathRepository = new EmployeeCareerPathRepository();
+      const saved = await careerPathRepository.saveOrUpdate(employee.id, competencies);
+
+      console.log('[FillContentMetricsUseCase] [CareerPath] ✅ Successfully saved career path competencies:', {
+        employee_id: employee.id,
+        competencies_count: competencies.length,
+        saved_at: saved.updated_at
+      });
+
+      // Return success response
+      return {
+        requester_service: requester_service,
+        payload: payload,
+        response: {
+          success: true,
+          message: 'Career path competencies updated successfully',
+          employee_id: employee.id,
+          competencies_count: competencies.length
+        }
+      };
+
+    } catch (error) {
+      console.error('[FillContentMetricsUseCase] [CareerPath] Error:', error);
+      return {
+        requester_service: requester_service,
+        payload: payload,
+        response: {
+          success: false,
+          error: error.message || 'Failed to update career path competencies'
+        }
+      };
     }
   }
 }
