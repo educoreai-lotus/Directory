@@ -529,6 +529,21 @@ class FillContentMetricsUseCase {
           c.hr_contact_email AS primary_hr_contact_email,
           c.hr_contact_role AS primary_hr_contact_role,
           (
+            SELECT hr_emp.id
+            FROM employees hr_emp
+            WHERE hr_emp.company_id = c.id
+              AND LOWER(hr_emp.email) = LOWER(c.hr_contact_email)
+            LIMIT 1
+          ) AS hr_employee_id,
+          (
+            SELECT dm.id
+            FROM employees dm
+            JOIN employee_roles er ON dm.id = er.employee_id
+            WHERE dm.company_id = c.id
+              AND er.role_type = 'DECISION_MAKER'
+            LIMIT 1
+          ) AS approver_id,
+          (
             SELECT CONCAT(er.role_type, ', ', dm.email)
             FROM employees dm
             JOIN employee_roles er ON dm.id = er.employee_id
@@ -651,19 +666,22 @@ class FillContentMetricsUseCase {
         primary_hr_contact: {
           name: row.primary_hr_contact_name || '',
           email: row.primary_hr_contact_email || '',
-          phone: '' // Not stored in database
+          phone: '', // Not stored in database
+          hr_user_id: row.hr_employee_id || ''
         },
         approver: (() => {
           if (row.approver_info) {
             const parts = row.approver_info.split(', ');
             return {
               role: parts[0] || '',
-              email: parts[1] || ''
+              email: parts[1] || '',
+              approver_id: row.approver_id || ''
             };
           }
           return {
             role: '',
-            email: ''
+            email: '',
+            approver_id: row.approver_id || ''
           };
         })(),
         kpis: (() => {
@@ -743,6 +761,21 @@ class FillContentMetricsUseCase {
           c.hr_contact_name AS primary_hr_contact_name,
           c.hr_contact_email AS primary_hr_contact_email,
           c.hr_contact_role AS primary_hr_contact_role,
+          (
+            SELECT hr_emp.id
+            FROM employees hr_emp
+            WHERE hr_emp.company_id = c.id
+              AND LOWER(hr_emp.email) = LOWER(c.hr_contact_email)
+            LIMIT 1
+          ) AS hr_employee_id,
+          (
+            SELECT dm.id
+            FROM employees dm
+            JOIN employee_roles er ON dm.id = er.employee_id
+            WHERE dm.company_id = c.id
+              AND er.role_type = 'DECISION_MAKER'
+            LIMIT 1
+          ) AS approver_id,
           (
             SELECT CONCAT(er.role_type, ', ', dm.email)
             FROM employees dm
@@ -907,11 +940,11 @@ class FillContentMetricsUseCase {
           primary_hr_contact: {
             name: row.primary_hr_contact_name || '',
             email: row.primary_hr_contact_email || '',
-            hr_user_id: '' // Not stored in database, return empty
+            hr_user_id: row.hr_employee_id || ''
           },
           approver: {
             ...approver,
-            approver_id: '' // Not stored in database, return empty
+            approver_id: row.approver_id || ''
           },
           kpis: kpis,
           max_test_attempts: parseInt(row.max_test_attempts || 0, 10),
