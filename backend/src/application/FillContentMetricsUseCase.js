@@ -582,7 +582,7 @@ class FillContentMetricsUseCase {
                               SELECT json_agg(emp_obj ORDER BY emp_obj.name)
                               FROM (
                                 SELECT
-                                  e.employee_id,
+                                  e.id AS employee_id,
                                   e.full_name AS name,
                                   -- Simplified role_type: trainer vs regular based on roles
                                   CASE
@@ -797,7 +797,7 @@ class FillContentMetricsUseCase {
                               SELECT json_agg(emp_obj ORDER BY emp_obj.name)
                               FROM (
                                 SELECT
-                                  e.employee_id,
+                                  e.id AS employee_id,
                                   e.full_name AS name,
                                   -- Simplified role_type: trainer vs regular based on roles
                                   CASE
