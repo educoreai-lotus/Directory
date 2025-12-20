@@ -283,7 +283,7 @@ class FillContentMetricsUseCase {
         mapped[templateKey] = value;
       } else if (template[templateKey] && typeof template[templateKey] === 'object' && !Array.isArray(template[templateKey])) {
         // Nested object - recurse, ensure we pass a valid object
-        mapped[0] = this.isPlainObject(template[templateKey])
+        mapped[templateKey] = this.isPlainObject(template[templateKey])
           ? this.mapRowToObject(row, template[templateKey])
           : template[templateKey];
       } else if (Array.isArray(template[templateKey])) {
@@ -677,9 +677,11 @@ class FillContentMetricsUseCase {
       let filledResponse = this.mapResultsToTemplate([row], responseTemplate, payload);
 
       // Override with specific field mappings for Learning Analytics
+      // Remove template-level fields that shouldn't be in company object
+      const { version: _, companies: __, users: ___, ...companyFields } = filledResponse;
+      
       filledResponse = {
-        ...filledResponse,
-        version: responseTemplate.version || filledResponse.version || '',
+        ...companyFields, // Include only company-level fields (exclude root-level arrays)
         company_id: row.company_id || filledResponse.company_id || '',
         company_name: row.company_name || filledResponse.company_name || '',
         industry: row.industry || filledResponse.industry || '',
@@ -711,15 +713,29 @@ class FillContentMetricsUseCase {
         })(),
         kpis: (() => {
           try {
-            if (row.kpis) {
+            if (row.kpis && row.kpis.trim() !== '' && row.kpis !== 'Not specified') {
               if (typeof row.kpis === 'string') {
-                return JSON.parse(row.kpis);
+                // Try JSON first
+                try {
+                  return JSON.parse(row.kpis);
+                } catch (jsonErr) {
+                  // If not JSON, check template format
+                  // If template expects string, return string; otherwise convert semicolon-separated to array
+                  const templateKpis = responseTemplate.kpis;
+                  if (typeof templateKpis === 'string' || (filledResponse.kpis && typeof filledResponse.kpis === 'string')) {
+                    return row.kpis; // Keep as string if template expects string
+                  } else {
+                    // Convert semicolon-separated string to array
+                    const kpisArray = row.kpis.split(';').map(k => k.trim()).filter(k => k.length > 0);
+                    return kpisArray.length > 0 ? kpisArray : (filledResponse.kpis || (responseTemplate.kpis !== undefined ? responseTemplate.kpis : {}));
+                  }
+                }
               }
               return row.kpis;
             }
-            return filledResponse.kpis || {};
+            return filledResponse.kpis || (responseTemplate.kpis !== undefined ? responseTemplate.kpis : {});
           } catch (e) {
-            return filledResponse.kpis || {};
+            return filledResponse.kpis || (responseTemplate.kpis !== undefined ? responseTemplate.kpis : {});
           }
         })(),
         max_test_attempts: parseInt(row.max_test_attempts || filledResponse.max_test_attempts || 0, 10),
@@ -947,16 +963,37 @@ class FillContentMetricsUseCase {
           };
         }
 
-        // Parse KPIs
-        let kpis = {};
+        // Parse KPIs - handle both JSON and semicolon-separated strings
+        // Default to empty object if template expects object, otherwise use template default
+        let kpis = (responseTemplate.kpis !== undefined && typeof responseTemplate.kpis === 'object' && !Array.isArray(responseTemplate.kpis)) 
+          ? {} 
+          : (baseResponse.kpis !== undefined ? baseResponse.kpis : (responseTemplate.kpis !== undefined ? responseTemplate.kpis : {}));
+        
         try {
-          if (typeof row.kpis === 'string') {
-            kpis = JSON.parse(row.kpis);
-          } else if (row.kpis) {
-            kpis = row.kpis;
+          if (row.kpis && row.kpis.trim() !== '' && row.kpis !== 'Not specified') {
+            if (typeof row.kpis === 'string') {
+              // Try JSON first
+              try {
+                kpis = JSON.parse(row.kpis);
+              } catch (jsonErr) {
+                // If not JSON, check if template expects string or object/array
+                if (typeof responseTemplate.kpis === 'string' || (baseResponse.kpis && typeof baseResponse.kpis === 'string')) {
+                  kpis = row.kpis; // Keep as string if template expects string
+                } else {
+                  // Convert semicolon-separated string to array
+                  const kpisArray = row.kpis.split(';').map(k => k.trim()).filter(k => k.length > 0);
+                  if (kpisArray.length > 0) {
+                    kpis = kpisArray;
+                  }
+                }
+              }
+            } else {
+              kpis = row.kpis;
+            }
           }
         } catch (e) {
           console.warn('[FillContentMetricsUseCase] [LearningAnalytics] Error parsing KPIs:', e);
+          // Keep template default on error
         }
 
         // Parse hierarchy
@@ -972,9 +1009,11 @@ class FillContentMetricsUseCase {
         }
 
         // Merge template-based response with specific Learning Analytics fields
+        // Remove template-level fields that shouldn't be in each company object
+        const { version: _, companies: __, users: ___, ...companyFields } = baseResponse;
+        
         return {
-          ...baseResponse, // Include all fields from responseTemplate
-          version: responseTemplate.version || baseResponse.version || '',
+          ...companyFields, // Include only company-level fields from responseTemplate (exclude root-level arrays)
           company_id: row.company_id || baseResponse.company_id || '',
           company_name: row.company_name || baseResponse.company_name || '',
           industry: row.industry || baseResponse.industry || '',
@@ -991,7 +1030,14 @@ class FillContentMetricsUseCase {
             ...approver,
             approver_id: row.approver_id || baseResponse.approver?.approver_id || ''
           },
-          kpis: Object.keys(kpis).length > 0 ? kpis : (baseResponse.kpis || {}),
+          kpis: (() => {
+            // If kpis is a string or array, return it directly
+            if (typeof kpis === 'string' || Array.isArray(kpis)) {
+              return kpis;
+            }
+            // For objects, return empty object if no keys (template default)
+            return kpis;
+          })(),
           max_test_attempts: parseInt(row.max_test_attempts || baseResponse.max_test_attempts || 0, 10),
           exercises_limit: parseInt(row.exercises_limit || baseResponse.exercises_limit || 0, 10),
           hierarchy: hierarchy.length > 0 ? hierarchy : (baseResponse.hierarchy || [])
