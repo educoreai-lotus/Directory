@@ -95,6 +95,7 @@
           "bio": "text",
           "email": "string",
           "status": "string",
+          "pdf_data": "jsonb",
           "full_name": "string",
           "company_id": "uuid",
           "created_at": "timestamp",
@@ -102,10 +103,9 @@
           "updated_at": "timestamp",
           "employee_id": "string",
           "github_data": "jsonb",
+          "manual_data": "jsonb",
           "linkedin_url": "string",
           "linkedin_data": "jsonb",
-          "pdf_data": "jsonb",
-          "manual_data": "jsonb",
           "password_hash": "string",
           "profile_status": "string",
           "profile_photo_url": "string",
@@ -259,6 +259,15 @@
           "processed_at": "timestamp",
           "relevance_score": "numeric"
         }
+      },
+      {
+        "name": "employee_career_path_competencies",
+        "schema": {
+          "id": "uuid",
+          "employee_id": "uuid",
+          "competencies": "jsonb",
+          "updated_at": "timestamp"
+        }
       }
     ],
     "migrations": [
@@ -285,7 +294,8 @@
     "chatbot integration",
     "OAuth integration",
     "profile approvals",
-    "trainer management"
+    "trainer management",
+    "career path competencies"
   ],
   "dependencies": [
     "skills-engine",
@@ -295,4 +305,3 @@
     "coordinator"
   ]
 }
-

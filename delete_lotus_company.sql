@@ -61,6 +61,20 @@ BEGIN
     );
     RAISE NOTICE 'Deleted trainer settings';
 
+    -- Step 5.5: Delete employee skills (references employee_id)
+    DELETE FROM employee_skills 
+    WHERE employee_id IN (
+        SELECT id FROM employees WHERE company_id = _company_id
+    );
+    RAISE NOTICE 'Deleted employee skills';
+
+    -- Step 5.6: Delete employee career path competencies (references employee_id)
+    DELETE FROM employee_career_path_competencies 
+    WHERE employee_id IN (
+        SELECT id FROM employees WHERE company_id = _company_id
+    );
+    RAISE NOTICE 'Deleted employee career path competencies';
+
     -- Step 6: Delete employee managers (references employee_id and manager_id)
     DELETE FROM employee_managers 
     WHERE employee_id IN (
