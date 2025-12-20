@@ -129,9 +129,19 @@ class EmployeeProfileApprovalController {
 
       console.log(`[EmployeeProfileApprovalController] ✅ Profile approved for employee: ${employeeUuid}`);
 
+      // Send response FIRST to ensure frontend gets confirmation
+      // Then make Skills Engine call asynchronously (non-blocking)
+      res.status(200).json({
+        success: true,
+        approval: updatedApproval,
+        message: 'Profile approved successfully'
+      });
+
       // After approval, send skills data to Skills Engine via Coordinator
       // This is non-blocking; errors are logged but won't fail the approval
-      try {
+      // Run asynchronously after response is sent
+      setImmediate(async () => {
+        try {
         const employee = await this.employeeRepository.findById(employeeUuid);
         const company = await this.companyRepository.findById(approvalCompanyId);
 
@@ -247,14 +257,9 @@ class EmployeeProfileApprovalController {
             hasCompany: !!company
           });
         }
-      } catch (skillsError) {
-        console.warn('[EmployeeProfileApprovalController] ⚠️ Skills Engine call after approval failed (non-blocking):', skillsError.message);
-      }
-
-      return res.status(200).json({
-        success: true,
-        approval: updatedApproval,
-        message: 'Profile approved successfully'
+        } catch (skillsError) {
+          console.warn('[EmployeeProfileApprovalController] ⚠️ Skills Engine call after approval failed (non-blocking):', skillsError.message);
+        }
       });
     } catch (error) {
       console.error('[EmployeeProfileApprovalController] Error approving profile:', error);
