@@ -1,5 +1,5 @@
 company_name,industry,logo_url,approval_policy,kpis,passing_grade,max_attempts,exercises_limited,num_of_exercises,learning_path_approval,employee_id,full_name,email,role_type,department_id,department_name,team_id,team_name,manager_id,password,current_role_in_company,target_role_in_company,preferred_language,status,ai_enabled,public_publish_enable
-LOTUS_TECHHUB,High-Tech / Technology,https://portlandtrust.org.il/wp-content/uploads/2023/03/LOTUS-new-logo.png,manual,Innovation Rate;Team Productivity;Customer Satisfaction;Revenue Growth,75,3,true,15,manual,,,,,,,,,,,,,,
+LOTUS_TECHHUB,High-Tech / Technology,https://portlandtrust.org.il/wp-content/uploads/2023/03/LOTUS-new-logo.png,auto,Innovation Rate;Team Productivity;Customer Satisfaction;Revenue Growth,75,3,true,15,auto,,,,,,,,,,,,,,
 ,,,,,,,,,,HR001,Rola Hassoun,rola.hassoun@lotustechhub.com,REGULAR_EMPLOYEE + DEPARTMENT_MANAGER,DEPT004,Human Resources,TEAM004,HR Management,,SecurePass123,Human Resources,Human Resources,en,active,false,false
 ,,,,,,,,,,EMP001,Maysa Halabi,maysa.halabi@lotustechhub.com,REGULAR_EMPLOYEE,DEPT001,Executive,TEAM001,Leadership,,SecurePass123,Founder & CEO,Founder & CEO,en,active,false,false
 ,,,,,,,,,,EMP002,Elisheva Laufer,elisheva.laufer@lotustechhub.com,TRAINER + DEPARTMENT_MANAGER,DEPT002,Engineering,TEAM002,Technology Strategy,EMP001,SecurePass123,CTO,CTO,en,active,true,true
@@ -13,6 +13,6 @@ LOTUS_TECHHUB,High-Tech / Technology,https://portlandtrust.org.il/wp-content/upl
 ,,,,,,,,,,EMP010,Atheer Shanan,atheer.shanan@lotustechhub.com,REGULAR_EMPLOYEE,DEPT002,Engineering,TEAM008,Quality Assurance,EMP002,SecurePass123,QA Engineer,Senior QA Engineer,en,active,false,false
 ,,,,,,,,,,EMP011,Leliea Samaan,leliea.samaan@lotustechhub.com,REGULAR_EMPLOYEE,DEPT002,Engineering,TEAM008,Quality Assurance,EMP002,SecurePass123,QA Engineer,Senior QA Engineer,en,active,false,false
 ,,,,,,,,,,EMP012,Wijdan Eslim,wijdan.eslim@lotustechhub.com,REGULAR_EMPLOYEE,DEPT001,Executive,TEAM001,Leadership,EMP001,SecurePass123,Executive Assistant,Executive Coordinator,en,active,false,false
-,,,,,,,,,,EMP013,Jasmine Mograby,jasmine.mograby@lotustechhub.com,TRAINER + DEPARTMENT_MANAGER + DECISION_MAKER,DEPT003,Operations,TEAM003,Operations Management,EMP001,SecurePass123,JavaScript Developer,Fullstack Developer,en,active,true,true
+,,,,,,,,,,EMP013,Jasmine Mograby,jasmine.mograby@lotustechhub.com,TRAINER + DEPARTMENT_MANAGER,DEPT003,Operations,TEAM003,Operations Management,EMP001,SecurePass123,JavaScript Developer,Fullstack Developer,en,active,true,true
 ,,,,,,,,,,EMP014,Sabeel Hammod,sabeel.hammod@lotustechhub.com,REGULAR_EMPLOYEE,DEPT004,Human Resources,TEAM009,Training & Development,HR001,SecurePass123,Training Coordinator,Training Specialist,en,active,false,false
 ,,,,,,,,,,EMP015,Maya Levi,maya.levi@lotustechhub.com,TRAINER + REGULAR_EMPLOYEE,DEPT002,Engineering,TEAM005,Development,EMP002,SecurePass123,Software Engineer,Senior Software Engineer,en,active,true,true
