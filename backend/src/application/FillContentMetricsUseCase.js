@@ -73,12 +73,20 @@ class FillContentMetricsUseCase {
       }
 
       // Check if this is a career path competencies update from Skills Engine
-      const isCareerPathUpdate = 
-        (requester === 'skills-engine-service' || requester === 'skills-engine') &&
-        payload?.action === 'Update user career path competencies';
+      // Match various possible requester service names and action formats
+      const requesterLower = requester.toLowerCase();
+      const isSkillsEngine = requesterLower.includes('skills') && requesterLower.includes('engine');
+      const action = payload?.action || '';
+      const actionLower = action.toLowerCase();
+      const isCareerPathAction = actionLower.includes('career') && actionLower.includes('path') && 
+                                 (actionLower.includes('competenc') || actionLower.includes('update'));
+      
+      const isCareerPathUpdate = isSkillsEngine && isCareerPathAction;
       
       if (isCareerPathUpdate) {
         console.log('[FillContentMetricsUseCase] 🎯 Detected career path competencies update from Skills Engine');
+        console.log('[FillContentMetricsUseCase] Requester:', requester);
+        console.log('[FillContentMetricsUseCase] Action:', action);
         return await this.handleCareerPathCompetenciesUpdate(envelope);
       }
 
@@ -1277,11 +1285,23 @@ class FillContentMetricsUseCase {
     const { requester_service, payload, response: responseTemplate } = envelope;
 
     try {
-      console.log('[FillContentMetricsUseCase] [CareerPath] Processing career path competencies update');
-      console.log('[FillContentMetricsUseCase] [CareerPath] Payload:', JSON.stringify(payload));
+      console.log('[FillContentMetricsUseCase] [CareerPath] ========== PROCESSING CAREER PATH UPDATE ==========');
+      console.log('[FillContentMetricsUseCase] [CareerPath] Full envelope:', JSON.stringify(envelope, null, 2));
+      console.log('[FillContentMetricsUseCase] [CareerPath] Payload:', JSON.stringify(payload, null, 2));
+      console.log('[FillContentMetricsUseCase] [CareerPath] Payload keys:', Object.keys(payload || {}));
 
-      const userId = payload?.user_id;
-      const competencies = payload?.career_path_competencies || [];
+      // Try multiple possible field names for user_id
+      const userId = payload?.user_id || payload?.userId || payload?.employee_id || payload?.employeeId;
+      // Try multiple possible field names for competencies
+      const competencies = payload?.career_path_competencies || 
+                          payload?.careerPathCompetencies || 
+                          payload?.competencies || 
+                          [];
+      
+      console.log('[FillContentMetricsUseCase] [CareerPath] Extracted userId:', userId);
+      console.log('[FillContentMetricsUseCase] [CareerPath] Extracted competencies:', JSON.stringify(competencies, null, 2));
+      console.log('[FillContentMetricsUseCase] [CareerPath] Competencies type:', Array.isArray(competencies) ? 'array' : typeof competencies);
+      console.log('[FillContentMetricsUseCase] [CareerPath] Competencies length:', Array.isArray(competencies) ? competencies.length : 'N/A');
 
       if (!userId) {
         console.error('[FillContentMetricsUseCase] [CareerPath] Missing user_id in payload');
