@@ -16,6 +16,7 @@ class EmployeeCareerPathRepository {
       ssl: config.databaseSsl ? { rejectUnauthorized: false } : false,
       connectionTimeoutMillis: 10000,
       idleTimeoutMillis: 30000,
+      max: 10  // Limit concurrent connections to prevent pool exhaustion
     });
   }
 
