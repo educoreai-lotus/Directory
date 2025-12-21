@@ -219,57 +219,30 @@ class EmployeeSkillsRepository {
         const existingComp = existingMap.get(compId);
         
         if (existingComp) {
-          // Merge existing with new data
-          const merged = { ...existingComp };
+          // COMPLETE OVERRIDE: Replace existing competency completely with new data from Skills Engine
+          // This ensures we have the latest structure, new skills, and updated data
+          const overridden = { ...newComp };
           
-          // Update level if new one is not undefined
-          const newLevel = newComp.level;
-          if (newLevel && String(newLevel).toLowerCase() !== 'undefined') {
-            merged.level = newLevel;
-            console.log('[EmployeeSkillsRepository] Updating level for competency:', compId, '->', newLevel);
-          }
-          
-          // Update other fields that might have changed
-          if (newComp.competencyName) merged.competencyName = newComp.competencyName;
-          if (newComp.name) merged.name = newComp.name;
-          if (newComp.coverage !== undefined) merged.coverage = newComp.coverage;
-          
-          // Recursively merge children
+          // Recursively override children (complete replacement, not merge)
           if (newComp.children && Array.isArray(newComp.children)) {
-            merged.children = mergeAndUpdateCompetencies(
-              existingComp.children || existingComp.nested_competencies || [],
-              newComp.children
-            );
+            overridden.children = mergeAndUpdateCompetencies([], newComp.children);
           } else if (newComp.nested_competencies && Array.isArray(newComp.nested_competencies)) {
-            merged.nested_competencies = mergeAndUpdateCompetencies(
-              existingComp.children || existingComp.nested_competencies || [],
-              newComp.nested_competencies
-            );
-          } else if (existingComp.children || existingComp.nested_competencies) {
-            // Keep existing children if new one doesn't have children
-            merged.children = existingComp.children || existingComp.nested_competencies;
+            overridden.nested_competencies = mergeAndUpdateCompetencies([], newComp.nested_competencies);
           }
           
-          // Merge skills if present and propagate level to skills
-          if (newComp.skills && Array.isArray(newComp.skills)) {
-            // Propagate competency level to skills if level is not undefined
-            merged.skills = newComp.skills.map(skill => ({
+          // Propagate competency level to skills if present
+          if (overridden.skills && Array.isArray(overridden.skills)) {
+            const compLevel = overridden.level;
+            overridden.skills = overridden.skills.map(skill => ({
               ...skill,
               level: skill.level && String(skill.level).toLowerCase() !== 'undefined'
                 ? skill.level
-                : (merged.level && String(merged.level).toLowerCase() !== 'undefined' ? merged.level : undefined)
-            }));
-          } else if (existingComp.skills && Array.isArray(existingComp.skills)) {
-            // Propagate competency level to existing skills if level was updated
-            merged.skills = existingComp.skills.map(skill => ({
-              ...skill,
-              level: skill.level && String(skill.level).toLowerCase() !== 'undefined'
-                ? skill.level
-                : (merged.level && String(merged.level).toLowerCase() !== 'undefined' ? merged.level : undefined)
+                : (compLevel && String(compLevel).toLowerCase() !== 'undefined' ? compLevel : undefined)
             }));
           }
           
-          updatedComps.push(merged);
+          console.log('[EmployeeSkillsRepository] Overriding competency:', compId, '| Name:', overridden.competencyName || overridden.name, '| Level:', overridden.level);
+          updatedComps.push(overridden);
         } else {
           // New competency - add it
           const newCompCopy = { ...newComp };
@@ -342,6 +315,19 @@ class EmployeeSkillsRepository {
     updatedCompetencies = propagateLevelsToSkills(updatedCompetencies);
     
     console.log('[EmployeeSkillsRepository] Merged competencies count:', updatedCompetencies.length);
+    
+    // Log summary of update operation
+    const newCompetenciesCount = newCompetencies.length;
+    const existingCompetenciesCount = existingSkills.competencies?.length || 0;
+    const finalCompetenciesCount = updatedCompetencies.length;
+    
+    console.log('[EmployeeSkillsRepository] Update summary:', {
+      new_from_skills_engine: newCompetenciesCount,
+      existing_in_database: existingCompetenciesCount,
+      final_after_override: finalCompetenciesCount,
+      added: finalCompetenciesCount - existingCompetenciesCount,
+      overridden: Math.min(newCompetenciesCount, existingCompetenciesCount)
+    });
     
     // Log competencies with levels and their skills
     const competenciesWithLevels = updatedCompetencies.filter(comp => {
