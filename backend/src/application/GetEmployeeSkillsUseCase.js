@@ -39,48 +39,53 @@ class GetEmployeeSkillsUseCase {
       }
 
       // Helper function to transform Skills Engine response to component format
+      // Always applies transformation to ensure levels are propagated to skills
       const transformSkillsResponse = (skillsData) => {
         if (!skillsData) return null;
         
-        // If competencies is already in the expected format, return as-is
+        // If competencies is already in the expected format, still transform to propagate levels
         if (Array.isArray(skillsData.competencies)) {
-          // Check if it needs transformation (has competencyName instead of name)
-          const needsTransform = skillsData.competencies.some(c => c.competencyName && !c.name);
-          
-          if (needsTransform) {
-            // Transform Skills Engine format to component format
-            const transformNode = (node) => {
-              const transformed = {
-                name: node.competencyName || node.name || 'Unknown',
-                id: node.competencyId || node.id,
-                coverage: node.coverage,
-                level: node.level,
-                verified: node.verified
-              };
-              
-              // Transform children if they exist
-              if (node.children && Array.isArray(node.children) && node.children.length > 0) {
-                transformed.nested_competencies = node.children.map(transformNode);
-              } else if (node.nested_competencies && Array.isArray(node.nested_competencies)) {
-                transformed.nested_competencies = node.nested_competencies.map(transformNode);
-              }
-              
-              // Transform skills if they exist
-              if (node.skills && Array.isArray(node.skills)) {
-                transformed.skills = node.skills.map(skill => ({
-                  name: skill.name || skill.skillName || 'Unknown',
-                  verified: skill.verified === true || skill.verified === 'verified' || String(skill.verified).toLowerCase() === 'true'
-                }));
-              }
-              
-              return transformed;
+          // Transform Skills Engine format to component format
+          // This ensures levels are propagated from competencies to skills
+          const transformNode = (node, parentLevel = null) => {
+            // Use node's level if available, otherwise use parent's level
+            const nodeLevel = node.level && String(node.level).toLowerCase() !== 'undefined' 
+              ? node.level 
+              : (parentLevel && String(parentLevel).toLowerCase() !== 'undefined' ? parentLevel : null);
+            
+            const transformed = {
+              name: node.competencyName || node.name || 'Unknown',
+              id: node.competencyId || node.id,
+              coverage: node.coverage,
+              level: nodeLevel,
+              verified: node.verified
             };
             
-            return {
-              ...skillsData,
-              competencies: skillsData.competencies.map(transformNode)
-            };
-          }
+            // Transform children if they exist (pass level down)
+            if (node.children && Array.isArray(node.children) && node.children.length > 0) {
+              transformed.nested_competencies = node.children.map(child => transformNode(child, nodeLevel));
+            } else if (node.nested_competencies && Array.isArray(node.nested_competencies)) {
+              transformed.nested_competencies = node.nested_competencies.map(child => transformNode(child, nodeLevel));
+            }
+            
+            // Transform skills if they exist (propagate competency level to skills)
+            if (node.skills && Array.isArray(node.skills)) {
+              transformed.skills = node.skills.map(skill => ({
+                name: skill.name || skill.skillName || 'Unknown',
+                level: skill.level && String(skill.level).toLowerCase() !== 'undefined' 
+                  ? skill.level 
+                  : (nodeLevel && String(nodeLevel).toLowerCase() !== 'undefined' ? nodeLevel : undefined),
+                verified: skill.verified === true || skill.verified === 'verified' || String(skill.verified).toLowerCase() === 'true'
+              }));
+            }
+            
+            return transformed;
+          };
+          
+          return {
+            ...skillsData,
+            competencies: skillsData.competencies.map(transformNode)
+          };
         }
         
         return skillsData;

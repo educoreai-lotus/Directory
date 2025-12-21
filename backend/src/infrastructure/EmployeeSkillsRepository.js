@@ -100,8 +100,8 @@ class EmployeeSkillsRepository {
   }
 
   /**
-   * Update skill levels for competencies that have non-undefined levels
-   * Recursively updates competencies in the JSONB structure
+   * Update skill levels and merge new competencies from Skills Engine
+   * Recursively updates competencies in the JSONB structure and adds new ones
    * @param {string} employeeId - Employee UUID
    * @param {Array} newCompetencies - Array of competencies with updated levels from Skills Engine
    * @param {Object} client - Optional database client for transaction
@@ -113,59 +113,195 @@ class EmployeeSkillsRepository {
     
     if (!existingSkills || !existingSkills.competencies) {
       console.warn('[EmployeeSkillsRepository] No existing skills found for employee:', employeeId);
+      // If no existing skills, save the new competencies as the initial skills
+      if (Array.isArray(newCompetencies) && newCompetencies.length > 0) {
+        console.log('[EmployeeSkillsRepository] Saving new competencies as initial skills');
+        const query = `
+          INSERT INTO employee_skills (employee_id, competencies, updated_at)
+          VALUES ($1, $2, CURRENT_TIMESTAMP)
+          ON CONFLICT (employee_id)
+          DO UPDATE SET
+            competencies = EXCLUDED.competencies,
+            updated_at = CURRENT_TIMESTAMP
+          RETURNING *
+        `;
+        const values = [employeeId, JSON.stringify(newCompetencies)];
+        const queryRunner = client || this.pool;
+        const result = await queryRunner.query(query, values);
+        const row = result.rows[0];
+        if (row && typeof row.competencies === 'string') {
+          row.competencies = JSON.parse(row.competencies);
+        }
+        return row;
+      }
       return null;
     }
 
-    // Create a map of competencyId -> level from new competencies
-    const levelMap = new Map();
+    // Build a map of competencyId -> full competency data from new competencies
+    const newCompetencyMap = new Map();
     
-    // Recursively extract competencyId and level from new competencies
-    const extractLevels = (competencies) => {
+    // Recursively build map of all competencies from new data
+    const buildCompetencyMap = (competencies, parentPath = []) => {
       if (!Array.isArray(competencies)) return;
       
       for (const comp of competencies) {
         const competencyId = comp.competencyId || comp.competency_id;
-        const level = comp.level;
-        
-        if (competencyId && level && String(level).toLowerCase() !== 'undefined') {
-          levelMap.set(competencyId, level);
-        }
-        
-        // Recursively process children
-        if (comp.children && Array.isArray(comp.children)) {
-          extractLevels(comp.children);
+        if (competencyId) {
+          // Store the full competency data (including structure)
+          newCompetencyMap.set(competencyId, {
+            ...comp,
+            _path: parentPath
+          });
+          
+          // Recursively process children
+          if (comp.children && Array.isArray(comp.children)) {
+            buildCompetencyMap(comp.children, [...parentPath, competencyId]);
+          }
+          if (comp.nested_competencies && Array.isArray(comp.nested_competencies)) {
+            buildCompetencyMap(comp.nested_competencies, [...parentPath, competencyId]);
+          }
         }
       }
     };
     
-    extractLevels(newCompetencies);
+    buildCompetencyMap(newCompetencies);
     
-    console.log('[EmployeeSkillsRepository] Found', levelMap.size, 'competencies with verified levels to update');
+    console.log('[EmployeeSkillsRepository] Found', newCompetencyMap.size, 'competencies in new data (including new ones)');
+    console.log('[EmployeeSkillsRepository] Existing competencies count:', existingSkills.competencies?.length || 0);
     
-    // Recursively update existing competencies
-    const updateCompetencyLevels = (competencies) => {
-      if (!Array.isArray(competencies)) return competencies;
+    // Helper to find a competency by ID in existing structure
+    const findCompetencyById = (competencies, targetId) => {
+      if (!Array.isArray(competencies)) return null;
       
-      return competencies.map(comp => {
-        const competencyId = comp.competencyId || comp.competency_id;
-        const updatedComp = { ...comp };
-        
-        // If this competency has a verified level in the map, update it
-        if (competencyId && levelMap.has(competencyId)) {
-          updatedComp.level = levelMap.get(competencyId);
-          console.log('[EmployeeSkillsRepository] Updating level for competency:', competencyId, '->', updatedComp.level);
+      for (const comp of competencies) {
+        const compId = comp.competencyId || comp.competency_id;
+        if (compId === targetId) {
+          return comp;
         }
         
-        // Recursively update children
+        // Check children
         if (comp.children && Array.isArray(comp.children)) {
-          updatedComp.children = updateCompetencyLevels(comp.children);
+          const found = findCompetencyById(comp.children, targetId);
+          if (found) return found;
         }
-        
-        return updatedComp;
-      });
+        if (comp.nested_competencies && Array.isArray(comp.nested_competencies)) {
+          const found = findCompetencyById(comp.nested_competencies, targetId);
+          if (found) return found;
+        }
+      }
+      return null;
     };
     
-    const updatedCompetencies = updateCompetencyLevels(existingSkills.competencies);
+    // Recursively merge and update competencies
+    const mergeAndUpdateCompetencies = (existingComps, newComps) => {
+      if (!Array.isArray(existingComps)) existingComps = [];
+      if (!Array.isArray(newComps)) newComps = [];
+      
+      // Create a map of existing competencies by ID
+      const existingMap = new Map();
+      existingComps.forEach(comp => {
+        const compId = comp.competencyId || comp.competency_id;
+        if (compId) {
+          existingMap.set(compId, comp);
+        }
+      });
+      
+      // Process each new competency
+      const updatedComps = [];
+      const processedIds = new Set();
+      
+      // First, update existing competencies and merge their children
+      for (const newComp of newComps) {
+        const compId = newComp.competencyId || newComp.competency_id;
+        if (!compId) continue;
+        
+        processedIds.add(compId);
+        const existingComp = existingMap.get(compId);
+        
+        if (existingComp) {
+          // Merge existing with new data
+          const merged = { ...existingComp };
+          
+          // Update level if new one is not undefined
+          const newLevel = newComp.level;
+          if (newLevel && String(newLevel).toLowerCase() !== 'undefined') {
+            merged.level = newLevel;
+            console.log('[EmployeeSkillsRepository] Updating level for competency:', compId, '->', newLevel);
+          }
+          
+          // Update other fields that might have changed
+          if (newComp.competencyName) merged.competencyName = newComp.competencyName;
+          if (newComp.name) merged.name = newComp.name;
+          if (newComp.coverage !== undefined) merged.coverage = newComp.coverage;
+          
+          // Recursively merge children
+          if (newComp.children && Array.isArray(newComp.children)) {
+            merged.children = mergeAndUpdateCompetencies(
+              existingComp.children || existingComp.nested_competencies || [],
+              newComp.children
+            );
+          } else if (newComp.nested_competencies && Array.isArray(newComp.nested_competencies)) {
+            merged.nested_competencies = mergeAndUpdateCompetencies(
+              existingComp.children || existingComp.nested_competencies || [],
+              newComp.nested_competencies
+            );
+          } else if (existingComp.children || existingComp.nested_competencies) {
+            // Keep existing children if new one doesn't have children
+            merged.children = existingComp.children || existingComp.nested_competencies;
+          }
+          
+          // Merge skills if present
+          if (newComp.skills && Array.isArray(newComp.skills)) {
+            merged.skills = newComp.skills;
+          } else if (existingComp.skills && Array.isArray(existingComp.skills)) {
+            merged.skills = existingComp.skills;
+          }
+          
+          updatedComps.push(merged);
+        } else {
+          // New competency - add it
+          const newCompCopy = { ...newComp };
+          // Ensure children are properly structured
+          if (newCompCopy.children && Array.isArray(newCompCopy.children)) {
+            newCompCopy.children = mergeAndUpdateCompetencies([], newCompCopy.children);
+          }
+          if (newCompCopy.nested_competencies && Array.isArray(newCompCopy.nested_competencies)) {
+            newCompCopy.nested_competencies = mergeAndUpdateCompetencies([], newCompCopy.nested_competencies);
+          }
+          updatedComps.push(newCompCopy);
+          console.log('[EmployeeSkillsRepository] Adding new competency:', compId, newCompCopy.competencyName || newCompCopy.name);
+        }
+      }
+      
+      // Add existing competencies that weren't in new data (preserve them)
+      for (const existingComp of existingComps) {
+        const compId = existingComp.competencyId || existingComp.competency_id;
+        if (compId && !processedIds.has(compId)) {
+          updatedComps.push(existingComp);
+        }
+      }
+      
+      return updatedComps;
+    };
+    
+    // Merge new competencies with existing ones
+    const updatedCompetencies = mergeAndUpdateCompetencies(existingSkills.competencies, newCompetencies);
+    
+    console.log('[EmployeeSkillsRepository] Merged competencies count:', updatedCompetencies.length);
+    
+    // Log a sample of updated competencies to verify levels are preserved
+    if (updatedCompetencies.length > 0) {
+      const sampleComp = updatedCompetencies[0];
+      const sampleId = sampleComp.competencyId || sampleComp.competency_id;
+      const sampleLevel = sampleComp.level;
+      console.log('[EmployeeSkillsRepository] Sample competency after merge:', {
+        id: sampleId,
+        name: sampleComp.competencyName || sampleComp.name,
+        level: sampleLevel,
+        has_children: !!(sampleComp.children || sampleComp.nested_competencies),
+        has_skills: !!sampleComp.skills
+      });
+    }
     
     // Save updated competencies back to database
     const query = `
@@ -192,7 +328,7 @@ class EmployeeSkillsRepository {
       row.gap = JSON.parse(row.gap);
     }
     
-    console.log('[EmployeeSkillsRepository] ✅ Successfully updated skill levels');
+    console.log('[EmployeeSkillsRepository] ✅ Successfully updated and merged skill levels');
     return row;
   }
 
