@@ -133,8 +133,8 @@ function ProfileSkills({ employeeId }) {
           >
             {node.name || node.competencyName || 'Unknown'}
             
-            {/* Verification Icon for Competency - Show only for top-level competencies (level === 0) with verified levels */}
-            {level === 0 && (() => {
+            {/* Verification Icon for Competency - Show for any competency with verified level (regardless of hierarchy level) */}
+            {(() => {
               const compLevel = node.level;
               // Only these specific level values indicate verification
               const verifiedLevels = ['EXPERT', 'ADVANCED', 'INTERMEDIATE', 'BEGINNER'];
