@@ -124,7 +124,7 @@ function ProfileSkills({ employeeId }) {
 
           {/* Node Name */}
           <span
-            className="font-medium flex-1"
+            className="font-medium flex-1 flex items-center gap-1"
             style={{
               color: 'var(--text-primary, #1e293b)',
               fontSize: level === 0 ? '1rem' : level === 1 ? '0.95rem' : '0.9rem',
@@ -132,6 +132,32 @@ function ProfileSkills({ employeeId }) {
             }}
           >
             {node.name || node.competencyName || 'Unknown'}
+            
+            {/* Verification Icon for Competency - Show if competency has a verified level */}
+            {(() => {
+              const compLevel = node.level;
+              const isVerified = compLevel !== undefined && 
+                                compLevel !== null && 
+                                compLevel !== '' && 
+                                String(compLevel).toLowerCase() !== 'undefined';
+              
+              if (isVerified) {
+                return (
+                  <span 
+                    className="ml-1" 
+                    title={`Verified - Level: ${compLevel}`}
+                    style={{ 
+                      color: 'rgb(34, 197, 94)',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    ✓
+                  </span>
+                );
+              }
+              return null;
+            })()}
           </span>
 
           {/* Assessment Icon - Only show on leaf nodes (no children) */}
