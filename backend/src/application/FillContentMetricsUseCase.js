@@ -3,6 +3,7 @@
 
 const AIQueryGenerator = require('../infrastructure/AIQueryGenerator');
 const EmployeeCareerPathRepository = require('../infrastructure/EmployeeCareerPathRepository');
+const EmployeeSkillsRepository = require('../infrastructure/EmployeeSkillsRepository');
 const EmployeeRepository = require('../infrastructure/EmployeeRepository');
 const { Pool } = require('pg');
 const config = require('../config');
@@ -88,6 +89,18 @@ class FillContentMetricsUseCase {
         console.log('[FillContentMetricsUseCase] Requester:', requester);
         console.log('[FillContentMetricsUseCase] Action:', action);
         return await this.handleCareerPathCompetenciesUpdate(envelope);
+      }
+
+      // Check if this is a skill levels update from Skills Engine ("Update user profile")
+      const isUpdateProfileAction = actionLower.includes('update') && 
+                                    (actionLower.includes('user profile') || actionLower.includes('profile'));
+      const isSkillLevelsUpdate = isSkillsEngine && isUpdateProfileAction;
+      
+      if (isSkillLevelsUpdate) {
+        console.log('[FillContentMetricsUseCase] ✅ Detected skill levels update from Skills Engine');
+        console.log('[FillContentMetricsUseCase] Requester:', requester);
+        console.log('[FillContentMetricsUseCase] Action:', action);
+        return await this.handleSkillLevelsUpdate(envelope);
       }
 
       // Step 1: Generate SQL query using AI
@@ -1402,6 +1415,140 @@ class FillContentMetricsUseCase {
         response: {
           success: false,
           error: error.message || 'Failed to update career path competencies'
+        }
+      };
+    }
+  }
+
+  /**
+   * Handle skill levels update from Skills Engine via Coordinator
+   * Updates skill verification status (level field) for competencies that have non-undefined levels
+   * @param {Object} envelope - Full Coordinator request envelope
+   * @returns {Promise<Object>} Filled envelope with success response
+   */
+  async handleSkillLevelsUpdate(envelope) {
+    const { requester_service, payload, response: responseTemplate } = envelope;
+
+    try {
+      console.log('[FillContentMetricsUseCase] [SkillLevels] ========== PROCESSING SKILL LEVELS UPDATE ==========');
+      console.log('[FillContentMetricsUseCase] [SkillLevels] Full envelope:', JSON.stringify(envelope, null, 2));
+      console.log('[FillContentMetricsUseCase] [SkillLevels] Payload:', JSON.stringify(payload, null, 2));
+
+      // Try multiple possible field names for user_id
+      const userId = payload?.user_id || payload?.userId || payload?.employee_id || payload?.employeeId;
+      // Extract competencies array
+      const competencies = payload?.competencies || [];
+      
+      console.log('[FillContentMetricsUseCase] [SkillLevels] Extracted userId:', userId);
+      console.log('[FillContentMetricsUseCase] [SkillLevels] Extracted competencies count:', Array.isArray(competencies) ? competencies.length : 0);
+
+      if (!userId) {
+        console.error('[FillContentMetricsUseCase] [SkillLevels] Missing user_id in payload');
+        return {
+          requester_service: requester_service,
+          payload: payload,
+          response: {
+            success: false,
+            error: 'Missing user_id in payload'
+          }
+        };
+      }
+
+      if (!Array.isArray(competencies) || competencies.length === 0) {
+        console.warn('[FillContentMetricsUseCase] [SkillLevels] No competencies provided or empty array');
+        return {
+          requester_service: requester_service,
+          payload: payload,
+          response: {
+            success: true,
+            message: 'No competencies to update'
+          }
+        };
+      }
+
+      // Find employee by user_id (could be UUID or employee_id string)
+      const employeeRepository = new EmployeeRepository();
+      let employee = null;
+
+      // Try to find by UUID first
+      try {
+        employee = await employeeRepository.findById(userId);
+      } catch (err) {
+        console.log('[FillContentMetricsUseCase] [SkillLevels] user_id is not a UUID, trying employee_id');
+      }
+
+      // If not found by UUID, try by employee_id string
+      if (!employee) {
+        const allEmployeesQuery = `
+          SELECT id, employee_id, company_id 
+          FROM employees 
+          WHERE employee_id = $1
+          LIMIT 1
+        `;
+        const result = await this.pool.query(allEmployeesQuery, [userId]);
+        if (result.rows.length > 0) {
+          employee = await employeeRepository.findById(result.rows[0].id);
+        }
+      }
+
+      if (!employee) {
+        console.error('[FillContentMetricsUseCase] [SkillLevels] Employee not found for user_id:', userId);
+        return {
+          requester_service: requester_service,
+          payload: payload,
+          response: {
+            success: false,
+            error: `Employee not found for user_id: ${userId}`
+          }
+        };
+      }
+
+      console.log('[FillContentMetricsUseCase] [SkillLevels] Found employee:', {
+        id: employee.id,
+        employee_id: employee.employee_id,
+        full_name: employee.full_name
+      });
+
+      // Update skill levels in database
+      const skillsRepository = new EmployeeSkillsRepository();
+      const updated = await skillsRepository.updateSkillLevels(employee.id, competencies);
+
+      if (!updated) {
+        console.warn('[FillContentMetricsUseCase] [SkillLevels] No existing skills found to update');
+        return {
+          requester_service: requester_service,
+          payload: payload,
+          response: {
+            success: true,
+            message: 'No existing skills found to update'
+          }
+        };
+      }
+
+      console.log('[FillContentMetricsUseCase] [SkillLevels] ✅ Successfully updated skill levels:', {
+        employee_id: employee.id,
+        updated_at: updated.updated_at
+      });
+
+      // Return success response (no need to send data back, just confirmation)
+      return {
+        requester_service: requester_service,
+        payload: payload,
+        response: {
+          success: true,
+          message: 'Skill levels updated successfully',
+          employee_id: employee.id
+        }
+      };
+
+    } catch (error) {
+      console.error('[FillContentMetricsUseCase] [SkillLevels] Error:', error);
+      return {
+        requester_service: requester_service,
+        payload: payload,
+        response: {
+          success: false,
+          error: error.message || 'Failed to update skill levels'
         }
       };
     }
