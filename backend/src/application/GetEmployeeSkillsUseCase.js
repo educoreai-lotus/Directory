@@ -112,6 +112,25 @@ class GetEmployeeSkillsUseCase {
           gap: storedSkills.gap || null
         });
         
+        // Log competencies with levels for debugging
+        if (transformed && transformed.competencies) {
+          const compsWithLevels = transformed.competencies.filter(c => {
+            const level = c.level;
+            return level && String(level).toLowerCase() !== 'undefined';
+          });
+          console.log('[GetEmployeeSkillsUseCase] Competencies with levels after transformation:', compsWithLevels.length);
+          compsWithLevels.forEach(comp => {
+            const compName = comp.name || comp.competencyName;
+            const compLevel = comp.level;
+            const skillsCount = comp.skills ? comp.skills.length : 0;
+            const skillsWithLevels = comp.skills ? comp.skills.filter(s => {
+              const sLevel = s.level;
+              return sLevel && String(sLevel).toLowerCase() !== 'undefined';
+            }).length : 0;
+            console.log('[GetEmployeeSkillsUseCase] -', compName, '| Level:', compLevel, '| Skills:', skillsCount, '| Skills with levels:', skillsWithLevels);
+          });
+        }
+        
         return {
           success: true,
           skills: transformed
