@@ -250,11 +250,23 @@ class EmployeeSkillsRepository {
             merged.children = existingComp.children || existingComp.nested_competencies;
           }
           
-          // Merge skills if present
+          // Merge skills if present and propagate level to skills
           if (newComp.skills && Array.isArray(newComp.skills)) {
-            merged.skills = newComp.skills;
+            // Propagate competency level to skills if level is not undefined
+            merged.skills = newComp.skills.map(skill => ({
+              ...skill,
+              level: skill.level && String(skill.level).toLowerCase() !== 'undefined'
+                ? skill.level
+                : (merged.level && String(merged.level).toLowerCase() !== 'undefined' ? merged.level : undefined)
+            }));
           } else if (existingComp.skills && Array.isArray(existingComp.skills)) {
-            merged.skills = existingComp.skills;
+            // Propagate competency level to existing skills if level was updated
+            merged.skills = existingComp.skills.map(skill => ({
+              ...skill,
+              level: skill.level && String(skill.level).toLowerCase() !== 'undefined'
+                ? skill.level
+                : (merged.level && String(merged.level).toLowerCase() !== 'undefined' ? merged.level : undefined)
+            }));
           }
           
           updatedComps.push(merged);
@@ -267,6 +279,16 @@ class EmployeeSkillsRepository {
           }
           if (newCompCopy.nested_competencies && Array.isArray(newCompCopy.nested_competencies)) {
             newCompCopy.nested_competencies = mergeAndUpdateCompetencies([], newCompCopy.nested_competencies);
+          }
+          // Propagate level to skills if present
+          if (newCompCopy.skills && Array.isArray(newCompCopy.skills)) {
+            const compLevel = newCompCopy.level;
+            newCompCopy.skills = newCompCopy.skills.map(skill => ({
+              ...skill,
+              level: skill.level && String(skill.level).toLowerCase() !== 'undefined'
+                ? skill.level
+                : (compLevel && String(compLevel).toLowerCase() !== 'undefined' ? compLevel : undefined)
+            }));
           }
           updatedComps.push(newCompCopy);
           console.log('[EmployeeSkillsRepository] Adding new competency:', compId, newCompCopy.competencyName || newCompCopy.name);
@@ -285,23 +307,61 @@ class EmployeeSkillsRepository {
     };
     
     // Merge new competencies with existing ones
-    const updatedCompetencies = mergeAndUpdateCompetencies(existingSkills.competencies, newCompetencies);
+    let updatedCompetencies = mergeAndUpdateCompetencies(existingSkills.competencies, newCompetencies);
+    
+    // Post-process: Ensure all skills inherit level from their parent competency
+    const propagateLevelsToSkills = (competencies) => {
+      if (!Array.isArray(competencies)) return competencies;
+      
+      return competencies.map(comp => {
+        const updated = { ...comp };
+        const compLevel = comp.level && String(comp.level).toLowerCase() !== 'undefined' ? comp.level : null;
+        
+        // Propagate level to skills if competency has a level
+        if (compLevel && updated.skills && Array.isArray(updated.skills)) {
+          updated.skills = updated.skills.map(skill => ({
+            ...skill,
+            level: skill.level && String(skill.level).toLowerCase() !== 'undefined'
+              ? skill.level
+              : compLevel
+          }));
+        }
+        
+        // Recursively process children
+        if (updated.children && Array.isArray(updated.children)) {
+          updated.children = propagateLevelsToSkills(updated.children);
+        }
+        if (updated.nested_competencies && Array.isArray(updated.nested_competencies)) {
+          updated.nested_competencies = propagateLevelsToSkills(updated.nested_competencies);
+        }
+        
+        return updated;
+      });
+    };
+    
+    updatedCompetencies = propagateLevelsToSkills(updatedCompetencies);
     
     console.log('[EmployeeSkillsRepository] Merged competencies count:', updatedCompetencies.length);
     
-    // Log a sample of updated competencies to verify levels are preserved
-    if (updatedCompetencies.length > 0) {
-      const sampleComp = updatedCompetencies[0];
-      const sampleId = sampleComp.competencyId || sampleComp.competency_id;
-      const sampleLevel = sampleComp.level;
-      console.log('[EmployeeSkillsRepository] Sample competency after merge:', {
-        id: sampleId,
-        name: sampleComp.competencyName || sampleComp.name,
-        level: sampleLevel,
-        has_children: !!(sampleComp.children || sampleComp.nested_competencies),
-        has_skills: !!sampleComp.skills
-      });
-    }
+    // Log competencies with levels and their skills
+    const competenciesWithLevels = updatedCompetencies.filter(comp => {
+      const level = comp.level;
+      return level && String(level).toLowerCase() !== 'undefined';
+    });
+    
+    console.log('[EmployeeSkillsRepository] Competencies with verified levels:', competenciesWithLevels.length);
+    competenciesWithLevels.forEach(comp => {
+      const compId = comp.competencyId || comp.competency_id;
+      const compName = comp.competencyName || comp.name;
+      const compLevel = comp.level;
+      const skillsCount = comp.skills ? comp.skills.length : 0;
+      const skillsWithLevels = comp.skills ? comp.skills.filter(s => {
+        const sLevel = s.level;
+        return sLevel && String(sLevel).toLowerCase() !== 'undefined';
+      }).length : 0;
+      
+      console.log('[EmployeeSkillsRepository] - Competency:', compName, '| Level:', compLevel, '| Skills:', skillsCount, '| Skills with levels:', skillsWithLevels);
+    });
     
     // Save updated competencies back to database
     const query = `
