@@ -133,13 +133,13 @@ function ProfileSkills({ employeeId }) {
           >
             {node.name || node.competencyName || 'Unknown'}
             
-            {/* Verification Icon for Competency - Show if competency has a verified level */}
-            {(() => {
+            {/* Verification Icon for Competency - Show only for top-level competencies (level === 0) with verified levels */}
+            {level === 0 && (() => {
               const compLevel = node.level;
-              const isVerified = compLevel !== undefined && 
-                                compLevel !== null && 
-                                compLevel !== '' && 
-                                String(compLevel).toLowerCase() !== 'undefined';
+              // Only these specific level values indicate verification
+              const verifiedLevels = ['EXPERT', 'ADVANCED', 'INTERMEDIATE', 'BEGINNER'];
+              const levelStr = compLevel ? String(compLevel).toUpperCase().trim() : '';
+              const isVerified = verifiedLevels.includes(levelStr);
               
               if (isVerified) {
                 return (
@@ -244,12 +244,10 @@ function ProfileSkills({ employeeId }) {
                 <div className="flex flex-wrap gap-2 mt-2 mb-3">
                   {node.skills.map((skill, skillIdx) => {
                     // Check if skill is verified based on level field
-                    // If level is undefined/null/empty, skill is NOT verified
-                    // If level has a value (beginner, intermediate, advanced, etc.), skill IS verified
-                    const isVerified = skill.level !== undefined && 
-                                      skill.level !== null && 
-                                      skill.level !== '' && 
-                                      String(skill.level).toLowerCase() !== 'undefined';
+                    // Only specific level values indicate verification: EXPERT, ADVANCED, INTERMEDIATE, BEGINNER
+                    const verifiedLevels = ['EXPERT', 'ADVANCED', 'INTERMEDIATE', 'BEGINNER'];
+                    const skillLevelStr = skill.level ? String(skill.level).toUpperCase().trim() : '';
+                    const isVerified = verifiedLevels.includes(skillLevelStr);
                     // Use skill name as-is (no cleaning needed)
                     const skillName = skill.name || '';
                     
