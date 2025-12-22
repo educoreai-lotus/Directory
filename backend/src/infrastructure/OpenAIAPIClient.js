@@ -694,23 +694,22 @@ class OpenAIAPIClient {
     if (targetRole && targetRole !== currentRole) {
       prompt += `1. Opens with a strategic contribution statement (e.g., "${name} plays a key role in...", "In their current position at ${companyName}, ${name} contributes to...", "${name} supports the success of ${companyName} through...") - do NOT start with "currently works as"\n`;
       prompt += `2. States that ${name} will be upgraded to work as ${targetRole}\n`;
-      prompt += `3. Identifies what skills, knowledge, or experience ${name} is missing to reach the target role\n`;
-      prompt += `4. Explains the value ${name} brings to ${companyName} and their potential impact in the target role\n`;
+      prompt += `3. Explains the value ${name} brings to ${companyName} and their potential impact in the target role\n`;
     } else {
       prompt += `1. Opens with a strategic contribution statement (e.g., "${name} plays a key role in...", "In their current position at ${companyName}, ${name} contributes to...", "${name} supports the success of ${companyName} through...") - do NOT start with "currently works as"\n`;
       prompt += `2. Notes that ${name} is continuing in their current role\n`;
       prompt += `3. Explains the value ${name} brings to ${companyName} in their current role and their organizational impact\n`;
     }
-    prompt += `5. Is written in a professional, encouraging tone\n`;
-    prompt += `6. Is suitable for display on an employee profile\n\n`;
+    prompt += `4. Is written in a professional, encouraging tone\n`;
+    prompt += `5. Is suitable for display on an employee profile\n\n`;
     
     prompt += `OUTPUT REQUIREMENTS:\n`;
     prompt += `- Length: 2-3 sentences, maximum 150 words\n`;
     prompt += `- Format: Plain text, no markdown, no code blocks, no bullet points\n`;
     prompt += `- Tone: Professional, clear, and motivating\n`;
-    prompt += `- Structure: Start with a strategic contribution statement (not "currently works as"), mention target role (if different), then mention what's needed to get there and the value they bring\n`;
+    prompt += `- Structure: Start with a strategic contribution statement (not "currently works as"), mention target role (if different), then explain the value they bring\n`;
     if (targetRole && targetRole !== currentRole) {
-      prompt += `- Example format: "${name} plays a key role in [strategic area] at ${companyName}. ${name} will be upgraded to work as ${targetRole}. To achieve this transition, ${name} needs to develop [specific skills/knowledge/experience]."\n`;
+      prompt += `- Example format: "${name} plays a key role in [strategic area] at ${companyName}. ${name} will be upgraded to work as ${targetRole}, where they will bring [value/impact] to the organization."\n`;
     } else {
       prompt += `- Example format: "In their current position at ${companyName}, ${name} contributes to [strategic area] and brings [value/impact] to the organization."\n`;
     }

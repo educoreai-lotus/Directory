@@ -630,9 +630,10 @@ class GeminiAPIClient {
     prompt += `1. States that ${name} currently works as ${currentRole} in the company\n`;
     if (targetRole && targetRole !== currentRole) {
       prompt += `2. States that ${name} will be upgraded to work as ${targetRole}\n`;
-      prompt += `3. Identifies what skills, knowledge, or experience ${name} is missing to reach the target role\n`;
+      prompt += `3. Explains the value ${name} brings to the company and their potential impact in the target role\n`;
     } else {
       prompt += `2. Notes that ${name} is continuing in their current role\n`;
+      prompt += `3. Explains the value ${name} brings to the company in their current role and their organizational impact\n`;
     }
     prompt += `4. Is written in a professional, encouraging tone\n`;
     prompt += `5. Is suitable for display on an employee profile\n\n`;
@@ -641,8 +642,12 @@ class GeminiAPIClient {
     prompt += `- Length: 2-3 sentences, maximum 150 words\n`;
     prompt += `- Format: Plain text, no markdown, no code blocks, no bullet points\n`;
     prompt += `- Tone: Professional, clear, and motivating\n`;
-    prompt += `- Structure: Start with current role, mention target role (if different), then mention what's needed to get there\n`;
-    prompt += `- Example format: "${name} currently works as ${currentRole} in the company. ${name} will be upgraded to work as ${targetRole}. To achieve this transition, ${name} needs to develop [specific skills/knowledge/experience]."\n\n`;
+    prompt += `- Structure: Start with current role, mention target role (if different), then explain the value they bring\n`;
+    if (targetRole && targetRole !== currentRole) {
+      prompt += `- Example format: "${name} currently works as ${currentRole} in the company. ${name} will be upgraded to work as ${targetRole}, where they will bring [value/impact] to the organization."\n\n`;
+    } else {
+      prompt += `- Example format: "${name} currently works as ${currentRole} in the company and brings [value/impact] to the organization."\n\n`;
+    }
     
     prompt += `Now generate a value proposition statement for ${name}:\n`;
     
