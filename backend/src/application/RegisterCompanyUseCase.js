@@ -200,6 +200,7 @@ class RegisterCompanyUseCase {
         requester_service: 'directory',
         payload: {
           action: 'sending_new_decision_maker_to_learner_ai',
+          target_service: 'learner-ai',
           company_id: company.id,
           company_name: company.company_name,
           approval_policy: approvalPolicy,
