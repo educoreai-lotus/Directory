@@ -104,50 +104,6 @@ function ProfileCareerPath({ employeeId }) {
                   }}
                 >
                   <span>{competencyName}</span>
-                  
-                  {/* Assessment Icon */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!employeeId) {
-                        console.error('[ProfileCareerPath] Cannot redirect: employeeId is missing');
-                        return;
-                      }
-                      
-                      // Redirect to Assessment with user_id and competency name
-                      const assessmentUrl = `https://assessment-seven-liard.vercel.app/exam-intro?examType=baseline&userId=${encodeURIComponent(employeeId)}&skillName=${encodeURIComponent(competencyName)}`;
-                      
-                      console.log('[ProfileCareerPath] Redirecting to Assessment:', assessmentUrl);
-                      console.log('[ProfileCareerPath] Employee ID (UUID):', employeeId);
-                      console.log('[ProfileCareerPath] Competency Name:', competencyName);
-                      
-                      window.location.href = assessmentUrl;
-                    }}
-                    className="ml-1 hover:opacity-70 transition-opacity"
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: '2px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                    title="Take Assessment"
-                  >
-                    <svg 
-                      width="14" 
-                      height="14" 
-                      viewBox="0 0 16 16" 
-                      fill="none" 
-                      style={{ color: 'var(--text-secondary, #64748b)' }}
-                    >
-                      <path 
-                        d="M8 0L10.5 5.5L16 8L10.5 10.5L8 16L5.5 10.5L0 8L5.5 5.5L8 0Z" 
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </button>
                 </div>
               );
             })}
