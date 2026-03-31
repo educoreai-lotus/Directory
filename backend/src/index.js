@@ -28,6 +28,7 @@ const EmployeeProfileApprovalController = require('./presentation/EmployeeProfil
 const RequestController = require('./presentation/RequestController');
 const UniversalEndpointController = require('./presentation/UniversalEndpointController');
 const AdminController = require('./presentation/AdminController');
+const NAuthRequestController = require('./presentation/NAuthRequestController');
 // PHASE_3: Import new controllers for extended enrichment flow
 const PDFUploadController = require('./presentation/PDFUploadController');
 const ManualDataController = require('./presentation/ManualDataController');
@@ -210,6 +211,7 @@ let pdfUploadController, manualDataController, enrollmentController;
 let companyProfileController, employeeController, authController, oauthController;
 let enrichmentController, approvalController, trainerController, requestController;
 let universalEndpointController, adminController;
+let nAuthRequestController;
 // Chatbot controller
 let chatbotController;
 
@@ -240,6 +242,7 @@ trainerController = initController('TrainerController', () => new TrainerControl
 requestController = initController('RequestController', () => new RequestController());
 universalEndpointController = initController('UniversalEndpointController', () => new UniversalEndpointController());
 adminController = initController('AdminController', () => new AdminController());
+nAuthRequestController = initController('NAuthRequestController', () => new NAuthRequestController());
 // PHASE_3: Initialize new controllers for extended enrichment flow
 pdfUploadController = initController('PDFUploadController', () => new PDFUploadController());
 manualDataController = initController('ManualDataController', () => new ManualDataController());
@@ -608,6 +611,22 @@ app.post('/api/fill-content-metrics', (req, res) => {
         error: 'Universal endpoint is not available. Controller initialization failed.'
       }
     }));
+  }
+});
+
+// Coordinator-routed nAuth lookup endpoint (no user auth required - service-to-service)
+app.post('/request', (req, res) => {
+  try {
+    checkController(nAuthRequestController, 'NAuthRequestController');
+    nAuthRequestController.handleRequest(req, res);
+  } catch (error) {
+    console.error('[index.js] /request endpoint error:', error.message);
+    res.status(503).json({
+      requester_service: 'directory_service',
+      response: {
+        error: 'Request lookup endpoint is not available.'
+      }
+    });
   }
 });
 
