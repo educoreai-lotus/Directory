@@ -6,6 +6,9 @@
   "engines": {
     "node": "20.x"
   },
+  "overrides": {
+    "lodash": "4.17.21"
+  },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
