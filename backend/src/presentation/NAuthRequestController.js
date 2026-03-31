@@ -67,7 +67,26 @@ class NAuthRequestController {
 
   async handleRequest(req, res) {
     try {
-      const body = req.body;
+      let body = req.body;
+
+      // Support raw JSON-string bodies in addition to normal parsed objects.
+      if (typeof body === 'string') {
+        try {
+          body = JSON.parse(body);
+        } catch (parseError) {
+          return res.status(400).json({
+            requester_service: 'directory_service',
+            response: {
+              error: 'Invalid JSON string body.'
+            }
+          });
+        }
+      }
+
+      // If upstream parsing middleware extracted payload only, normalize shape.
+      if ((!body || typeof body !== 'object' || Array.isArray(body)) && req.parsedBody && typeof req.parsedBody === 'object' && !Array.isArray(req.parsedBody)) {
+        body = { payload: req.parsedBody };
+      }
 
       if (!body || typeof body !== 'object' || Array.isArray(body)) {
         return res.status(400).json({
