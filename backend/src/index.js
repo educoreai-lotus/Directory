@@ -615,7 +615,7 @@ app.post('/api/fill-content-metrics', (req, res) => {
 });
 
 // Coordinator-routed nAuth lookup endpoint (no user auth required - service-to-service)
-app.post('/request', (req, res) => {
+app.post('/request', express.text({ type: '*/*', limit: '1mb' }), (req, res) => {
   try {
     checkController(nAuthRequestController, 'NAuthRequestController');
     nAuthRequestController.handleRequest(req, res);
