@@ -57,6 +57,19 @@ app.use((req, res, next) => {
   next();
 });
 
+// TEMP COMPAT: Normalize malformed duplicated JSON content-type for /request only.
+// Example incoming value: "application/json, application/json"
+app.use('/request', (req, res, next) => {
+  const contentType = req.headers['content-type'];
+  if (typeof contentType === 'string') {
+    const normalized = contentType.replace(/\s+/g, '').toLowerCase();
+    if (normalized === 'application/json,application/json') {
+      req.headers['content-type'] = 'application/json';
+    }
+  }
+  next();
+});
+
 // Note: parseRequest must come before express.json for stringified JSON
 // But multer (file uploads) needs to be handled separately in the route
 // CRITICAL: Skip body parsing for multipart/form-data (file uploads)
