@@ -617,10 +617,27 @@ app.post('/api/fill-content-metrics', (req, res) => {
 // Coordinator-routed nAuth lookup endpoint (no user auth required - service-to-service)
 app.post('/request', express.text({ type: 'text/*', limit: '1mb' }), (req, res) => {
   try {
-    // TEMP DEBUG (route-local only): verify parsing state for Coordinator-routed requests.
-    console.log('[DEBUG] content-type:', req.headers['content-type']);
-    console.log('[DEBUG] body type:', typeof req.body);
-    console.log('[DEBUG] body:', req.body);
+    // TEMP DEBUG (route-local only): /request runtime payload diagnostics.
+    console.log('[DEBUG][DIRECTORY][/request] content-type:', req.headers['content-type']);
+    console.log('[DEBUG][DIRECTORY][/request] header keys:', Object.keys(req.headers));
+    console.log('[DEBUG][DIRECTORY][/request] typeof req.body:', typeof req.body);
+    console.log('[DEBUG][DIRECTORY][/request] req.body:', req.body);
+    console.log('[DEBUG][DIRECTORY][/request] req.parsedBody:', req.parsedBody);
+    console.log('[DEBUG][DIRECTORY][/request] req.body?.payload:', req.body?.payload);
+    console.log(
+      '[DEBUG][DIRECTORY][/request] body empty object:',
+      !!req.body &&
+      typeof req.body === 'object' &&
+      !Array.isArray(req.body) &&
+      Object.keys(req.body).length === 0
+    );
+    console.log(
+      '[DEBUG][DIRECTORY][/request] parsedBody empty object:',
+      !!req.parsedBody &&
+      typeof req.parsedBody === 'object' &&
+      !Array.isArray(req.parsedBody) &&
+      Object.keys(req.parsedBody).length === 0
+    );
 
     // Scoped fallback for /request only: if body is empty but parseRequest extracted payload.
     if (
