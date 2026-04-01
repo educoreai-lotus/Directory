@@ -630,7 +630,8 @@ app.post('/request', express.text({ type: 'text/*', limit: '1mb' }), (req, res) 
       Object.keys(req.body).length === 0 &&
       req.parsedBody &&
       typeof req.parsedBody === 'object' &&
-      !Array.isArray(req.parsedBody)
+      !Array.isArray(req.parsedBody) &&
+      Object.keys(req.parsedBody).length > 0
     ) {
       req.body = { payload: req.parsedBody };
     }
