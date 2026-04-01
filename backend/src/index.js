@@ -615,8 +615,26 @@ app.post('/api/fill-content-metrics', (req, res) => {
 });
 
 // Coordinator-routed nAuth lookup endpoint (no user auth required - service-to-service)
-app.post('/request', express.text({ type: '*/*', limit: '1mb' }), (req, res) => {
+app.post('/request', express.text({ type: 'text/*', limit: '1mb' }), (req, res) => {
   try {
+    // TEMP DEBUG (route-local only): verify parsing state for Coordinator-routed requests.
+    console.log('[DEBUG] content-type:', req.headers['content-type']);
+    console.log('[DEBUG] body type:', typeof req.body);
+    console.log('[DEBUG] body:', req.body);
+
+    // Scoped fallback for /request only: if body is empty but parseRequest extracted payload.
+    if (
+      req.body &&
+      typeof req.body === 'object' &&
+      !Array.isArray(req.body) &&
+      Object.keys(req.body).length === 0 &&
+      req.parsedBody &&
+      typeof req.parsedBody === 'object' &&
+      !Array.isArray(req.parsedBody)
+    ) {
+      req.body = { payload: req.parsedBody };
+    }
+
     checkController(nAuthRequestController, 'NAuthRequestController');
     nAuthRequestController.handleRequest(req, res);
   } catch (error) {
