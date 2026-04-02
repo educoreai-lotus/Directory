@@ -4,6 +4,9 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as authService from '../services/authService';
+import api from '../utils/api';
+import { refreshAccessToken } from '../services/nauthService';
+import { setAccessToken, clearAccessToken } from '../auth/accessTokenStore';
 
 const AuthContext = createContext(null);
 
@@ -25,6 +28,22 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        const authMode = process.env.REACT_APP_AUTH_MODE || 'dummy';
+        if (authMode === 'nauth') {
+          // nAuth bootstrap: obtain short-lived access token via refresh cookie (credentials include).
+          const token = await refreshAccessToken();
+          setAccessToken(token);
+
+          // Fetch trusted user context from Directory using the verified bearer token.
+          const meResp = await api.get('/auth/me');
+          const meUser = meResp?.data?.response?.user || meResp?.data?.user || null;
+
+          setUser(meUser);
+          setIsAuthenticated(!!meUser);
+          setLoading(false);
+          return;
+        }
+
         // CRITICAL: Check for OAuth callback FIRST, before any token operations
         // This prevents token from being cleared during OAuth redirects
         const urlParams = new URLSearchParams(window.location.search);
@@ -276,6 +295,11 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       setLoading(true);
+      const authMode = process.env.REACT_APP_AUTH_MODE || 'dummy';
+      if (authMode === 'nauth') {
+        // Directory is not a login authority in nAuth mode.
+        return { success: false, error: 'Please sign in via nAuth.' };
+      }
       
       // CRITICAL: Clear old user state before login to prevent showing wrong user
       console.log('[AuthContext] Clearing old user state before login');
@@ -346,6 +370,15 @@ export const AuthProvider = ({ children }) => {
    */
   const logout = async () => {
     try {
+      const authMode = process.env.REACT_APP_AUTH_MODE || 'dummy';
+      if (authMode === 'nauth') {
+        clearAccessToken();
+        setUser(null);
+        setIsAuthenticated(false);
+        navigate('/');
+        return;
+      }
+
       await authService.logout();
       setUser(null);
       setIsAuthenticated(false);

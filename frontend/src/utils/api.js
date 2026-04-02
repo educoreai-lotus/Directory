@@ -3,6 +3,7 @@
 
 import config from '../config';
 import axios from 'axios';
+import { getAccessToken } from '../auth/accessTokenStore';
 
 console.log("[DEBUG] Loaded API Base URL =", config.apiBaseUrl);
 
@@ -30,19 +31,26 @@ api.interceptors.request.use(
     console.log('[api] api.defaults.baseURL =', api.defaults.baseURL);
     console.log('[api] config.url =', config.url);
     
-    // Add Authorization header if token exists
-    // In dummy mode, inject dummy token if missing
-    let token = localStorage.getItem('auth_token');
-    const isDummyMode = process.env.REACT_APP_AUTH_MODE === 'dummy' || !process.env.REACT_APP_AUTH_MODE;
-    
-    if (isDummyMode && !token) {
-      // In dummy mode, if no token exists, create and store a dummy token
-      token = 'dummy-token';
-      localStorage.setItem('auth_token', token);
-      console.log('[api] Request interceptor - Dummy mode: Created and stored dummy token');
+    const authMode = process.env.REACT_APP_AUTH_MODE || 'dummy';
+
+    // Add Authorization header if token exists.
+    // In nAuth mode, token must be in-memory only (no localStorage/sessionStorage).
+    let token = null;
+    if (authMode === 'nauth') {
+      token = getAccessToken();
+    } else {
+      // Legacy modes (dummy / existing Directory auth): keep existing behavior
+      token = localStorage.getItem('auth_token');
+
+      const isDummyMode = authMode === 'dummy';
+      if (isDummyMode && !token) {
+        token = 'dummy-token';
+        localStorage.setItem('auth_token', token);
+        console.log('[api] Request interceptor - Dummy mode: Created and stored dummy token');
+      }
     }
     
-    console.log('[api] Request interceptor - Token in localStorage:', token ? `${token.substring(0, 30)}...` : 'null');
+    console.log('[api] Request interceptor - Token present:', token ? 'yes' : 'no');
     
     if (token) {
       // For dummy tokens, we'll send it as Bearer token
@@ -50,7 +58,7 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
       console.log('[api] Request interceptor - Authorization header added:', `Bearer ${token.substring(0, 20)}...`);
     } else {
-      console.warn('[api] Request interceptor - No token found in localStorage for URL:', config.url);
+      console.warn('[api] Request interceptor - No token available for URL:', config.url);
     }
     
     // RULE 5: Skip stringification for FormData (file uploads)

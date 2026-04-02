@@ -4,6 +4,7 @@
 const config = require('../../config');
 const DummyAuthProvider = require('./DummyAuthProvider');
 const AuthServiceProvider = require('./AuthServiceProvider');
+const NAuthProvider = require('./NAuthProvider');
 
 /**
  * Authentication Factory
@@ -27,6 +28,9 @@ class AuthFactory {
       }
       
       return new AuthServiceProvider();
+    } else if (config.auth.mode === 'nauth') {
+      console.log('🔐 Using nAuth Access Token Provider (Production)');
+      return new NAuthProvider();
     } else {
       throw new Error(`Invalid AUTH_MODE: ${config.auth.mode}. Must be 'dummy' or 'auth-service'`);
     }

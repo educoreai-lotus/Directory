@@ -83,6 +83,16 @@ const config = {
     // Authentication mode: 'dummy' (for testing) or 'auth-service' (for production)
     // Set via environment variable: AUTH_MODE=dummy or AUTH_MODE=auth-service
     mode: process.env.AUTH_MODE || 'dummy',
+
+    // nAuth access-token verification (local JWT verification)
+    // When AUTH_MODE=nauth, Directory verifies nAuth-minted access tokens locally.
+    // Provide either NAUTH_JWT_PUBLIC_KEY (recommended for asymmetric signing) OR NAUTH_JWT_SECRET (symmetric).
+    nauth: {
+      issuer: process.env.NAUTH_JWT_ISSUER || null,
+      audience: process.env.NAUTH_JWT_AUDIENCE || null,
+      publicKey: process.env.NAUTH_JWT_PUBLIC_KEY || null,
+      algorithms: process.env.NAUTH_JWT_ALGORITHMS || 'RS256'
+    },
     
     // Auth Service Configuration (for future use when AUTH_MODE=auth-service)
     authService: {
@@ -191,8 +201,8 @@ const config = {
 };
 
 // Validate auth mode
-if (config.auth.mode !== 'dummy' && config.auth.mode !== 'auth-service') {
-  console.warn(`⚠️  Invalid AUTH_MODE: "${config.auth.mode}". Defaulting to "dummy". Valid values: "dummy", "auth-service"`);
+if (config.auth.mode !== 'dummy' && config.auth.mode !== 'auth-service' && config.auth.mode !== 'nauth') {
+  console.warn(`⚠️  Invalid AUTH_MODE: "${config.auth.mode}". Defaulting to "dummy". Valid values: "dummy", "auth-service", "nauth"`);
   config.auth.mode = 'dummy';
 }
 

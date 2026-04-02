@@ -2,6 +2,7 @@
 // Handles OAuth API calls
 
 import api from '../utils/api';
+import { getAccessToken } from '../auth/accessTokenStore';
 
 /**
  * Get LinkedIn OAuth authorization URL
@@ -9,8 +10,8 @@ import api from '../utils/api';
  */
 export const getLinkedInAuthUrl = async () => {
   try {
-    // Check if token exists before making request
-    const token = localStorage.getItem('auth_token');
+    // Check if token exists before making request (nAuth uses in-memory token)
+    const token = getAccessToken() || localStorage.getItem('auth_token');
     console.log('[oauthService] Getting LinkedIn auth URL, token:', token ? 'present' : 'missing');
     
     const response = await api.get('/oauth/linkedin/authorize');
@@ -43,8 +44,8 @@ export const getLinkedInAuthUrl = async () => {
  */
 export const getGitHubAuthUrl = async () => {
   try {
-    // Check if token exists before making request
-    const token = localStorage.getItem('auth_token');
+    // Check if token exists before making request (nAuth uses in-memory token)
+    const token = getAccessToken() || localStorage.getItem('auth_token');
     console.log('[oauthService] Getting GitHub auth URL, token:', token ? 'present' : 'missing');
     
     const response = await api.get('/oauth/github/authorize');

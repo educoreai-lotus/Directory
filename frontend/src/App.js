@@ -13,6 +13,7 @@ import EmployeeProfilePage from './pages/EmployeeProfilePage';
 import AdminDashboard from './pages/AdminDashboard';
 import Header from './components/Header';
 import './App.css';
+import { getAccessToken } from './auth/accessTokenStore';
 
 // Bot initialization component (must be inside AuthProvider)
 function BotInitializer() {
@@ -25,11 +26,9 @@ function BotInitializer() {
       return;
     }
 
-    // Get token from localStorage
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
-      return;
-    }
+    // Get token (nAuth mode uses in-memory only)
+    const token = getAccessToken() || localStorage.getItem('auth_token');
+    if (!token) return;
 
     // Wait for bot script to load and initialize
     if (window.initializeEducoreBot && !botInitializedRef.current) {
