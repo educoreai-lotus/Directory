@@ -209,4 +209,15 @@ if (config.auth.mode !== 'dummy' && config.auth.mode !== 'auth-service' && confi
 // Log current auth mode
 console.log(`🔐 Authentication Mode: ${config.auth.mode === 'dummy' ? 'DUMMY (Testing Only - Not Secure)' : 'AUTH SERVICE (Production)'}`);
 
+// TEMP DEBUG: nAuth env visibility at startup (never print key material).
+if (config.auth.mode === 'nauth') {
+  console.log('[TEMP][nAuth][Startup] Auth env visibility:', {
+    AUTH_MODE: process.env.AUTH_MODE,
+    NAUTH_JWT_PUBLIC_KEY_present: !!process.env.NAUTH_JWT_PUBLIC_KEY,
+    NAUTH_JWT_ISSUER: process.env.NAUTH_JWT_ISSUER,
+    NAUTH_JWT_AUDIENCE: process.env.NAUTH_JWT_AUDIENCE,
+    NAUTH_JWT_ALGORITHMS: process.env.NAUTH_JWT_ALGORITHMS
+  });
+}
+
 module.exports = config;
