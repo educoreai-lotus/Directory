@@ -51,7 +51,22 @@ class NAuthProvider extends AuthProvider {
         return { valid: false, error: 'Invalid NAUTH_JWT_ALGORITHMS (must be RS256)' };
       }
 
-      const decoded = jwt.verify(token, this.publicKey, verifyOptions);
+      console.log('[NAuthProvider] Pre-verify config:', {
+        issuer: verifyOptions.issuer,
+        audience: verifyOptions.audience,
+        algorithms: verifyOptions.algorithms,
+        publicKeyPresent: !!this.publicKey
+      });
+
+      let decoded;
+      try {
+        decoded = jwt.verify(token, this.publicKey, verifyOptions);
+      } catch (error) {
+        console.error('[NAuthProvider] jwt.verify failed (full error):', error);
+        console.error('[NAuthProvider] jwt.verify error.name:', error?.name);
+        console.error('[NAuthProvider] jwt.verify error.message:', error?.message);
+        return { valid: false, error: 'Invalid or expired token' };
+      }
 
       // Required token contract fields
       const sub = decoded?.sub;
