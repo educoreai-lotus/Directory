@@ -5,8 +5,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as authService from '../services/authService';
 import api from '../utils/api';
-import { refreshAccessToken } from '../services/nauthService';
-import { setAccessToken, clearAccessToken } from '../auth/accessTokenStore';
+import { setAccessToken, getAccessToken, clearAccessToken } from '../auth/accessTokenStore';
 
 const AuthContext = createContext(null);
 
@@ -33,11 +32,97 @@ export const AuthProvider = ({ children }) => {
           console.error('[AuthContext] ❌ REACT_APP_AUTH_MODE is missing. Refusing to default to dummy mode.');
         }
         if (authMode === 'nauth') {
-          // nAuth bootstrap: obtain short-lived access token via refresh cookie (credentials include).
-          const token = await refreshAccessToken();
-          setAccessToken(token);
+          const nAuthBaseUrl =
+            process.env.REACT_APP_NAUTH_BASE_URL || 'https://nauth-production.up.railway.app';
+          const coordinatorBaseUrl =
+            process.env.REACT_APP_COORDINATOR_BASE_URL ||
+            process.env.REACT_APP_COORDINATOR_URL ||
+            'https://coordinator-production-6004.up.railway.app';
+          const coordinatorEndpoint =
+            process.env.REACT_APP_COORDINATOR_ENDPOINT || '/request';
 
-          // Fetch trusted user context from Directory using the verified bearer token.
+          // 1) Read access token from URL fragment: #access_token=...
+          const hash = window.location.hash || '';
+          const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
+          const tokenFromHash = hashParams.get('access_token') || '';
+          const existingToken = getAccessToken();
+          let tokenForValidation = '';
+
+          // 2) Use token from URL if present, otherwise fall back to existing in-memory token.
+          if (tokenFromHash) {
+            setAccessToken(tokenFromHash);
+            tokenForValidation = tokenFromHash;
+            window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+          } else if (existingToken) {
+            tokenForValidation = existingToken;
+          } else {
+            clearAccessToken();
+            setUser(null);
+            setIsAuthenticated(false);
+            window.location.href = `${nAuthBaseUrl}/login`;
+            return;
+          }
+
+          // 3) Validate token via Coordinator -> nAuth
+          let coordinatorResp;
+          let coordinatorData = {};
+          try {
+            coordinatorResp = await fetch(`${coordinatorBaseUrl}${coordinatorEndpoint}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                requester_service: 'Directory',
+                payload: {
+                  action:
+                    'Route this request to nAuth service only for access token validation and session continuity decision.',
+                  access_token: tokenForValidation
+                },
+                response: {
+                  valid: false,
+                  reason: '',
+                  auth_state: '',
+                  directory_user_id: '',
+                  organization_id: '',
+                  new_access_token: ''
+                }
+              })
+            });
+
+            if (!coordinatorResp.ok) {
+              clearAccessToken();
+              setUser(null);
+              setIsAuthenticated(false);
+              window.location.href = `${nAuthBaseUrl}/login`;
+              return;
+            }
+
+            coordinatorData = await coordinatorResp.json().catch(() => ({}));
+          } catch (coordinatorError) {
+            clearAccessToken();
+            setUser(null);
+            setIsAuthenticated(false);
+            window.location.href = `${nAuthBaseUrl}/login`;
+            return;
+          }
+          const coordinatorResponse = coordinatorData?.response || {};
+          const isValid = coordinatorResponse.valid === true;
+
+          if (!isValid) {
+            clearAccessToken();
+            setUser(null);
+            setIsAuthenticated(false);
+            window.location.href = `${nAuthBaseUrl}/login`;
+            return;
+          }
+
+          // 4) If Coordinator/nAuth returns rotated access token, replace memory token.
+          if (coordinatorResponse.new_access_token) {
+            setAccessToken(coordinatorResponse.new_access_token);
+          }
+
+          // 5) Continue normal app flow with authenticated state.
           const meResp = await api.get('/auth/me');
           const meUser = meResp?.data?.response?.user || meResp?.data?.user || null;
 

@@ -7,8 +7,12 @@ import { getAccessToken } from '../auth/accessTokenStore';
 
 console.log("[DEBUG] Loaded API Base URL =", config.apiBaseUrl);
 
+// Ensure cookies are included for cross-domain requests when needed.
+axios.defaults.withCredentials = true;
+
 const api = axios.create({
   baseURL: config.apiBaseUrl,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
   },
