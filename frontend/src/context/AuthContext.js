@@ -32,8 +32,7 @@ export const AuthProvider = ({ children }) => {
           console.error('[AuthContext] ❌ REACT_APP_AUTH_MODE is missing. Refusing to default to dummy mode.');
         }
         if (authMode === 'nauth') {
-          const nAuthBaseUrl =
-            process.env.REACT_APP_NAUTH_BASE_URL || 'https://nauth-production.up.railway.app';
+          const nAuthFrontendUrl = process.env.REACT_APP_NAUTH_FRONTEND_URL;
           const coordinatorBaseUrl =
             process.env.REACT_APP_COORDINATOR_BASE_URL ||
             process.env.REACT_APP_COORDINATOR_URL ||
@@ -59,7 +58,11 @@ export const AuthProvider = ({ children }) => {
             clearAccessToken();
             setUser(null);
             setIsAuthenticated(false);
-            window.location.href = `${nAuthBaseUrl}/login`;
+            if (!nAuthFrontendUrl) {
+              console.error('[AuthContext] ❌ REACT_APP_NAUTH_FRONTEND_URL is missing. Cannot redirect to nAuth login.');
+              return;
+            }
+            window.location.href = `${nAuthFrontendUrl}/login`;
             return;
           }
 
@@ -94,7 +97,11 @@ export const AuthProvider = ({ children }) => {
               clearAccessToken();
               setUser(null);
               setIsAuthenticated(false);
-              window.location.href = `${nAuthBaseUrl}/login`;
+              if (!nAuthFrontendUrl) {
+                console.error('[AuthContext] ❌ REACT_APP_NAUTH_FRONTEND_URL is missing. Cannot redirect to nAuth login.');
+                return;
+              }
+              window.location.href = `${nAuthFrontendUrl}/login`;
               return;
             }
 
@@ -103,7 +110,11 @@ export const AuthProvider = ({ children }) => {
             clearAccessToken();
             setUser(null);
             setIsAuthenticated(false);
-            window.location.href = `${nAuthBaseUrl}/login`;
+            if (!nAuthFrontendUrl) {
+              console.error('[AuthContext] ❌ REACT_APP_NAUTH_FRONTEND_URL is missing. Cannot redirect to nAuth login.');
+              return;
+            }
+            window.location.href = `${nAuthFrontendUrl}/login`;
             return;
           }
           const coordinatorResponse = coordinatorData?.response || {};
@@ -113,7 +124,11 @@ export const AuthProvider = ({ children }) => {
             clearAccessToken();
             setUser(null);
             setIsAuthenticated(false);
-            window.location.href = `${nAuthBaseUrl}/login`;
+            if (!nAuthFrontendUrl) {
+              console.error('[AuthContext] ❌ REACT_APP_NAUTH_FRONTEND_URL is missing. Cannot redirect to nAuth login.');
+              return;
+            }
+            window.location.href = `${nAuthFrontendUrl}/login`;
             return;
           }
 
