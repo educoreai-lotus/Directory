@@ -31,14 +31,17 @@ api.interceptors.request.use(
     console.log('[api] api.defaults.baseURL =', api.defaults.baseURL);
     console.log('[api] config.url =', config.url);
     
-    const authMode = process.env.REACT_APP_AUTH_MODE || 'dummy';
+    const authMode = process.env.REACT_APP_AUTH_MODE;
+    if (!authMode) {
+      console.error('[api] ❌ REACT_APP_AUTH_MODE is missing. Refusing to default to dummy mode.');
+    }
 
     // Add Authorization header if token exists.
     // In nAuth mode, token must be in-memory only (no localStorage/sessionStorage).
     let token = null;
     if (authMode === 'nauth') {
       token = getAccessToken();
-    } else {
+    } else if (authMode) {
       // Legacy modes (dummy / existing Directory auth): keep existing behavior
       token = localStorage.getItem('auth_token');
 

@@ -14,7 +14,11 @@ export const registerCompany = async (companyData) => {
 
     // After successful company registration, inject dummy token for dummy mode
     // This ensures CSV upload and other operations work without requiring login
-    const isDummyMode = process.env.REACT_APP_AUTH_MODE === 'dummy' || !process.env.REACT_APP_AUTH_MODE;
+    const authMode = process.env.REACT_APP_AUTH_MODE;
+    if (!authMode) {
+      console.error('[companyRegistrationService] ❌ REACT_APP_AUTH_MODE is missing. Refusing to default to dummy mode.');
+    }
+    const isDummyMode = authMode === 'dummy';
     if (isDummyMode) {
       const dummyToken = 'dummy-token';
       localStorage.setItem('auth_token', dummyToken);

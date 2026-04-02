@@ -28,7 +28,10 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const authMode = process.env.REACT_APP_AUTH_MODE || 'dummy';
+        const authMode = process.env.REACT_APP_AUTH_MODE;
+        if (!authMode) {
+          console.error('[AuthContext] ❌ REACT_APP_AUTH_MODE is missing. Refusing to default to dummy mode.');
+        }
         if (authMode === 'nauth') {
           // nAuth bootstrap: obtain short-lived access token via refresh cookie (credentials include).
           const token = await refreshAccessToken();
@@ -295,7 +298,10 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       setLoading(true);
-      const authMode = process.env.REACT_APP_AUTH_MODE || 'dummy';
+      const authMode = process.env.REACT_APP_AUTH_MODE;
+      if (!authMode) {
+        console.error('[AuthContext] ❌ REACT_APP_AUTH_MODE is missing. Refusing to default to dummy mode.');
+      }
       if (authMode === 'nauth') {
         // Directory is not a login authority in nAuth mode.
         return { success: false, error: 'Please sign in via nAuth.' };
@@ -370,7 +376,10 @@ export const AuthProvider = ({ children }) => {
    */
   const logout = async () => {
     try {
-      const authMode = process.env.REACT_APP_AUTH_MODE || 'dummy';
+      const authMode = process.env.REACT_APP_AUTH_MODE;
+      if (!authMode) {
+        console.error('[AuthContext] ❌ REACT_APP_AUTH_MODE is missing. Refusing to default to dummy mode.');
+      }
       if (authMode === 'nauth') {
         clearAccessToken();
         setUser(null);
