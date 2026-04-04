@@ -1,5 +1,5 @@
 // nAuth Authentication Provider
-// Validates nAuth-minted access tokens locally (no per-request introspection).
+// Validates nAuth-minted access tokens locally; authMiddleware may escalate to Coordinator when needed.
 
 const jwt = require('jsonwebtoken');
 const AuthProvider = require('./AuthProvider');
@@ -65,6 +65,9 @@ class NAuthProvider extends AuthProvider {
         console.error('[NAuthProvider] jwt.verify failed (full error):', error);
         console.error('[NAuthProvider] jwt.verify error.name:', error?.name);
         console.error('[NAuthProvider] jwt.verify error.message:', error?.message);
+        if (error && error.name === 'TokenExpiredError') {
+          return { valid: false, error: 'Invalid or expired token', expired: true };
+        }
         return { valid: false, error: 'Invalid or expired token' };
       }
 

@@ -3,7 +3,7 @@
 
 import config from '../config';
 import axios from 'axios';
-import { getAccessToken } from '../auth/accessTokenStore';
+import { getAccessToken, setAccessToken } from '../auth/accessTokenStore';
 
 console.log("[DEBUG] Loaded API Base URL =", config.apiBaseUrl);
 
@@ -185,6 +185,12 @@ api.interceptors.response.use(
         console.error('Failed to parse response:', e);
       }
     }
+    if (process.env.REACT_APP_AUTH_MODE === 'nauth') {
+      const rotated = response.headers?.['x-new-access-token'];
+      if (rotated != null && String(rotated).trim() !== '') {
+        setAccessToken(String(rotated).trim());
+      }
+    }
     return response;
   },
   (error) => {
@@ -193,6 +199,13 @@ api.interceptors.response.use(
         error.response.data = JSON.parse(error.response.data);
       } catch (e) {
         console.error('Failed to parse error response:', e);
+      }
+    }
+
+    if (process.env.REACT_APP_AUTH_MODE === 'nauth' && error.response) {
+      const rotated = error.response.headers?.['x-new-access-token'];
+      if (rotated != null && String(rotated).trim() !== '') {
+        setAccessToken(String(rotated).trim());
       }
     }
     

@@ -3,6 +3,11 @@
 // Works with both dummy and real Auth Service modes
 
 const AuthFactory = require('../infrastructure/auth/AuthFactory');
+const {
+  isSensitiveNAuthRequest,
+  revalidateNAuthAccessTokenViaCoordinator,
+  buildUserFromCoordinatorResponse
+} = require('./nAuthCoordinatorRevalidate');
 
 // Create auth provider instance (singleton pattern)
 let authProvider = null;
@@ -135,7 +140,76 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    // Validate token
+    // nAuth: local JWT first; Coordinator -> nAuth only when sensitive or token expired locally.
+    if (process.env.AUTH_MODE === 'nauth') {
+      console.log('[authMiddleware] nAuth mode: validating token (local first)...');
+      const validationResult = await provider.validateToken(token);
+      const sensitive = isSensitiveNAuthRequest(req);
+
+      if (validationResult.valid && !sensitive) {
+        req.user = validationResult.user;
+        req.token = token;
+        console.log('[authMiddleware] nAuth local OK (non-sensitive):', req.user?.id);
+        return next();
+      }
+
+      if (!validationResult.valid && !validationResult.expired) {
+        console.log('[authMiddleware] nAuth local rejected (not expired):', validationResult.error || '');
+        return res.status(401).json({
+          requester_service: 'directory_service',
+          response: {
+            error: validationResult.error || 'Invalid or expired token'
+          }
+        });
+      }
+
+      try {
+        const cr = await revalidateNAuthAccessTokenViaCoordinator(token, req);
+        const coord = cr.coordinatorResponse || {};
+        if (!cr.httpOk || coord.valid !== true) {
+          console.log('[authMiddleware] nAuth Coordinator revalidation failed:', {
+            httpOk: cr.httpOk,
+            status: cr.status,
+            valid: coord.valid,
+            reason: coord.reason
+          });
+          return res.status(401).json({
+            requester_service: 'directory_service',
+            response: {
+              error: coord.reason || 'Invalid or expired token'
+            }
+          });
+        }
+
+        const user = buildUserFromCoordinatorResponse(coord, validationResult.user || null);
+        if (!user) {
+          return res.status(401).json({
+            requester_service: 'directory_service',
+            response: {
+              error: 'Invalid authentication response'
+            }
+          });
+        }
+
+        req.user = user;
+        req.token = coord.new_access_token || token;
+        if (coord.new_access_token) {
+          res.setHeader('X-New-Access-Token', coord.new_access_token);
+        }
+        console.log('[authMiddleware] nAuth Coordinator OK, user:', req.user.id);
+        return next();
+      } catch (coordErr) {
+        console.error('[authMiddleware] nAuth Coordinator error:', coordErr.message);
+        return res.status(401).json({
+          requester_service: 'directory_service',
+          response: {
+            error: 'Authentication validation failed'
+          }
+        });
+      }
+    }
+
+    // Validate token (non-nAuth modes)
     console.log('[authMiddleware] Validating token...');
     const validationResult = await provider.validateToken(token);
     console.log('[authMiddleware] Validation result:', validationResult.valid ? 'valid' : 'invalid', validationResult.error || '');
