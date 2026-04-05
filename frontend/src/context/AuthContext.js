@@ -7,6 +7,24 @@ import * as authService from '../services/authService';
 import api from '../utils/api';
 import { setAccessToken, getAccessToken, clearAccessToken } from '../auth/accessTokenStore';
 
+/**
+ * Decode JWT payload only (no verification). Used for nAuth client-side landing routes only.
+ */
+function decodeJwtPayload(token) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    let b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const pad = b64.length % 4;
+    if (pad) b64 += '='.repeat(4 - pad);
+    const json = atob(b64);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
@@ -144,6 +162,53 @@ export const AuthProvider = ({ children }) => {
           setUser(meUser);
           setIsAuthenticated(!!meUser);
           setLoading(false);
+
+          // nAuth: one-time-style landing redirect only from neutral entry paths (deep links preserved).
+          if (meUser) {
+            const path = window.location.pathname;
+            if (path === '/' || path === '/login') {
+              const activeToken = getAccessToken();
+              const claims = decodeJwtPayload(activeToken) || {};
+              const directoryUserId = meUser.directoryUserId || meUser.id;
+              const organizationId =
+                meUser.organizationId || meUser.companyId || meUser.company_id;
+              const primaryRole = String(
+                claims.primaryRole ??
+                  claims.primary_role ??
+                  meUser.primaryRole ??
+                  meUser.primary_role ??
+                  ''
+              ).toUpperCase();
+              const isSystemAdmin =
+                claims.isSystemAdmin === true ||
+                claims.is_system_admin === true ||
+                meUser.isSystemAdmin === true ||
+                meUser.is_system_admin === true ||
+                primaryRole === 'DIRECTORY_ADMIN';
+              const isHR =
+                meUser.isHR === true ||
+                claims.isHR === true ||
+                claims.is_hr === true;
+              const hasValidOrganizationId =
+                organizationId != null &&
+                String(organizationId).trim() !== '' &&
+                String(organizationId) !== 'undefined';
+
+              let target = null;
+              if (isSystemAdmin) {
+                target = '/admin/dashboard';
+              } else if (isHR && hasValidOrganizationId) {
+                target = `/company/${organizationId}`;
+              } else if (directoryUserId) {
+                target = `/employee/${directoryUserId}`;
+              }
+
+              if (target && target !== path) {
+                navigate(target, { replace: true });
+              }
+            }
+          }
+
           return;
         }
 
