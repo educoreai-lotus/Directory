@@ -1,8 +1,19 @@
 const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+const AdminRepository = require('../infrastructure/AdminRepository');
+
+/** First matching role in this list wins as primary_role (DEPARTMENT_MANAGER strictest first). */
+const PRIMARY_ROLE_PRECEDENCE = [
+  'DEPARTMENT_MANAGER',
+  'TEAM_MANAGER',
+  'TRAINER',
+  'DECISION_MAKER',
+  'REGULAR_EMPLOYEE'
+];
 
 class NAuthRequestController {
   constructor() {
     this.employeeRepository = new EmployeeRepository();
+    this.adminRepository = new AdminRepository();
   }
 
   buildNotFoundResponse() {
@@ -13,12 +24,25 @@ class NAuthRequestController {
         user_id: '',
         full_name: '',
         organization_id: '',
-        organization_name: ''
+        organization_name: '',
+        roles: [],
+        primary_role: '',
+        is_system_admin: false
       }
     };
   }
 
-  buildFoundResponse(employee) {
+  /**
+   * @param {object} employee - row from findByEmail / findByGithubUrl
+   * @param {{ roles?: string[], primary_role?: string, is_system_admin?: boolean }} [enrichment]
+   */
+  buildFoundResponse(employee, enrichment = {}) {
+    const roles = Array.isArray(enrichment.roles) ? enrichment.roles : [];
+    const primaryRole =
+      typeof enrichment.primary_role === 'string' && enrichment.primary_role.length > 0
+        ? enrichment.primary_role
+        : 'REGULAR_EMPLOYEE';
+    const isSystemAdmin = enrichment.is_system_admin === true;
     return {
       requester_service: 'directory_service',
       response: {
@@ -26,9 +50,52 @@ class NAuthRequestController {
         user_id: employee.id || '',
         full_name: employee.full_name || '',
         organization_id: employee.company_id || '',
-        organization_name: employee.organization_name || ''
+        organization_name: employee.organization_name || '',
+        roles,
+        primary_role: primaryRole,
+        is_system_admin: isSystemAdmin
       }
     };
+  }
+
+  buildAdminFoundResponse(admin) {
+    return {
+      requester_service: 'directory_service',
+      response: {
+        user_exists: true,
+        user_id: admin.id || '',
+        full_name: admin.full_name || '',
+        organization_id: '',
+        organization_name: '',
+        roles: ['DIRECTORY_ADMIN'],
+        primary_role: 'DIRECTORY_ADMIN',
+        is_system_admin: true
+      }
+    };
+  }
+
+  computePrimaryRole(roleTypes) {
+    if (!roleTypes || roleTypes.length === 0) {
+      return 'REGULAR_EMPLOYEE';
+    }
+    const set = new Set(roleTypes);
+    for (let i = 0; i < PRIMARY_ROLE_PRECEDENCE.length; i += 1) {
+      const r = PRIMARY_ROLE_PRECEDENCE[i];
+      if (set.has(r)) {
+        return r;
+      }
+    }
+    return 'REGULAR_EMPLOYEE';
+  }
+
+  async fetchEmployeeRoleTypes(employeeId) {
+    const query = `
+      SELECT role_type
+      FROM employee_roles
+      WHERE employee_id = $1
+    `;
+    const result = await this.employeeRepository.pool.query(query, [employeeId]);
+    return result.rows.map((row) => row.role_type).filter(Boolean);
   }
 
   async findByEmail(email) {
@@ -221,11 +288,37 @@ class NAuthRequestController {
         });
       }
 
-      if (!employee) {
-        return res.status(200).json(this.buildNotFoundResponse());
+      if (employee) {
+        let roles = [];
+        let primaryRole = 'REGULAR_EMPLOYEE';
+        try {
+          roles = await this.fetchEmployeeRoleTypes(employee.id);
+          primaryRole = this.computePrimaryRole(roles);
+        } catch (roleErr) {
+          console.error('[NAuthRequestController] Role lookup failed (non-fatal):', roleErr.message);
+        }
+        return res.status(200).json(
+          this.buildFoundResponse(employee, {
+            roles,
+            primary_role: primaryRole,
+            is_system_admin: false
+          })
+        );
       }
 
-      return res.status(200).json(this.buildFoundResponse(employee));
+      // Employee not found: optional directory_admins fallback when email was provided.
+      if (email) {
+        try {
+          const admin = await this.adminRepository.findByEmail(email);
+          if (admin) {
+            return res.status(200).json(this.buildAdminFoundResponse(admin));
+          }
+        } catch (adminErr) {
+          console.error('[NAuthRequestController] Admin lookup failed (non-fatal):', adminErr.message);
+        }
+      }
+
+      return res.status(200).json(this.buildNotFoundResponse());
     } catch (error) {
       responseErrorMessage = error?.message || 'Failed to process directory lookup request.';
       console.error('[NAuthRequestController] Error handling /request:', error.message);
