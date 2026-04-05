@@ -88,7 +88,16 @@ async function revalidateNAuthAccessTokenViaCoordinator(accessToken, req) {
 function buildUserFromCoordinatorResponse(coordinatorResponse, localUser) {
   const directoryUserId = coordinatorResponse.directory_user_id;
   const organizationId = coordinatorResponse.organization_id;
-  if (!directoryUserId || !organizationId) {
+  const isSystemAdminFromCoordinator =
+    coordinatorResponse.isSystemAdmin === true ||
+    coordinatorResponse.is_system_admin === true;
+  const isSystemAdmin =
+    isSystemAdminFromCoordinator || localUser?.isSystemAdmin === true;
+
+  if (!directoryUserId) {
+    return null;
+  }
+  if (!organizationId && !isSystemAdmin) {
     return null;
   }
   const sub = localUser?.sub != null ? localUser.sub : String(directoryUserId);
@@ -96,15 +105,22 @@ function buildUserFromCoordinatorResponse(coordinatorResponse, localUser) {
     ? localUser.provider
     : undefined;
 
-  return {
+  const user = {
     sub,
     directoryUserId,
-    organizationId,
     id: directoryUserId,
-    companyId: organizationId,
-    company_id: organizationId,
     ...(provider !== undefined ? { provider } : {})
   };
+  if (isSystemAdmin) {
+    user.isSystemAdmin = true;
+  }
+  if (organizationId) {
+    user.organizationId = organizationId;
+    user.companyId = organizationId;
+    user.company_id = organizationId;
+  }
+
+  return user;
 }
 
 module.exports = {

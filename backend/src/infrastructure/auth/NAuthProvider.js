@@ -75,6 +75,8 @@ class NAuthProvider extends AuthProvider {
       const sub = decoded?.sub;
       const directoryUserId = decoded?.directoryUserId;
       const organizationId = decoded?.organizationId;
+      const isSystemAdmin =
+        decoded?.isSystemAdmin === true || decoded?.is_system_admin === true;
 
       if (!sub) {
         return { valid: false, error: 'Token missing required claim: sub' };
@@ -82,24 +84,30 @@ class NAuthProvider extends AuthProvider {
       if (!directoryUserId) {
         return { valid: false, error: 'Token missing required claim: directoryUserId' };
       }
-      if (!organizationId) {
+      if (!organizationId && !isSystemAdmin) {
         return { valid: false, error: 'Token missing required claim: organizationId' };
       }
 
       // Attach trusted context using existing Directory conventions where possible.
-      // Keep the contract minimal: sub, directoryUserId, organizationId are the source of truth.
+      // organizationId optional only for nAuth system admins (signed claims).
+      const user = {
+        sub,
+        directoryUserId,
+        id: directoryUserId,
+        provider: decoded?.provider
+      };
+      if (isSystemAdmin) {
+        user.isSystemAdmin = true;
+      }
+      if (organizationId) {
+        user.organizationId = organizationId;
+        user.companyId = organizationId;
+        user.company_id = organizationId;
+      }
+
       return {
         valid: true,
-        user: {
-          sub,
-          directoryUserId,
-          organizationId,
-          // Compatibility aliases for existing code paths (do not use as source of truth):
-          id: directoryUserId,
-          companyId: organizationId,
-          company_id: organizationId,
-          provider: decoded?.provider
-        }
+        user
       };
     } catch (error) {
       return { valid: false, error: 'Invalid or expired token' };
