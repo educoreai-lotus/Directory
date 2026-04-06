@@ -2,10 +2,41 @@
 // Handles HTTP requests for company profile data
 
 const GetCompanyProfileUseCase = require('../application/GetCompanyProfileUseCase');
+const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+const CompanyRepository = require('../infrastructure/CompanyRepository');
 
 class CompanyProfileController {
   constructor() {
     this.getCompanyProfileUseCase = new GetCompanyProfileUseCase();
+    this.employeeRepository = new EmployeeRepository();
+    this.companyRepository = new CompanyRepository();
+  }
+
+  getRequesterDirectoryUserId(req) {
+    return req.user?.directoryUserId || req.user?.id || null;
+  }
+
+  getRequesterCompanyId(req) {
+    return req.user?.organizationId || req.user?.companyId || req.user?.company_id || null;
+  }
+
+  isSystemAdmin(req) {
+    return req.user?.isSystemAdmin === true;
+  }
+
+  async isHrForCompany(req, companyId) {
+    const requesterId = this.getRequesterDirectoryUserId(req);
+    if (!requesterId) return false;
+    const requesterEmployee = await this.employeeRepository.findById(requesterId);
+    if (!requesterEmployee) return false;
+    if (String(requesterEmployee.company_id) !== String(companyId)) return false;
+
+    const profile = await this.companyRepository.findById(companyId);
+    if (!profile || !profile.hr_contact_email) return false;
+    return (
+      String(profile.hr_contact_email).trim().toLowerCase() ===
+      String(requesterEmployee.email || '').trim().toLowerCase()
+    );
   }
 
   /**
@@ -15,6 +46,16 @@ class CompanyProfileController {
   async getProfile(req, res, next) {
     try {
       const { id: companyId } = req.params;
+      const requesterCompanyId = this.getRequesterCompanyId(req);
+      const admin = this.isSystemAdmin(req);
+      const hrInCompany = await this.isHrForCompany(req, companyId);
+
+      // Allow: system admin OR same-company user OR HR of that company.
+      if (!admin && !hrInCompany && String(requesterCompanyId || '') !== String(companyId)) {
+        return res.status(403).json({
+          error: 'Access denied'
+        });
+      }
 
       console.log(`[CompanyProfileController] Fetching profile for company ${companyId}`);
 

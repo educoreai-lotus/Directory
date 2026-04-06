@@ -11,6 +11,7 @@ const GetEmployeeLearningPathUseCase = require('../application/GetEmployeeLearni
 const GetEmployeeDashboardUseCase = require('../application/GetEmployeeDashboardUseCase');
 const GetManagerHierarchyUseCase = require('../application/GetManagerHierarchyUseCase');
 const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+const CompanyRepository = require('../infrastructure/CompanyRepository');
 const ErrorTranslator = require('../shared/ErrorTranslator');
 
 class EmployeeController {
@@ -25,6 +26,62 @@ class EmployeeController {
     this.getEmployeeDashboardUseCase = new GetEmployeeDashboardUseCase();
     this.getManagerHierarchyUseCase = new GetManagerHierarchyUseCase();
     this.employeeRepository = new EmployeeRepository();
+    this.companyRepository = new CompanyRepository();
+  }
+
+  getRequesterDirectoryUserId(req) {
+    return req.user?.directoryUserId || req.user?.id || null;
+  }
+
+  getRequesterCompanyId(req) {
+    return req.user?.organizationId || req.user?.companyId || req.user?.company_id || null;
+  }
+
+  isSystemAdmin(req) {
+    return req.user?.isSystemAdmin === true;
+  }
+
+  async isHrForCompany(req, companyId) {
+    const requesterId = this.getRequesterDirectoryUserId(req);
+    if (!requesterId) return false;
+    const requesterEmployee = await this.employeeRepository.findById(requesterId);
+    if (!requesterEmployee) return false;
+    if (String(requesterEmployee.company_id) !== String(companyId)) return false;
+
+    const company = await this.companyRepository.findById(companyId);
+    if (!company || !company.hr_contact_email) return false;
+    return (
+      String(company.hr_contact_email).trim().toLowerCase() ===
+      String(requesterEmployee.email || '').trim().toLowerCase()
+    );
+  }
+
+  async canAccessEmployee(req, companyId, targetEmployeeId) {
+    const target = await this.employeeRepository.findById(targetEmployeeId);
+    if (!target || String(target.company_id) !== String(companyId)) {
+      return { allowed: false, reason: 'not_found', target: null };
+    }
+
+    if (this.isSystemAdmin(req)) {
+      return { allowed: true, reason: 'system_admin', target };
+    }
+
+    const requesterCompanyId = this.getRequesterCompanyId(req);
+    if (!requesterCompanyId || String(requesterCompanyId) !== String(companyId)) {
+      return { allowed: false, reason: 'forbidden', target };
+    }
+
+    const requesterId = this.getRequesterDirectoryUserId(req);
+    if (requesterId && String(requesterId) === String(targetEmployeeId)) {
+      return { allowed: true, reason: 'self', target };
+    }
+
+    const hr = await this.isHrForCompany(req, companyId);
+    if (hr) {
+      return { allowed: true, reason: 'hr', target };
+    }
+
+    return { allowed: false, reason: 'forbidden', target };
   }
 
   /**
@@ -35,6 +92,14 @@ class EmployeeController {
     try {
       const { id: companyId } = req.params;
       const employeeData = req.body;
+
+      const admin = this.isSystemAdmin(req);
+      const hr = await this.isHrForCompany(req, companyId);
+      if (!admin && !hr) {
+        return res.status(403).json({
+          error: 'Access denied'
+        });
+      }
 
       console.log(`[EmployeeController] Adding employee for company ${companyId}`);
 
@@ -71,6 +136,26 @@ class EmployeeController {
       
       // Extract data from envelope structure (payload) or direct body
       const employeeData = req.body.payload || req.body;
+      const access = await this.canAccessEmployee(req, companyId, employeeId);
+      if (!access.allowed) {
+        if (access.reason === 'not_found') {
+          return res.status(404).json({ error: 'Employee not found' });
+        }
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      const isPrivileged = this.isSystemAdmin(req) || (await this.isHrForCompany(req, companyId));
+      if (!isPrivileged && access.reason === 'self') {
+        const allowedSelfKeys = new Set(['preferred_language', 'bio', 'value_proposition']);
+        const sanitized = {};
+        for (const [key, value] of Object.entries(employeeData || {})) {
+          if (allowedSelfKeys.has(key)) {
+            sanitized[key] = value;
+          }
+        }
+        Object.keys(employeeData || {}).forEach((k) => delete employeeData[k]);
+        Object.assign(employeeData, sanitized);
+      }
       
       console.log(`[EmployeeController] Updating employee ${employeeId} for company ${companyId}`);
       console.log(`[EmployeeController] Employee data received:`, {
@@ -109,6 +194,20 @@ class EmployeeController {
   async deleteEmployee(req, res, next) {
     try {
       const { id: companyId, employeeId } = req.params;
+      const admin = this.isSystemAdmin(req);
+      const hr = await this.isHrForCompany(req, companyId);
+      if (!admin && !hr) {
+        return res.status(403).json({
+          error: 'Access denied'
+        });
+      }
+      const access = await this.canAccessEmployee(req, companyId, employeeId);
+      if (!access.allowed) {
+        if (access.reason === 'not_found') {
+          return res.status(404).json({ error: 'Employee not found' });
+        }
+        return res.status(403).json({ error: 'Access denied' });
+      }
 
       console.log(`[EmployeeController] Deleting employee ${employeeId} for company ${companyId}`);
 
@@ -137,10 +236,19 @@ class EmployeeController {
   async getEmployee(req, res, next) {
     try {
       const { id: companyId, employeeId } = req.params;
-
-      const employee = await this.employeeRepository.findById(employeeId);
-      
-      if (!employee || employee.company_id !== companyId) {
+      const access = await this.canAccessEmployee(req, companyId, employeeId);
+      if (!access.allowed) {
+        if (access.reason === 'not_found') {
+          return res.status(404).json({
+            error: 'Employee not found'
+          });
+        }
+        return res.status(403).json({
+          error: 'Access denied'
+        });
+      }
+      const employee = access.target;
+      if (!employee) {
         return res.status(404).json({
           error: 'Employee not found'
         });

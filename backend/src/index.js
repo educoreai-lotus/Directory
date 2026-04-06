@@ -344,24 +344,24 @@ apiRouter.post('/companies/:id/upload', (req, res, next) => {
 });
 
 // Company Profile
-apiRouter.get('/companies/:id/profile', (req, res, next) => {
+apiRouter.get('/companies/:id/profile', authMiddleware, (req, res, next) => {
   companyProfileController.getProfile(req, res, next);
 });
 
 // Employee Management
-apiRouter.post('/companies/:id/employees', (req, res, next) => {
+apiRouter.post('/companies/:id/employees', authMiddleware, (req, res, next) => {
   employeeController.addEmployee(req, res, next);
 });
 
-apiRouter.put('/companies/:id/employees/:employeeId', (req, res, next) => {
+apiRouter.put('/companies/:id/employees/:employeeId', authMiddleware, (req, res, next) => {
   employeeController.updateEmployee(req, res, next);
 });
 
-apiRouter.delete('/companies/:id/employees/:employeeId', (req, res, next) => {
+apiRouter.delete('/companies/:id/employees/:employeeId', authMiddleware, (req, res, next) => {
   employeeController.deleteEmployee(req, res, next);
 });
 
-apiRouter.get('/companies/:id/employees/:employeeId', (req, res, next) => {
+apiRouter.get('/companies/:id/employees/:employeeId', authMiddleware, (req, res, next) => {
   employeeController.getEmployee(req, res, next);
 });
 
