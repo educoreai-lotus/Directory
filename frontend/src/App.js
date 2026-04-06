@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DesignSystemProvider } from './context/DesignSystemContext';
 import LandingPage from './pages/LandingPage';
@@ -76,6 +76,57 @@ function RootRouteGate() {
   return <LandingPage />;
 }
 
+function getSafeRouteForUser(user) {
+  const userId = user?.directoryUserId || user?.id;
+  const companyId = user?.companyId || user?.company_id || user?.organizationId;
+  const isSystemAdmin =
+    user?.isSystemAdmin === true ||
+    user?.isAdmin === true ||
+    String(user?.role || '').toUpperCase() === 'DIRECTORY_ADMIN';
+
+  if (isSystemAdmin) return '/admin/dashboard';
+  if (user?.isHR === true && companyId) return `/company/${companyId}`;
+  if (userId) return `/employee/${userId}`;
+  return '/';
+}
+
+function AdminRouteGuard({ children }) {
+  const { loading, user } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/" replace />;
+
+  const isSystemAdmin =
+    user?.isSystemAdmin === true ||
+    user?.isAdmin === true ||
+    String(user?.role || '').toUpperCase() === 'DIRECTORY_ADMIN';
+
+  if (!isSystemAdmin) {
+    return <Navigate to={getSafeRouteForUser(user)} replace />;
+  }
+  return children;
+}
+
+function EmployeeRouteGuard({ children }) {
+  const { loading, user } = useAuth();
+  const { employeeId } = useParams();
+  if (loading) return null;
+  if (!user) return <Navigate to="/" replace />;
+
+  const userId = user?.directoryUserId || user?.id;
+  const isSelf = userId && String(userId) === String(employeeId);
+  const isSystemAdmin =
+    user?.isSystemAdmin === true ||
+    user?.isAdmin === true ||
+    String(user?.role || '').toUpperCase() === 'DIRECTORY_ADMIN';
+  const isHrContext = user?.isHR === true && !!(user?.companyId || user?.company_id || user?.organizationId);
+
+  // Deny by default when frontend cannot prove access.
+  if (!isSelf && !isSystemAdmin && !isHrContext) {
+    return <Navigate to={getSafeRouteForUser(user)} replace />;
+  }
+  return children;
+}
+
 // Bot initialization component (must be inside AuthProvider)
 function BotInitializer() {
   const { user, isAuthenticated } = useAuth();
@@ -120,12 +171,26 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<RootRouteGate />} />
           <Route path="/enrich" element={<EnrichProfilePage />} />
-          <Route path="/employee/:employeeId" element={<EmployeeProfilePage />} />
+          <Route
+            path="/employee/:employeeId"
+            element={
+              <EmployeeRouteGuard>
+                <EmployeeProfilePage />
+              </EmployeeRouteGuard>
+            }
+          />
           <Route path="/register" element={<CompanyRegistrationForm />} />
           <Route path="/verify/:companyId" element={<CompanyVerificationPage />} />
           <Route path="/upload/:companyId" element={<CompanyCSVUploadPage />} />
           <Route path="/company/:companyId" element={<CompanyProfilePage />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <AdminRouteGuard>
+                <AdminDashboard />
+              </AdminRouteGuard>
+            }
+          />
         </Routes>
       </main>
       <BotInitializer />

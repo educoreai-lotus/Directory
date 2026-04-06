@@ -12,9 +12,23 @@ import LearningPathApprovals from '../components/LearningPathApprovals';
 import ProfileEditForm from '../components/ProfileEditForm';
 import ProfileManagement from '../components/ProfileManagement';
 
+function getSafeRouteForUser(user) {
+  const userId = user?.directoryUserId || user?.id;
+  const companyId = user?.companyId || user?.company_id || user?.organizationId;
+  const isSystemAdmin =
+    user?.isSystemAdmin === true ||
+    user?.isAdmin === true ||
+    String(user?.role || '').toUpperCase() === 'DIRECTORY_ADMIN';
+
+  if (isSystemAdmin) return '/admin/dashboard';
+  if (user?.isHR === true && companyId) return `/company/${companyId}`;
+  if (userId) return `/employee/${userId}`;
+  return '/';
+}
+
 function EmployeeProfilePage() {
   const { employeeId } = useParams();
-  const { user, logout } = useAuth();
+  const { user, logout, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -24,10 +38,23 @@ function EmployeeProfilePage() {
   const [showEnrichmentSuccess, setShowEnrichmentSuccess] = useState(true);
   const [showApprovalSuccess, setShowApprovalSuccess] = useState(true);
 
-  // Determine if this is an admin view (must be defined before useEffect)
-  const isAdminView = searchParams.get('admin') === 'true' || 
-                     user?.isAdmin || 
-                     user?.role === 'DIRECTORY_ADMIN';
+  const userId = user?.directoryUserId || user?.id;
+  const isSelf = !!userId && String(userId) === String(employeeId);
+  const isSystemAdmin =
+    user?.isSystemAdmin === true ||
+    user?.isAdmin === true ||
+    String(user?.role || '').toUpperCase() === 'DIRECTORY_ADMIN';
+  const isHrContext = user?.isHR === true && !!(user?.companyId || user?.company_id || user?.organizationId);
+  // Keep admin query behavior only for actual admins.
+  const isAdminView = (searchParams.get('admin') === 'true' && isSystemAdmin) || isSystemAdmin;
+  const canAccessByFrontend = isSelf || isSystemAdmin || isHrContext;
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!canAccessByFrontend) {
+      navigate(getSafeRouteForUser(user), { replace: true });
+    }
+  }, [authLoading, canAccessByFrontend, navigate, user]);
 
   // Auto-dismiss success messages after 5 seconds
   // Use employee data if available, otherwise use defaults
@@ -93,10 +120,14 @@ function EmployeeProfilePage() {
       }
     };
 
-    if (employeeId && (user?.companyId || isAdminView)) {
+    if (canAccessByFrontend && employeeId && (user?.companyId || isAdminView)) {
       fetchEmployee();
     }
-  }, [employeeId, user?.companyId, isAdminView]);
+  }, [canAccessByFrontend, employeeId, user?.companyId, isAdminView]);
+
+  if (authLoading || !canAccessByFrontend) {
+    return null;
+  }
 
   // Parse project summaries if stored as JSON string
   const parseProjectSummaries = (summaries) => {
@@ -158,7 +189,7 @@ function EmployeeProfilePage() {
   const isApproved = profileStatus === 'approved';
   
   // Determine if current user is viewing their own profile or someone else's
-  const isOwnProfile = user?.id === employeeId && !isAdminView;
+  const isOwnProfile = isSelf && !isAdminView;
   const isViewOnly = !isOwnProfile || isAdminView; // Read-only mode when viewing someone else's profile or when admin
   
   if (process.env.NODE_ENV === 'development') {

@@ -2,18 +2,38 @@
 // Platform-level admin dashboard for managing the entire directory
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import { getAllCompanies } from '../services/adminService';
 
+function getSafeRouteForUser(user) {
+  const userId = user?.directoryUserId || user?.id;
+  const companyId = user?.companyId || user?.company_id || user?.organizationId;
+  if (user?.isHR === true && companyId) return `/company/${companyId}`;
+  if (userId) return `/employee/${userId}`;
+  return '/';
+}
+
 function AdminDashboard() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const isSystemAdmin =
+    user?.isSystemAdmin === true ||
+    user?.isAdmin === true ||
+    String(user?.role || '').toUpperCase() === 'DIRECTORY_ADMIN';
+
+  if (!loading && !isSystemAdmin) {
+    return <Navigate to={getSafeRouteForUser(user)} replace />;
+  }
+
+  if (loading) {
+    return null;
+  }
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -166,21 +186,23 @@ function AdminDashboard() {
             >
               Requests
             </button>
-            <button
-              onClick={handleManagementReporting}
-              className={`px-4 py-2 font-medium transition-colors ${
-                activeTab === 'management'
-                  ? 'border-b-2 border-teal-600 text-teal-600'
-                  : 'text-gray-600 hover:text-gray-800'
-              }`}
-              style={{
-                color: activeTab === 'management' ? 'var(--border-focus)' : 'var(--text-secondary)',
-                borderBottomColor: activeTab === 'management' ? 'var(--border-focus)' : 'transparent',
-                cursor: 'pointer'
-              }}
-            >
-              Management & Reporting
-            </button>
+            {isSystemAdmin && (
+              <button
+                onClick={handleManagementReporting}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  activeTab === 'management'
+                    ? 'border-b-2 border-teal-600 text-teal-600'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+                style={{
+                  color: activeTab === 'management' ? 'var(--border-focus)' : 'var(--text-secondary)',
+                  borderBottomColor: activeTab === 'management' ? 'var(--border-focus)' : 'transparent',
+                  cursor: 'pointer'
+                }}
+              >
+                Management & Reporting
+              </button>
+            )}
           </div>
 
           {/* Overview Tab */}
@@ -355,7 +377,7 @@ function AdminDashboard() {
           )}
 
           {/* Management & Reporting Tab */}
-          {activeTab === 'management' && (
+          {isSystemAdmin && activeTab === 'management' && (
             <div>
               <div 
                 className="p-6 rounded-lg border text-center"
