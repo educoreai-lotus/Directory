@@ -615,8 +615,8 @@ app.post('/api/fill-content-metrics', authMiddleware, adminOnlyMiddleware, (req,
   }
 });
 
-// Coordinator-routed nAuth lookup endpoint (admin-only)
-app.post('/request', authMiddleware, adminOnlyMiddleware, express.text({ type: 'text/*', limit: '1mb' }), (req, res) => {
+// Coordinator-routed nAuth lookup endpoint (internal; not user Bearer/admin gated)
+app.post('/request', express.text({ type: 'text/*', limit: '1mb' }), (req, res) => {
   try {
     // TEMP DEBUG (route-local only): /request runtime payload diagnostics.
     console.log('[DEBUG][DIRECTORY][/request] content-type:', req.headers['content-type']);
