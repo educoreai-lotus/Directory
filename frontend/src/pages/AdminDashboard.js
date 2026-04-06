@@ -19,19 +19,11 @@ function AdminDashboard() {
     user?.isAdmin === true ||
     String(user?.role || '').toUpperCase() === 'DIRECTORY_ADMIN';
 
-  if (authLoading) {
-    return null;
-  }
-  if (!isSystemAdmin) {
-    return (
-      <AccessDeniedPage
-        title="Access Denied"
-        message="You do not have permission to access admin pages."
-      />
-    );
-  }
-
   useEffect(() => {
+    if (authLoading || !isSystemAdmin) {
+      return;
+    }
+
     const fetchCompanies = async () => {
       try {
         setCompaniesLoading(true);
@@ -53,7 +45,19 @@ function AdminDashboard() {
     };
 
     fetchCompanies();
-  }, []);
+  }, [authLoading, isSystemAdmin]);
+
+  if (authLoading) {
+    return null;
+  }
+  if (!isSystemAdmin) {
+    return (
+      <AccessDeniedPage
+        title="Access Denied"
+        message="You do not have permission to access admin pages."
+      />
+    );
+  }
 
   const handleViewCompany = (companyId) => {
     navigate(`/company/${companyId}?admin=true`);
