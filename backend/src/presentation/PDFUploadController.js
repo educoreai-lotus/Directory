@@ -3,12 +3,66 @@
 // PHASE_3: This file is part of the extended enrichment flow
 
 const UploadCVUseCase = require('../application/UploadCVUseCase');
+const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+const CompanyRepository = require('../infrastructure/CompanyRepository');
 const fs = require('fs');
 const path = require('path');
 
 class PDFUploadController {
   constructor() {
     this.uploadCVUseCase = new UploadCVUseCase();
+    this.employeeRepository = new EmployeeRepository();
+    this.companyRepository = new CompanyRepository();
+  }
+
+  getRequesterDirectoryUserId(req) {
+    return req.user?.directoryUserId || req.user?.id || null;
+  }
+
+  getRequesterCompanyId(req) {
+    return req.user?.organizationId || req.user?.companyId || req.user?.company_id || null;
+  }
+
+  isSystemAdmin(req) {
+    return req.user?.isSystemAdmin === true;
+  }
+
+  async isHrForCompany(req, companyId) {
+    const requesterId = this.getRequesterDirectoryUserId(req);
+    if (!requesterId) return false;
+    const requesterEmployee = await this.employeeRepository.findById(requesterId);
+    if (!requesterEmployee) return false;
+    if (String(requesterEmployee.company_id) !== String(companyId)) return false;
+
+    const company = await this.companyRepository.findById(companyId);
+    if (!company || !company.hr_contact_email) return false;
+    return (
+      String(company.hr_contact_email).trim().toLowerCase() ===
+      String(requesterEmployee.email || '').trim().toLowerCase()
+    );
+  }
+
+  async canAccessEmployee(req, targetEmployeeId) {
+    const target = await this.employeeRepository.findById(targetEmployeeId);
+    if (!target) {
+      return { allowed: false, reason: 'not_found', target: null };
+    }
+    if (this.isSystemAdmin(req)) {
+      return { allowed: true, reason: 'system_admin', target };
+    }
+    const requesterId = this.getRequesterDirectoryUserId(req);
+    if (requesterId && String(requesterId) === String(targetEmployeeId)) {
+      return { allowed: true, reason: 'self', target };
+    }
+    const requesterCompanyId = this.getRequesterCompanyId(req);
+    if (!requesterCompanyId || String(requesterCompanyId) !== String(target.company_id)) {
+      return { allowed: false, reason: 'forbidden', target };
+    }
+    const hr = await this.isHrForCompany(req, target.company_id);
+    if (hr) {
+      return { allowed: true, reason: 'hr', target };
+    }
+    return { allowed: false, reason: 'forbidden', target };
   }
 
   /**
@@ -27,14 +81,17 @@ class PDFUploadController {
       
       // PHASE_3: Get employee ID from params and verify authentication
       const { id } = req.params;
-      const authenticatedEmployeeId = req.user?.id || req.user?.employeeId;
-      const isHR = req.user?.isHR || false;
-
-      // Verify employee ID matches authenticated user (unless HR)
-      if (!isHR && authenticatedEmployeeId !== id) {
+      const access = await this.canAccessEmployee(req, id);
+      if (!access.allowed) {
+        if (access.reason === 'not_found') {
+          return res.status(404).json({
+            success: false,
+            message: 'Employee not found'
+          });
+        }
         return res.status(403).json({
           success: false,
-          message: 'You can only upload CV for your own profile'
+          message: 'Access denied'
         });
       }
 

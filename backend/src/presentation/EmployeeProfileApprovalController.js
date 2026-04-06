@@ -5,7 +5,6 @@ const EmployeeProfileApprovalRepository = require('../infrastructure/EmployeePro
 const EmployeeRepository = require('../infrastructure/EmployeeRepository');
 const CompanyRepository = require('../infrastructure/CompanyRepository');
 const MicroserviceClient = require('../infrastructure/MicroserviceClient');
-const { hrOnlyMiddleware } = require('../shared/authMiddleware');
 
 class EmployeeProfileApprovalController {
   constructor() {
@@ -13,6 +12,33 @@ class EmployeeProfileApprovalController {
     this.employeeRepository = new EmployeeRepository();
     this.companyRepository = new CompanyRepository();
     this.microserviceClient = new MicroserviceClient();
+  }
+
+  getRequesterDirectoryUserId(req) {
+    return req.user?.directoryUserId || req.user?.id || null;
+  }
+
+  getRequesterCompanyId(req) {
+    return req.user?.organizationId || req.user?.companyId || req.user?.company_id || null;
+  }
+
+  isSystemAdmin(req) {
+    return req.user?.isSystemAdmin === true;
+  }
+
+  async isHrForCompany(req, companyId) {
+    const requesterId = this.getRequesterDirectoryUserId(req);
+    if (!requesterId) return false;
+    const requesterEmployee = await this.employeeRepository.findById(requesterId);
+    if (!requesterEmployee) return false;
+    if (String(requesterEmployee.company_id) !== String(companyId)) return false;
+
+    const company = await this.companyRepository.findById(companyId);
+    if (!company || !company.hr_contact_email) return false;
+    return (
+      String(company.hr_contact_email).trim().toLowerCase() ===
+      String(requesterEmployee.email || '').trim().toLowerCase()
+    );
   }
 
   /**
@@ -24,10 +50,11 @@ class EmployeeProfileApprovalController {
     try {
       const { id: companyId } = req.params;
 
-      // Verify user is HR for this company
-      if (!req.user || !req.user.isHR || req.user.companyId !== companyId) {
+      const isAdmin = this.isSystemAdmin(req);
+      const isHr = await this.isHrForCompany(req, companyId);
+      if (!isAdmin && !isHr) {
         return res.status(403).json({
-          error: 'Access denied. HR privileges required.'
+          error: 'Access denied'
         });
       }
 
@@ -52,12 +79,13 @@ class EmployeeProfileApprovalController {
   async approveProfile(req, res, next) {
     try {
       const { id: companyId, approvalId } = req.params;
-      const hrEmployeeId = req.user?.id;
+      const hrEmployeeId = this.getRequesterDirectoryUserId(req);
 
-      // Verify user is HR for this company
-      if (!req.user || !req.user.isHR || req.user.companyId !== companyId) {
+      const isAdmin = this.isSystemAdmin(req);
+      const isHr = await this.isHrForCompany(req, companyId);
+      if (!isAdmin && !isHr) {
         return res.status(403).json({
-          error: 'Access denied. HR privileges required.'
+          error: 'Access denied'
         });
       }
 
@@ -278,12 +306,13 @@ class EmployeeProfileApprovalController {
     try {
       const { id: companyId, approvalId } = req.params;
       const { reason } = req.body;
-      const hrEmployeeId = req.user?.id;
+      const hrEmployeeId = this.getRequesterDirectoryUserId(req);
 
-      // Verify user is HR for this company
-      if (!req.user || !req.user.isHR || req.user.companyId !== companyId) {
+      const isAdmin = this.isSystemAdmin(req);
+      const isHr = await this.isHrForCompany(req, companyId);
+      if (!isAdmin && !isHr) {
         return res.status(403).json({
-          error: 'Access denied. HR privileges required.'
+          error: 'Access denied'
         });
       }
 
@@ -365,17 +394,6 @@ class EmployeeProfileApprovalController {
   async getApprovalStatus(req, res, next) {
     try {
       const { id: employeeId } = req.params;
-      const authenticatedEmployeeId = req.user?.id;
-      const isHR = req.user?.isHR || false;
-
-      // Verify user can access this employee's approval status
-      if (!isHR && authenticatedEmployeeId !== employeeId) {
-        return res.status(403).json({
-          error: 'You can only view your own approval status'
-        });
-      }
-
-      const approval = await this.approvalRepository.findByEmployeeId(employeeId);
       const employee = await this.employeeRepository.findById(employeeId);
 
       if (!employee) {
@@ -383,6 +401,22 @@ class EmployeeProfileApprovalController {
           error: 'Employee not found'
         });
       }
+
+      const requesterId = this.getRequesterDirectoryUserId(req);
+      const isAdmin = this.isSystemAdmin(req);
+      const isSelf = requesterId && String(requesterId) === String(employeeId);
+      const sameCompany =
+        this.getRequesterCompanyId(req) &&
+        String(this.getRequesterCompanyId(req)) === String(employee.company_id);
+      const isHr = sameCompany && (await this.isHrForCompany(req, employee.company_id));
+
+      if (!isAdmin && !isSelf && !isHr) {
+        return res.status(403).json({
+          error: 'Access denied'
+        });
+      }
+
+      const approval = await this.approvalRepository.findByEmployeeId(employeeId);
 
       return res.status(200).json({
         employee_id: employeeId,

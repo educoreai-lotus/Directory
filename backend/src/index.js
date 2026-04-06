@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const parseRequest = require('./shared/requestParser');
 const formatResponse = require('./shared/responseFormatter');
+const { authMiddleware, optionalAuthMiddleware, hrOnlyMiddleware, adminOnlyMiddleware } = require('./shared/authMiddleware');
 
 // Load design tokens with error handling
 let designTokens;
@@ -137,8 +138,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Debug endpoint to find HR email (for development/testing only)
-app.get('/debug/find-hr-email', async (req, res) => {
+// Debug endpoint to find HR email (for development/testing only, admin-only)
+app.get('/debug/find-hr-email', authMiddleware, adminOnlyMiddleware, async (req, res) => {
   try {
     const { companyName, employeeEmail } = req.query;
     const CompanyRepository = require('./infrastructure/CompanyRepository');
@@ -279,7 +280,6 @@ const checkController = (controller, name) => {
 
 // Authentication (nAuth only — no Directory-issued login/logout)
 // Get current user (requires authentication)
-const { authMiddleware, optionalAuthMiddleware, hrOnlyMiddleware, adminOnlyMiddleware } = require('./shared/authMiddleware');
 apiRouter.get('/auth/me', authMiddleware, (req, res, next) => {
   authController.getCurrentUser(req, res, next);
 });
@@ -308,12 +308,12 @@ apiRouter.post('/companies/register', (req, res, next) => {
   companyRegistrationController.register(req, res, next);
 });
 
-// Company Verification
-apiRouter.get('/companies/:id/verification', (req, res, next) => {
+// Company Verification (admin-only)
+apiRouter.get('/companies/:id/verification', authMiddleware, adminOnlyMiddleware, (req, res, next) => {
   companyVerificationController.getStatus(req, res, next);
 });
 
-apiRouter.post('/companies/:id/verify', (req, res, next) => {
+apiRouter.post('/companies/:id/verify', authMiddleware, adminOnlyMiddleware, (req, res, next) => {
   companyVerificationController.verify(req, res, next);
 });
 
@@ -597,9 +597,9 @@ apiRouter.post(
   }
 );
 
-// Universal Endpoint for other microservices (no auth required - internal service-to-service)
+// Universal Endpoint for other microservices (admin-only)
 // This must be BEFORE /api/v1 to avoid conflicts
-app.post('/api/fill-content-metrics', (req, res) => {
+app.post('/api/fill-content-metrics', authMiddleware, adminOnlyMiddleware, (req, res) => {
   try {
     checkController(universalEndpointController, 'UniversalEndpointController');
     universalEndpointController.handleRequest(req, res);
@@ -615,8 +615,8 @@ app.post('/api/fill-content-metrics', (req, res) => {
   }
 });
 
-// Coordinator-routed nAuth lookup endpoint (no user auth required - service-to-service)
-app.post('/request', express.text({ type: 'text/*', limit: '1mb' }), (req, res) => {
+// Coordinator-routed nAuth lookup endpoint (admin-only)
+app.post('/request', authMiddleware, adminOnlyMiddleware, express.text({ type: 'text/*', limit: '1mb' }), (req, res) => {
   try {
     // TEMP DEBUG (route-local only): /request runtime payload diagnostics.
     console.log('[DEBUG][DIRECTORY][/request] content-type:', req.headers['content-type']);

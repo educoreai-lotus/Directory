@@ -2,10 +2,41 @@
 // Handles HTTP requests for employee enrollment to courses
 
 const EnrollEmployeesCareerPathUseCase = require('../application/EnrollEmployeesCareerPathUseCase');
+const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+const CompanyRepository = require('../infrastructure/CompanyRepository');
 
 class EnrollmentController {
   constructor() {
     this.enrollCareerPathUseCase = new EnrollEmployeesCareerPathUseCase();
+    this.employeeRepository = new EmployeeRepository();
+    this.companyRepository = new CompanyRepository();
+  }
+
+  getRequesterDirectoryUserId(req) {
+    return req.user?.directoryUserId || req.user?.id || null;
+  }
+
+  getRequesterCompanyId(req) {
+    return req.user?.organizationId || req.user?.companyId || req.user?.company_id || null;
+  }
+
+  isSystemAdmin(req) {
+    return req.user?.isSystemAdmin === true;
+  }
+
+  async isHrForCompany(req, companyId) {
+    const requesterId = this.getRequesterDirectoryUserId(req);
+    if (!requesterId) return false;
+    const requesterEmployee = await this.employeeRepository.findById(requesterId);
+    if (!requesterEmployee) return false;
+    if (String(requesterEmployee.company_id) !== String(companyId)) return false;
+
+    const company = await this.companyRepository.findById(companyId);
+    if (!company || !company.hr_contact_email) return false;
+    return (
+      String(company.hr_contact_email).trim().toLowerCase() ===
+      String(requesterEmployee.email || '').trim().toLowerCase()
+    );
   }
 
   /**
@@ -44,9 +75,9 @@ class EnrollmentController {
       console.log('[EnrollmentController] employeeIds length:', employeeIds?.length || 0);
 
       // Validate companyId matches authenticated user's company (if user is not admin)
-      const userCompanyId = req.user?.companyId || req.user?.company_id;
-      const isHR = req.user?.isHR || false;
-      const isAdmin = req.user?.isAdmin || req.user?.role === 'DIRECTORY_ADMIN' || false;
+      const userCompanyId = this.getRequesterCompanyId(req);
+      const isAdmin = this.isSystemAdmin(req);
+      const isHR = await this.isHrForCompany(req, companyId);
       console.log("[EnrollmentController] User permission check:");
       console.log("  isHR:", isHR);
       console.log("  isAdmin:", isAdmin);
@@ -65,7 +96,7 @@ class EnrollmentController {
       }
 
       // HR can only enroll employees from their own company
-      if (isHR && !isAdmin && userCompanyId !== companyId) {
+      if (isHR && !isAdmin && String(userCompanyId) !== String(companyId)) {
         return res.status(403).json({
           requester_service: 'directory_service',
           response: {

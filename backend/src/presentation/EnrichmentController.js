@@ -2,11 +2,69 @@
 // Handles profile enrichment endpoints
 
 const EnrichProfileUseCase = require('../application/EnrichProfileUseCase');
-const { authMiddleware } = require('../shared/authMiddleware');
+const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+const CompanyRepository = require('../infrastructure/CompanyRepository');
 
 class EnrichmentController {
   constructor() {
     this.enrichProfileUseCase = new EnrichProfileUseCase();
+    this.employeeRepository = new EmployeeRepository();
+    this.companyRepository = new CompanyRepository();
+  }
+
+  getRequesterDirectoryUserId(req) {
+    return req.user?.directoryUserId || req.user?.id || null;
+  }
+
+  getRequesterCompanyId(req) {
+    return req.user?.organizationId || req.user?.companyId || req.user?.company_id || null;
+  }
+
+  isSystemAdmin(req) {
+    return req.user?.isSystemAdmin === true;
+  }
+
+  async isHrForCompany(req, companyId) {
+    const requesterId = this.getRequesterDirectoryUserId(req);
+    if (!requesterId) return false;
+    const requesterEmployee = await this.employeeRepository.findById(requesterId);
+    if (!requesterEmployee) return false;
+    if (String(requesterEmployee.company_id) !== String(companyId)) return false;
+
+    const company = await this.companyRepository.findById(companyId);
+    if (!company || !company.hr_contact_email) return false;
+    return (
+      String(company.hr_contact_email).trim().toLowerCase() ===
+      String(requesterEmployee.email || '').trim().toLowerCase()
+    );
+  }
+
+  async canAccessEmployee(req, targetEmployeeId) {
+    const target = await this.employeeRepository.findById(targetEmployeeId);
+    if (!target) {
+      return { allowed: false, reason: 'not_found', target: null };
+    }
+
+    if (this.isSystemAdmin(req)) {
+      return { allowed: true, reason: 'system_admin', target };
+    }
+
+    const requesterId = this.getRequesterDirectoryUserId(req);
+    if (requesterId && String(requesterId) === String(targetEmployeeId)) {
+      return { allowed: true, reason: 'self', target };
+    }
+
+    const requesterCompanyId = this.getRequesterCompanyId(req);
+    if (!requesterCompanyId || String(requesterCompanyId) !== String(target.company_id)) {
+      return { allowed: false, reason: 'forbidden', target };
+    }
+
+    const hr = await this.isHrForCompany(req, target.company_id);
+    if (hr) {
+      return { allowed: true, reason: 'hr', target };
+    }
+
+    return { allowed: false, reason: 'forbidden', target };
   }
 
   /**
@@ -19,21 +77,26 @@ class EnrichmentController {
     console.log('[EnrichmentController] enrichProfile called');
     console.log('[EnrichmentController] Request params:', req.params);
     console.log('[EnrichmentController] Request body:', req.body);
-    console.log('[EnrichmentController] Request user:', req.user ? { id: req.user.id, email: req.user.email, isHR: req.user.isHR } : 'null');
+    console.log('[EnrichmentController] Request user:', req.user ? { id: req.user.id, email: req.user.email, isSystemAdmin: req.user.isSystemAdmin } : 'null');
     
     try {
       const { employeeId } = req.params;
       console.log('[EnrichmentController] Processing enrichment for employee:', employeeId);
       
-      // Verify employee ID matches authenticated user (unless HR)
-      const authenticatedEmployeeId = req.user?.id || req.user?.employeeId;
-      const isHR = req.user?.isHR || false;
-      
-      if (!isHR && authenticatedEmployeeId !== employeeId) {
+      const access = await this.canAccessEmployee(req, employeeId);
+      if (!access.allowed) {
+        if (access.reason === 'not_found') {
+          return res.status(404).json({
+            requester_service: 'directory_service',
+            response: {
+              error: 'Employee not found'
+            }
+          });
+        }
         return res.status(403).json({
           requester_service: 'directory_service',
           response: {
-            error: 'You can only enrich your own profile'
+            error: 'Access denied'
           }
         });
       }
@@ -81,6 +144,23 @@ class EnrichmentController {
   async getEnrichmentStatus(req, res, next) {
     try {
       const { employeeId } = req.params;
+      const access = await this.canAccessEmployee(req, employeeId);
+      if (!access.allowed) {
+        if (access.reason === 'not_found') {
+          return res.status(404).json({
+            requester_service: 'directory_service',
+            response: {
+              error: 'Employee not found'
+            }
+          });
+        }
+        return res.status(403).json({
+          requester_service: 'directory_service',
+          response: {
+            error: 'Access denied'
+          }
+        });
+      }
       
       const isReady = await this.enrichProfileUseCase.isReadyForEnrichment(employeeId);
 

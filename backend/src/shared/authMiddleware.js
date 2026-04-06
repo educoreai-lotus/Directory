@@ -143,11 +143,11 @@ const hrOnlyMiddleware = (req, res, next) => {
     });
   }
 
-  if (!req.user.isHR) {
+  if (!req.user.isSystemAdmin) {
     return res.status(403).json({
       requester_service: 'directory_service',
       response: {
-        error: 'Access denied. HR privileges required.'
+        error: 'Access denied. Admin privileges required.'
       }
     });
   }
@@ -165,7 +165,7 @@ const adminOnlyMiddleware = (req, res, next) => {
     });
   }
 
-  if (!req.user.isAdmin && req.user.role !== 'DIRECTORY_ADMIN' && !req.user.isSystemAdmin) {
+  if (!req.user.isSystemAdmin) {
     return res.status(403).json({
       requester_service: 'directory_service',
       response: {
