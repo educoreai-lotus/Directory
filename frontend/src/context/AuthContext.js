@@ -37,9 +37,9 @@ async function fetchMeUser() {
 }
 
 async function callNAuthLogout() {
-  const nAuthApiBase = process.env.REACT_APP_NAUTH_API_URL;
+  const nAuthApiBase = process.env.REACT_APP_NAUTH_BASE_URL;
   if (!nAuthApiBase) {
-    console.warn('[AuthContext] REACT_APP_NAUTH_API_URL is not set; skipping nAuth logout call.');
+    console.warn('[AuthContext] REACT_APP_NAUTH_BASE_URL is not set; skipping nAuth logout call.');
     return;
   }
 
