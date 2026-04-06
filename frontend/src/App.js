@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DesignSystemProvider } from './context/DesignSystemContext';
@@ -10,9 +10,11 @@ import CompanyProfilePage from './pages/CompanyProfilePage';
 import EnrichProfilePage from './pages/EnrichProfilePage';
 import EmployeeProfilePage from './pages/EmployeeProfilePage';
 import AdminDashboard from './pages/AdminDashboard';
+import AccessDeniedPage from './pages/AccessDeniedPage';
 import Header from './components/Header';
 import './App.css';
 import { getAccessToken } from './auth/accessTokenStore';
+import api from './utils/api';
 
 function RootTransitionScreen() {
   return (
@@ -76,24 +78,10 @@ function RootRouteGate() {
   return <LandingPage />;
 }
 
-function getSafeRouteForUser(user) {
-  const userId = user?.directoryUserId || user?.id;
-  const companyId = user?.companyId || user?.company_id || user?.organizationId;
-  const isSystemAdmin =
-    user?.isSystemAdmin === true ||
-    user?.isAdmin === true ||
-    String(user?.role || '').toUpperCase() === 'DIRECTORY_ADMIN';
-
-  if (isSystemAdmin) return '/admin/dashboard';
-  if (user?.isHR === true && companyId) return `/company/${companyId}`;
-  if (userId) return `/employee/${userId}`;
-  return '/';
-}
-
 function AdminRouteGuard({ children }) {
   const { loading, user } = useAuth();
   if (loading) return null;
-  if (!user) return <Navigate to="/" replace />;
+  if (!user) return <AccessDeniedPage title="Authentication Required" message="Please sign in to continue." />;
 
   const isSystemAdmin =
     user?.isSystemAdmin === true ||
@@ -101,7 +89,12 @@ function AdminRouteGuard({ children }) {
     String(user?.role || '').toUpperCase() === 'DIRECTORY_ADMIN';
 
   if (!isSystemAdmin) {
-    return <Navigate to={getSafeRouteForUser(user)} replace />;
+    return (
+      <AccessDeniedPage
+        title="Access Denied"
+        message="You do not have permission to access admin pages."
+      />
+    );
   }
   return children;
 }
@@ -109,21 +102,82 @@ function AdminRouteGuard({ children }) {
 function EmployeeRouteGuard({ children }) {
   const { loading, user } = useAuth();
   const { employeeId } = useParams();
-  if (loading) return null;
-  if (!user) return <Navigate to="/" replace />;
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [isAllowed, setIsAllowed] = useState(false);
 
-  const userId = user?.directoryUserId || user?.id;
-  const isSelf = userId && String(userId) === String(employeeId);
-  const isSystemAdmin =
-    user?.isSystemAdmin === true ||
-    user?.isAdmin === true ||
-    String(user?.role || '').toUpperCase() === 'DIRECTORY_ADMIN';
-  const isHrContext = user?.isHR === true && !!(user?.companyId || user?.company_id || user?.organizationId);
+  useEffect(() => {
+    let cancelled = false;
+    const verifyAccess = async () => {
+      if (loading) {
+        if (!cancelled) setIsVerifying(true);
+        return;
+      }
+      if (!user) {
+        if (!cancelled) {
+          setIsAllowed(false);
+          setIsVerifying(false);
+        }
+        return;
+      }
 
-  // Deny by default when frontend cannot prove access.
-  if (!isSelf && !isSystemAdmin && !isHrContext) {
-    return <Navigate to={getSafeRouteForUser(user)} replace />;
+      const userId = user?.directoryUserId || user?.id;
+      const companyId = user?.companyId || user?.company_id || user?.organizationId;
+      const isSelf = !!userId && String(userId) === String(employeeId);
+      const isSystemAdmin =
+        user?.isSystemAdmin === true ||
+        user?.isAdmin === true ||
+        String(user?.role || '').toUpperCase() === 'DIRECTORY_ADMIN';
+      const isHrContext = user?.isHR === true && !!companyId;
+
+      if (isSelf || isSystemAdmin) {
+        setIsAllowed(true);
+        setIsVerifying(false);
+        return;
+      }
+
+      // Deny by default when frontend cannot prove access.
+      if (!isHrContext) {
+        setIsAllowed(false);
+        setIsVerifying(false);
+        return;
+      }
+
+      try {
+        setIsVerifying(true);
+        await api.get(`/companies/${companyId}/employees/${employeeId}`);
+        if (!cancelled) {
+          setIsAllowed(true);
+        }
+      } catch {
+        if (!cancelled) {
+          setIsAllowed(false);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsVerifying(false);
+        }
+      }
+    };
+
+    verifyAccess();
+    return () => {
+      cancelled = true;
+    };
+  }, [employeeId, loading, user]);
+
+  if (isVerifying) return null;
+  if (!user) {
+    return <AccessDeniedPage title="Authentication Required" message="Please sign in to continue." />;
   }
+  if (!isAllowed) {
+    return (
+      <AccessDeniedPage
+        title="Access Denied"
+        message="You do not have permission to view this employee profile."
+      />
+    );
+  }
+
   return children;
 }
 
@@ -191,6 +245,15 @@ function AppContent() {
               </AdminRouteGuard>
             }
           />
+          <Route
+            path="/management-reporting"
+            element={
+              <AdminRouteGuard>
+                <Navigate to="/admin/dashboard" replace />
+              </AdminRouteGuard>
+            }
+          />
+          <Route path="/access-denied" element={<AccessDeniedPage />} />
         </Routes>
       </main>
       <BotInitializer />

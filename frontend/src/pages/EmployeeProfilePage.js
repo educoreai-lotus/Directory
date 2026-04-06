@@ -11,20 +11,7 @@ import ApprovedProfileTabs from '../components/ApprovedProfileTabs';
 import LearningPathApprovals from '../components/LearningPathApprovals';
 import ProfileEditForm from '../components/ProfileEditForm';
 import ProfileManagement from '../components/ProfileManagement';
-
-function getSafeRouteForUser(user) {
-  const userId = user?.directoryUserId || user?.id;
-  const companyId = user?.companyId || user?.company_id || user?.organizationId;
-  const isSystemAdmin =
-    user?.isSystemAdmin === true ||
-    user?.isAdmin === true ||
-    String(user?.role || '').toUpperCase() === 'DIRECTORY_ADMIN';
-
-  if (isSystemAdmin) return '/admin/dashboard';
-  if (user?.isHR === true && companyId) return `/company/${companyId}`;
-  if (userId) return `/employee/${userId}`;
-  return '/';
-}
+import AccessDeniedPage from './AccessDeniedPage';
 
 function EmployeeProfilePage() {
   const { employeeId } = useParams();
@@ -48,13 +35,6 @@ function EmployeeProfilePage() {
   // Keep admin query behavior only for actual admins.
   const isAdminView = (searchParams.get('admin') === 'true' && isSystemAdmin) || isSystemAdmin;
   const canAccessByFrontend = isSelf || isSystemAdmin || isHrContext;
-
-  useEffect(() => {
-    if (authLoading) return;
-    if (!canAccessByFrontend) {
-      navigate(getSafeRouteForUser(user), { replace: true });
-    }
-  }, [authLoading, canAccessByFrontend, navigate, user]);
 
   // Auto-dismiss success messages after 5 seconds
   // Use employee data if available, otherwise use defaults
@@ -125,8 +105,16 @@ function EmployeeProfilePage() {
     }
   }, [canAccessByFrontend, employeeId, user?.companyId, isAdminView]);
 
-  if (authLoading || !canAccessByFrontend) {
+  if (authLoading) {
     return null;
+  }
+  if (!canAccessByFrontend) {
+    return (
+      <AccessDeniedPage
+        title="Access Denied"
+        message="You do not have permission to view this employee profile."
+      />
+    );
   }
 
   // Parse project summaries if stored as JSON string

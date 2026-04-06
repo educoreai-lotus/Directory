@@ -12,6 +12,7 @@ const GetEmployeeDashboardUseCase = require('../application/GetEmployeeDashboard
 const GetManagerHierarchyUseCase = require('../application/GetManagerHierarchyUseCase');
 const EmployeeRepository = require('../infrastructure/EmployeeRepository');
 const CompanyRepository = require('../infrastructure/CompanyRepository');
+const AdminRepository = require('../infrastructure/AdminRepository');
 const ErrorTranslator = require('../shared/ErrorTranslator');
 
 class EmployeeController {
@@ -27,6 +28,7 @@ class EmployeeController {
     this.getManagerHierarchyUseCase = new GetManagerHierarchyUseCase();
     this.employeeRepository = new EmployeeRepository();
     this.companyRepository = new CompanyRepository();
+    this.adminRepository = new AdminRepository();
   }
 
   getRequesterDirectoryUserId(req) {
@@ -56,14 +58,40 @@ class EmployeeController {
     );
   }
 
+  async isEmployeeHrForCompany(employee, companyId) {
+    if (!employee) return false;
+    if (String(employee.company_id) !== String(companyId)) return false;
+    const company = await this.companyRepository.findById(companyId);
+    if (!company || !company.hr_contact_email) return false;
+    return (
+      String(company.hr_contact_email).trim().toLowerCase() ===
+      String(employee.email || '').trim().toLowerCase()
+    );
+  }
+
+  async isEmployeeSystemAdmin(employee) {
+    if (!employee) return false;
+    const adminById = await this.adminRepository.findById(employee.id);
+    if (adminById) return true;
+    if (!employee.email) return false;
+    const adminByEmail = await this.adminRepository.findByEmail(employee.email);
+    return !!adminByEmail;
+  }
+
   async canAccessEmployee(req, companyId, targetEmployeeId) {
     const target = await this.employeeRepository.findById(targetEmployeeId);
     if (!target || String(target.company_id) !== String(companyId)) {
       return { allowed: false, reason: 'not_found', target: null };
     }
 
-    if (this.isSystemAdmin(req)) {
+    const requesterIsSystemAdmin = this.isSystemAdmin(req);
+    if (requesterIsSystemAdmin) {
       return { allowed: true, reason: 'system_admin', target };
+    }
+
+    const targetIsSystemAdmin = await this.isEmployeeSystemAdmin(target);
+    if (targetIsSystemAdmin) {
+      return { allowed: false, reason: 'forbidden', target };
     }
 
     const requesterCompanyId = this.getRequesterCompanyId(req);
@@ -72,12 +100,19 @@ class EmployeeController {
     }
 
     const requesterId = this.getRequesterDirectoryUserId(req);
+    const requesterIsHr = await this.isHrForCompany(req, companyId);
+    const targetIsHr = await this.isEmployeeHrForCompany(target, companyId);
+
     if (requesterId && String(requesterId) === String(targetEmployeeId)) {
       return { allowed: true, reason: 'self', target };
     }
 
-    const hr = await this.isHrForCompany(req, companyId);
-    if (hr) {
+    // Regular users must never access HR profiles.
+    if (targetIsHr && !requesterIsHr) {
+      return { allowed: false, reason: 'forbidden', target };
+    }
+
+    if (requesterIsHr) {
       return { allowed: true, reason: 'hr', target };
     }
 

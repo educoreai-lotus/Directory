@@ -2,24 +2,16 @@
 // Platform-level admin dashboard for managing the entire directory
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import Header from '../components/Header';
 import { getAllCompanies } from '../services/adminService';
-
-function getSafeRouteForUser(user) {
-  const userId = user?.directoryUserId || user?.id;
-  const companyId = user?.companyId || user?.company_id || user?.organizationId;
-  if (user?.isHR === true && companyId) return `/company/${companyId}`;
-  if (userId) return `/employee/${userId}`;
-  return '/';
-}
+import AccessDeniedPage from './AccessDeniedPage';
 
 function AdminDashboard() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [companies, setCompanies] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [companiesLoading, setCompaniesLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const isSystemAdmin =
@@ -27,18 +19,22 @@ function AdminDashboard() {
     user?.isAdmin === true ||
     String(user?.role || '').toUpperCase() === 'DIRECTORY_ADMIN';
 
-  if (!loading && !isSystemAdmin) {
-    return <Navigate to={getSafeRouteForUser(user)} replace />;
-  }
-
-  if (loading) {
+  if (authLoading) {
     return null;
+  }
+  if (!isSystemAdmin) {
+    return (
+      <AccessDeniedPage
+        title="Access Denied"
+        message="You do not have permission to access admin pages."
+      />
+    );
   }
 
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        setLoading(true);
+        setCompaniesLoading(true);
         setError(null);
         console.log('[AdminDashboard] Fetching companies...');
         const response = await getAllCompanies();
@@ -52,7 +48,7 @@ function AdminDashboard() {
         console.error('[AdminDashboard] Error details:', err.response?.data || err.message);
         setError('Failed to load companies');
       } finally {
-        setLoading(false);
+        setCompaniesLoading(false);
       }
     };
 
@@ -210,7 +206,7 @@ function AdminDashboard() {
             <div>
 
             {/* Companies Grid */}
-            {loading ? (
+            {companiesLoading ? (
               <div className="text-center py-12">
                 <p style={{ color: 'var(--text-secondary)' }}>Loading companies...</p>
               </div>
