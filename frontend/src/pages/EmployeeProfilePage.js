@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { redirectToNAuthLogin } from '../utils/nauthRedirect';
 import { getEmployee } from '../services/employeeService';
 import TrainerSettings from '../components/TrainerSettings';
 import ApprovedProfileTabs from '../components/ApprovedProfileTabs';
@@ -13,7 +14,7 @@ import ProfileManagement from '../components/ProfileManagement';
 
 function EmployeeProfilePage() {
   const { employeeId } = useParams();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -177,6 +178,11 @@ function EmployeeProfilePage() {
     });
   }
 
+  const handleLogoutClick = async () => {
+    await logout({ redirect: false });
+    redirectToNAuthLogin();
+  };
+
   return (
     <div className="min-h-screen p-6" style={{ background: 'var(--bg-primary)' }}>
       <div className="max-w-4xl mx-auto">
@@ -326,10 +332,10 @@ function EmployeeProfilePage() {
           </div>
           <div className="flex gap-3 mb-4">
             <button
-              onClick={() => navigate(-1)}
+              onClick={handleLogoutClick}
               className="text-sm text-teal-600 hover:text-teal-700"
             >
-              ← Back
+              Logout
             </button>
             {/* Only show Edit button if viewing own profile */}
             {user?.id === employeeId && (

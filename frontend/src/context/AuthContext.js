@@ -228,11 +228,13 @@ export const AuthProvider = ({ children }) => {
     return { success: false, error: 'Use nAuth to sign in.' };
   };
 
-  const logout = async () => {
+  const logout = async (options = {}) => {
     clearAccessToken();
     setUser(null);
     setIsAuthenticated(false);
-    navigate('/');
+    if (options?.redirect !== false) {
+      navigate('/');
+    }
   };
 
   const value = {
