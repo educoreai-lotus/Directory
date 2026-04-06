@@ -3,6 +3,8 @@
 
 const multer = require('multer');
 const ParseCSVUseCase = require('../application/ParseCSVUseCase');
+const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+const CompanyRepository = require('../infrastructure/CompanyRepository');
 const ErrorTranslator = require('../shared/ErrorTranslator');
 
 // Configure multer for memory storage
@@ -26,9 +28,34 @@ class CSVUploadController {
     console.log('[CSVUploadController] ========== CONSTRUCTOR CALLED ==========');
     console.log('[CSVUploadController] Initializing CSVUploadController...');
     this.parseCSVUseCase = new ParseCSVUseCase();
+    this.employeeRepository = new EmployeeRepository();
+    this.companyRepository = new CompanyRepository();
     this.upload = upload.single('csvFile');
     console.log('[CSVUploadController] ✅ CSVUploadController initialized successfully');
     console.log('[CSVUploadController] Multer configured for single file upload with field name: csvFile');
+  }
+
+  getRequesterDirectoryUserId(req) {
+    return req.user?.directoryUserId || req.user?.id || null;
+  }
+
+  isSystemAdmin(req) {
+    return req.user?.isSystemAdmin === true;
+  }
+
+  async isHrForCompany(req, companyId) {
+    const requesterId = this.getRequesterDirectoryUserId(req);
+    if (!requesterId) return false;
+    const requesterEmployee = await this.employeeRepository.findById(requesterId);
+    if (!requesterEmployee) return false;
+    if (String(requesterEmployee.company_id) !== String(companyId)) return false;
+
+    const company = await this.companyRepository.findById(companyId);
+    if (!company || !company.hr_contact_email) return false;
+    return (
+      String(company.hr_contact_email).trim().toLowerCase() ===
+      String(requesterEmployee.email || '').trim().toLowerCase()
+    );
   }
 
   /**
@@ -74,6 +101,13 @@ class CSVUploadController {
 
       try {
         const { id: companyId } = req.params;
+        const admin = this.isSystemAdmin(req);
+        const hr = await this.isHrForCompany(req, companyId);
+        if (!admin && !hr) {
+          return res.status(403).json({
+            error: 'Access denied'
+          });
+        }
         const fileBuffer = req.file.buffer;
 
         console.log(`[CSVUploadController] Processing CSV upload for company ${companyId}, file size: ${fileBuffer.length} bytes`);

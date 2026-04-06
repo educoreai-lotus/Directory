@@ -84,6 +84,19 @@ class EmployeeController {
     return { allowed: false, reason: 'forbidden', target };
   }
 
+  async enforceEmployeeDataAccess(req, res, companyId, employeeId) {
+    const access = await this.canAccessEmployee(req, companyId, employeeId);
+    if (!access.allowed) {
+      if (access.reason === 'not_found') {
+        res.status(404).json({ error: 'Employee not found' });
+      } else {
+        res.status(403).json({ error: 'Access denied' });
+      }
+      return { ok: false, access: null };
+    }
+    return { ok: true, access };
+  }
+
   /**
    * Add a new employee
    * POST /api/v1/companies/:id/employees
@@ -326,6 +339,8 @@ class EmployeeController {
   async getEmployeeSkills(req, res, next) {
     try {
       const { id: companyId, employeeId } = req.params;
+      const authz = await this.enforceEmployeeDataAccess(req, res, companyId, employeeId);
+      if (!authz.ok) return;
 
       const result = await this.getEmployeeSkillsUseCase.execute(employeeId, companyId);
 
@@ -352,6 +367,8 @@ class EmployeeController {
   async getEmployeeCareerPathCompetencies(req, res, next) {
     try {
       const { id: companyId, employeeId } = req.params;
+      const authz = await this.enforceEmployeeDataAccess(req, res, companyId, employeeId);
+      if (!authz.ok) return;
 
       const result = await this.getEmployeeCareerPathCompetenciesUseCase.execute(employeeId, companyId);
 
@@ -378,6 +395,8 @@ class EmployeeController {
   async getEmployeeCourses(req, res, next) {
     try {
       const { id: companyId, employeeId } = req.params;
+      const authz = await this.enforceEmployeeDataAccess(req, res, companyId, employeeId);
+      if (!authz.ok) return;
 
       const result = await this.getEmployeeCoursesUseCase.execute(employeeId, companyId);
 
@@ -404,6 +423,8 @@ class EmployeeController {
   async getEmployeeLearningPath(req, res, next) {
     try {
       const { id: companyId, employeeId } = req.params;
+      const authz = await this.enforceEmployeeDataAccess(req, res, companyId, employeeId);
+      if (!authz.ok) return;
 
       const result = await this.getEmployeeLearningPathUseCase.execute(employeeId, companyId);
 
@@ -430,6 +451,8 @@ class EmployeeController {
   async getEmployeeDashboard(req, res, next) {
     try {
       const { id: companyId, employeeId } = req.params;
+      const authz = await this.enforceEmployeeDataAccess(req, res, companyId, employeeId);
+      if (!authz.ok) return;
 
       const result = await this.getEmployeeDashboardUseCase.execute(employeeId, companyId);
 
@@ -462,33 +485,13 @@ class EmployeeController {
       console.log(`[EmployeeController] Request path: ${req.path}`);
       console.log(`[EmployeeController] Request method: ${req.method}`);
 
-      // Verify employee exists and belongs to company
-      const employee = await this.employeeRepository.findById(employeeId);
-      if (!employee) {
-        console.log(`[EmployeeController] ❌ Employee ${employeeId} not found in database`);
-        return res.status(404).json({
-          requester_service: 'directory_service',
-          response: {
-            error: 'Employee not found'
-          }
-        });
-      }
+      const authz = await this.enforceEmployeeDataAccess(req, res, companyId, employeeId);
+      if (!authz.ok) return;
+      const employee = authz.access.target;
 
       console.log(`[EmployeeController] ✅ Found employee: ${employee.full_name} (${employee.email})`);
       console.log(`[EmployeeController] Employee company_id: ${employee.company_id} (type: ${typeof employee.company_id})`);
       console.log(`[EmployeeController] Request companyId: ${companyId} (type: ${typeof companyId})`);
-
-      // Compare company_id as strings to handle UUID type differences
-      if (String(employee.company_id) !== String(companyId)) {
-        console.log(`[EmployeeController] ❌ Employee ${employeeId} does not belong to company ${companyId}`);
-        console.log(`[EmployeeController] Employee company_id: ${employee.company_id}, Request companyId: ${companyId}`);
-        return res.status(404).json({
-          requester_service: 'directory_service',
-          response: {
-            error: 'Employee not found'
-          }
-        });
-      }
 
       console.log(`[EmployeeController] ✅ Company match verified. Calling GetManagerHierarchyUseCase...`);
       const hierarchy = await this.getManagerHierarchyUseCase.execute(employeeId, companyId);

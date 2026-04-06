@@ -317,9 +317,9 @@ apiRouter.post('/companies/:id/verify', (req, res, next) => {
   companyVerificationController.verify(req, res, next);
 });
 
-// CSV Upload - NO AUTH REQUIRED (handled by authMiddleware in dummy mode)
+// CSV Upload
 // Route: POST /api/v1/companies/:id/upload
-apiRouter.post('/companies/:id/upload', (req, res, next) => {
+apiRouter.post('/companies/:id/upload', authMiddleware, (req, res, next) => {
   console.log('[index.js] ========== CSV UPLOAD ROUTE HIT ==========');
   console.log('[index.js] Route: POST /api/v1/companies/:id/upload');
   console.log('[index.js] Full URL:', req.originalUrl);

@@ -4,6 +4,8 @@
 const SubmitEmployeeRequestUseCase = require('../application/SubmitEmployeeRequestUseCase');
 const GetEmployeeRequestsUseCase = require('../application/GetEmployeeRequestsUseCase');
 const EmployeeRequestRepository = require('../infrastructure/EmployeeRequestRepository');
+const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+const CompanyRepository = require('../infrastructure/CompanyRepository');
 const ErrorTranslator = require('../shared/ErrorTranslator');
 
 class RequestController {
@@ -11,6 +13,68 @@ class RequestController {
     this.submitRequestUseCase = new SubmitEmployeeRequestUseCase();
     this.getRequestsUseCase = new GetEmployeeRequestsUseCase();
     this.requestRepository = new EmployeeRequestRepository();
+    this.employeeRepository = new EmployeeRepository();
+    this.companyRepository = new CompanyRepository();
+  }
+
+  getRequesterDirectoryUserId(req) {
+    return req.user?.directoryUserId || req.user?.id || null;
+  }
+
+  getRequesterCompanyId(req) {
+    return req.user?.organizationId || req.user?.companyId || req.user?.company_id || null;
+  }
+
+  isSystemAdmin(req) {
+    return req.user?.isSystemAdmin === true;
+  }
+
+  async isHrForCompany(req, companyId) {
+    const requesterId = this.getRequesterDirectoryUserId(req);
+    if (!requesterId) return false;
+    const requesterEmployee = await this.employeeRepository.findById(requesterId);
+    if (!requesterEmployee) return false;
+    if (String(requesterEmployee.company_id) !== String(companyId)) return false;
+
+    const company = await this.companyRepository.findById(companyId);
+    if (!company || !company.hr_contact_email) return false;
+    return (
+      String(company.hr_contact_email).trim().toLowerCase() ===
+      String(requesterEmployee.email || '').trim().toLowerCase()
+    );
+  }
+
+  async canAccessEmployeeRequests(req, companyId, targetEmployeeId) {
+    const target = await this.employeeRepository.findById(targetEmployeeId);
+    if (!target || String(target.company_id) !== String(companyId)) {
+      return { allowed: false, reason: 'not_found', target: null };
+    }
+
+    if (this.isSystemAdmin(req)) {
+      return { allowed: true, reason: 'system_admin', target };
+    }
+
+    const requesterCompanyId = this.getRequesterCompanyId(req);
+    if (!requesterCompanyId || String(requesterCompanyId) !== String(companyId)) {
+      return { allowed: false, reason: 'forbidden', target };
+    }
+
+    const requesterId = this.getRequesterDirectoryUserId(req);
+    if (requesterId && String(requesterId) === String(targetEmployeeId)) {
+      return { allowed: true, reason: 'self', target };
+    }
+
+    const hr = await this.isHrForCompany(req, companyId);
+    if (hr) {
+      return { allowed: true, reason: 'hr', target };
+    }
+
+    return { allowed: false, reason: 'forbidden', target };
+  }
+
+  async canManageCompanyRequests(req, companyId) {
+    if (this.isSystemAdmin(req)) return true;
+    return this.isHrForCompany(req, companyId);
   }
 
   /**
@@ -20,6 +84,13 @@ class RequestController {
   async submitRequest(req, res, next) {
     try {
       const { id: companyId, employeeId } = req.params;
+      const access = await this.canAccessEmployeeRequests(req, companyId, employeeId);
+      if (!access.allowed) {
+        if (access.reason === 'not_found') {
+          return res.status(404).json({ error: 'Employee not found' });
+        }
+        return res.status(403).json({ error: 'Access denied' });
+      }
       
       // Handle envelope structure from frontend API interceptor
       const requestData = req.body.payload || req.body;
@@ -70,6 +141,13 @@ class RequestController {
   async getEmployeeRequests(req, res, next) {
     try {
       const { id: companyId, employeeId } = req.params;
+      const access = await this.canAccessEmployeeRequests(req, companyId, employeeId);
+      if (!access.allowed) {
+        if (access.reason === 'not_found') {
+          return res.status(404).json({ error: 'Employee not found' });
+        }
+        return res.status(403).json({ error: 'Access denied' });
+      }
 
       const result = await this.getRequestsUseCase.execute(employeeId, companyId);
 
@@ -102,6 +180,10 @@ class RequestController {
     try {
       const { id: companyId } = req.params;
       const { status } = req.query;
+      const canManage = await this.canManageCompanyRequests(req, companyId);
+      if (!canManage) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
 
       console.log(`[RequestController] Fetching company requests for company ${companyId} (type: ${typeof companyId}) with status: ${status || 'all'}`);
       console.log(`[RequestController] User making request:`, req.user?.email, req.user?.id);
@@ -155,7 +237,11 @@ class RequestController {
     try {
       const { id: companyId, requestId } = req.params;
       const { status, rejection_reason, response_notes } = req.body;
-      const reviewerId = req.user?.id; // From auth middleware
+      const canManage = await this.canManageCompanyRequests(req, companyId);
+      if (!canManage) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      const reviewerId = this.getRequesterDirectoryUserId(req);
 
       if (!status) {
         return res.status(400).json({
