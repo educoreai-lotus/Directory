@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { redirectToNAuthLogin } from '../utils/nauthRedirect';
 
 function LandingPage() {
   const navigate = useNavigate();
@@ -8,8 +9,8 @@ function LandingPage() {
     navigate('/register');
   };
 
-  const handleLogin = () => {
-    navigate('/login');
+  const handleSignIn = () => {
+    redirectToNAuthLogin();
   };
 
   return (
@@ -79,10 +80,11 @@ function LandingPage() {
           </div>
           
           <button
-            onClick={handleLogin}
+            type="button"
+            onClick={handleSignIn}
             className="btn btn-secondary w-full"
           >
-            ALREADY REGISTERED? LOGIN
+            ALREADY REGISTERED? SIGN IN
           </button>
         </div>
       </div>

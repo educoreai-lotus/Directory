@@ -2,6 +2,7 @@
 // Button to initiate GitHub OAuth flow
 
 import React, { useState } from 'react';
+import { getAccessToken } from '../auth/accessTokenStore';
 import { getGitHubAuthUrl } from '../services/oauthService';
 
 function GitHubConnectButton({ onConnected, disabled = false, alreadyConnected = false }) {
@@ -14,9 +15,9 @@ function GitHubConnectButton({ onConnected, disabled = false, alreadyConnected =
       setError(null);
 
       // Verify token exists before making request
-      const token = localStorage.getItem('auth_token');
+      const token = getAccessToken();
       if (!token) {
-        throw new Error('You must be logged in to connect GitHub. Please log in first.');
+        throw new Error('You must be signed in to connect GitHub.');
       }
 
       console.log('[GitHubConnectButton] Token present, requesting authorization URL...');

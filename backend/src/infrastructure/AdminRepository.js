@@ -43,16 +43,6 @@ class AdminRepository {
   }
 
   /**
-   * Verify password
-   * @param {string} plainPassword - Plain text password
-   * @param {string} hashedPassword - Hashed password from database
-   * @returns {Promise<boolean>} True if password matches
-   */
-  async verifyPassword(plainPassword, hashedPassword) {
-    return await bcrypt.compare(plainPassword, hashedPassword);
-  }
-
-  /**
    * Create a new admin (for initial setup)
    * @param {Object} adminData - Admin data
    * @returns {Promise<Object>} Created admin

@@ -1,15 +1,11 @@
-// Frontend Context - Authentication Context
-// Provides authentication state and methods throughout the app
+// Authentication context — nAuth + Coordinator + Directory JWT (/auth/me) only.
 
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import * as authService from '../services/authService';
 import api from '../utils/api';
 import { setAccessToken, getAccessToken, clearAccessToken } from '../auth/accessTokenStore';
+import { redirectToNAuthLogin } from '../utils/nauthRedirect';
 
-/**
- * Decode JWT payload only (no verification). Used for nAuth client-side landing routes only.
- */
 function decodeJwtPayload(token) {
   if (!token || typeof token !== 'string') return null;
   const parts = token.split('.');
@@ -35,535 +31,208 @@ export const useAuth = () => {
   return context;
 };
 
+async function fetchMeUser() {
+  const meResp = await api.get('/auth/me');
+  return meResp?.data?.response?.user || meResp?.data?.user || null;
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
 
-  // Initialize auth state on mount
+  const runPostLoginRouting = useCallback(
+    (meUser) => {
+      if (!meUser) return;
+      const path = window.location.pathname;
+      if (path !== '/' && path !== '/login') {
+        return;
+      }
+      const activeToken = getAccessToken();
+      const claims = decodeJwtPayload(activeToken) || {};
+      const directoryUserId = meUser.directoryUserId || meUser.id;
+      const organizationId =
+        meUser.organizationId || meUser.companyId || meUser.company_id;
+      const primaryRole = String(
+        claims.primaryRole ??
+          claims.primary_role ??
+          meUser.primaryRole ??
+          meUser.primary_role ??
+          ''
+      ).toUpperCase();
+      const isSystemAdmin =
+        claims.isSystemAdmin === true ||
+        claims.is_system_admin === true ||
+        meUser.isSystemAdmin === true ||
+        meUser.is_system_admin === true ||
+        primaryRole === 'DIRECTORY_ADMIN';
+      const isHR =
+        meUser.isHR === true || claims.isHR === true || claims.is_hr === true;
+      const hasValidOrganizationId =
+        organizationId != null &&
+        String(organizationId).trim() !== '' &&
+        String(organizationId) !== 'undefined';
+
+      let target = null;
+      if (isSystemAdmin) {
+        target = '/admin/dashboard';
+      } else if (isHR && hasValidOrganizationId) {
+        target = `/company/${organizationId}`;
+      } else if (directoryUserId) {
+        target = `/employee/${directoryUserId}`;
+      }
+
+      if (target && target !== path) {
+        navigate(target, { replace: true });
+      }
+    },
+    [navigate]
+  );
+
   useEffect(() => {
     const initAuth = async () => {
+      if (process.env.REACT_APP_AUTH_MODE !== 'nauth') {
+        console.error(
+          '[AuthContext] REACT_APP_AUTH_MODE must be "nauth" for this build.'
+        );
+        setUser(null);
+        setIsAuthenticated(false);
+        setLoading(false);
+        return;
+      }
+
+      const nAuthFrontendUrl = process.env.REACT_APP_NAUTH_FRONTEND_URL;
+      const coordinatorBaseUrl =
+        process.env.REACT_APP_COORDINATOR_BASE_URL ||
+        process.env.REACT_APP_COORDINATOR_URL ||
+        'https://coordinator-production-6004.up.railway.app';
+      const coordinatorEndpoint =
+        process.env.REACT_APP_COORDINATOR_ENDPOINT || '/request';
+
       try {
-        const authMode = process.env.REACT_APP_AUTH_MODE;
-        if (!authMode) {
-          console.error('[AuthContext] ❌ REACT_APP_AUTH_MODE is missing. Refusing to default to dummy mode.');
-        }
-        if (authMode === 'nauth') {
-          const nAuthFrontendUrl = process.env.REACT_APP_NAUTH_FRONTEND_URL;
-          const coordinatorBaseUrl =
-            process.env.REACT_APP_COORDINATOR_BASE_URL ||
-            process.env.REACT_APP_COORDINATOR_URL ||
-            'https://coordinator-production-6004.up.railway.app';
-          const coordinatorEndpoint =
-            process.env.REACT_APP_COORDINATOR_ENDPOINT || '/request';
+        const hash = window.location.hash || '';
+        const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
+        const tokenFromHash = hashParams.get('access_token') || '';
+        const existingToken = getAccessToken();
+        let tokenForValidation = '';
 
-          // 1) Read access token from URL fragment: #access_token=...
-          const hash = window.location.hash || '';
-          const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
-          const tokenFromHash = hashParams.get('access_token') || '';
-          const existingToken = getAccessToken();
-          let tokenForValidation = '';
-
-          // 2) Use token from URL if present, otherwise fall back to existing in-memory token.
-          if (tokenFromHash) {
-            setAccessToken(tokenFromHash);
-            tokenForValidation = tokenFromHash;
-            window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
-          } else if (existingToken) {
-            tokenForValidation = existingToken;
-          } else {
-            clearAccessToken();
-            setUser(null);
-            setIsAuthenticated(false);
-            if (!nAuthFrontendUrl) {
-              console.error('[AuthContext] ❌ REACT_APP_NAUTH_FRONTEND_URL is missing. Cannot redirect to nAuth login.');
-              return;
-            }
-            window.location.href = `${nAuthFrontendUrl}/login`;
-            return;
-          }
-
-          // 3) Validate token via Coordinator -> nAuth
-          let coordinatorResp;
-          let coordinatorData = {};
-          try {
-            coordinatorResp = await fetch(`${coordinatorBaseUrl}${coordinatorEndpoint}`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                requester_service: 'Directory',
-                payload: {
-                  action:
-                    'Route this request to nAuth service only for access token validation and session continuity decision.',
-                  access_token: tokenForValidation
-                },
-                response: {
-                  valid: false,
-                  reason: '',
-                  auth_state: '',
-                  directory_user_id: '',
-                  organization_id: '',
-                  new_access_token: ''
-                }
-              })
-            });
-
-            if (!coordinatorResp.ok) {
-              clearAccessToken();
-              setUser(null);
-              setIsAuthenticated(false);
-              if (!nAuthFrontendUrl) {
-                console.error('[AuthContext] ❌ REACT_APP_NAUTH_FRONTEND_URL is missing. Cannot redirect to nAuth login.');
-                return;
-              }
-              window.location.href = `${nAuthFrontendUrl}/login`;
-              return;
-            }
-
-            coordinatorData = await coordinatorResp.json().catch(() => ({}));
-          } catch (coordinatorError) {
-            clearAccessToken();
-            setUser(null);
-            setIsAuthenticated(false);
-            if (!nAuthFrontendUrl) {
-              console.error('[AuthContext] ❌ REACT_APP_NAUTH_FRONTEND_URL is missing. Cannot redirect to nAuth login.');
-              return;
-            }
-            window.location.href = `${nAuthFrontendUrl}/login`;
-            return;
-          }
-          const coordinatorResponse = coordinatorData?.response || {};
-          const isValid = coordinatorResponse.valid === true;
-
-          if (!isValid) {
-            clearAccessToken();
-            setUser(null);
-            setIsAuthenticated(false);
-            if (!nAuthFrontendUrl) {
-              console.error('[AuthContext] ❌ REACT_APP_NAUTH_FRONTEND_URL is missing. Cannot redirect to nAuth login.');
-              return;
-            }
-            window.location.href = `${nAuthFrontendUrl}/login`;
-            return;
-          }
-
-          // 4) If Coordinator/nAuth returns rotated access token, replace memory token.
-          if (coordinatorResponse.new_access_token) {
-            setAccessToken(coordinatorResponse.new_access_token);
-          }
-
-          // 5) Continue normal app flow with authenticated state.
-          const meResp = await api.get('/auth/me');
-          const meUser = meResp?.data?.response?.user || meResp?.data?.user || null;
-
-          setUser(meUser);
-          setIsAuthenticated(!!meUser);
+        if (tokenFromHash) {
+          setAccessToken(tokenFromHash);
+          tokenForValidation = tokenFromHash;
+          window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+        } else if (existingToken) {
+          tokenForValidation = existingToken;
+        } else {
+          clearAccessToken();
+          setUser(null);
+          setIsAuthenticated(false);
           setLoading(false);
-
-          // nAuth: one-time-style landing redirect only from neutral entry paths (deep links preserved).
-          if (meUser) {
-            const path = window.location.pathname;
-            if (path === '/' || path === '/login') {
-              const activeToken = getAccessToken();
-              const claims = decodeJwtPayload(activeToken) || {};
-              const directoryUserId = meUser.directoryUserId || meUser.id;
-              const organizationId =
-                meUser.organizationId || meUser.companyId || meUser.company_id;
-              const primaryRole = String(
-                claims.primaryRole ??
-                  claims.primary_role ??
-                  meUser.primaryRole ??
-                  meUser.primary_role ??
-                  ''
-              ).toUpperCase();
-              const isSystemAdmin =
-                claims.isSystemAdmin === true ||
-                claims.is_system_admin === true ||
-                meUser.isSystemAdmin === true ||
-                meUser.is_system_admin === true ||
-                primaryRole === 'DIRECTORY_ADMIN';
-              const isHR =
-                meUser.isHR === true ||
-                claims.isHR === true ||
-                claims.is_hr === true;
-              const hasValidOrganizationId =
-                organizationId != null &&
-                String(organizationId).trim() !== '' &&
-                String(organizationId) !== 'undefined';
-
-              let target = null;
-              if (isSystemAdmin) {
-                target = '/admin/dashboard';
-              } else if (isHR && hasValidOrganizationId) {
-                target = `/company/${organizationId}`;
-              } else if (directoryUserId) {
-                target = `/employee/${directoryUserId}`;
-              }
-
-              if (target && target !== path) {
-                navigate(target, { replace: true });
-              }
-            }
+          if (nAuthFrontendUrl) {
+            window.location.href = `${nAuthFrontendUrl.replace(/\/$/, '')}/login`;
           }
-
           return;
         }
 
-        // CRITICAL: Check for OAuth callback FIRST, before any token operations
-        // This prevents token from being cleared during OAuth redirects
-        const urlParams = new URLSearchParams(window.location.search);
-        const linkedinParam = urlParams.get('linkedin');
-        const githubParam = urlParams.get('github');
-        const errorParam = urlParams.get('error');
-        const enrichedParam = urlParams.get('enriched');
-        const tokenParam = urlParams.get('token');
-        
-        // OAuth callback is detected by:
-        // 1. Success indicators (linkedin=connected, github=connected, enriched=true)
-        // 2. OR error parameter (OAuth errors still come from OAuth callback)
-        // 3. OR token parameter (OAuth callbacks include token in URL)
-        // This ensures we preserve token/user even when OAuth returns an error
-        const isOAuthCallback = linkedinParam === 'connected' || 
-                                githubParam === 'connected' || 
-                                enrichedParam === 'true' ||
-                                !!errorParam ||  // OAuth errors are still OAuth callbacks
-                                !!tokenParam;    // Token in URL indicates OAuth callback
-        
-        // Check if there's an error (for logging, but still treat as OAuth callback)
-        const hasOAuthError = !!errorParam;
-        
-        console.log('[AuthContext] Initializing auth, isOAuthCallback:', isOAuthCallback, 'hasOAuthError:', hasOAuthError);
-
-        const storedUser = authService.getCurrentUser();
-        const token = authService.getToken();
-        
-        // Check for recent OAuth callback flag (even if URL params are cleared)
-        const oauthTimestamp = localStorage.getItem('oauth_callback_timestamp');
-        const isRecentOAuth = oauthTimestamp && (Date.now() - parseInt(oauthTimestamp, 10)) < 10000; // 10 seconds window
-
-        console.log('[AuthContext] Token exists:', !!token, 'Stored user exists:', !!storedUser, 'isRecentOAuth:', isRecentOAuth);
-
-        // If OAuth callback OR recent OAuth (within 10 seconds), ALWAYS preserve token and user, skip validation
-        // OAuth callbacks include user data in URL, so we should have it in localStorage
-        if (isOAuthCallback || isRecentOAuth) {
-          console.log('[AuthContext] ⚠️ OAuth callback detected - preserving token and user without validation');
-          
-          // Check if user was just stored from OAuth callback (might be in URL params)
-          const urlParams = new URLSearchParams(window.location.search);
-          const userParam = urlParams.get('user');
-          
-          if (userParam) {
-            // User data is in URL - decode and store it
-            try {
-              const userDataJson = atob(userParam);
-              const userData = JSON.parse(userDataJson);
-              localStorage.setItem('user', JSON.stringify(userData));
-              console.log('[AuthContext] User data extracted from OAuth callback URL and stored');
-              setUser(userData);
-              setIsAuthenticated(true);
-              setLoading(false);
-              return;
-            } catch (error) {
-              console.error('[AuthContext] Failed to decode user data from URL:', error);
-            }
-          }
-          
-          // Use stored user from localStorage (should be there from OAuth callback)
-          if (token && storedUser) {
-            setUser(storedUser);
-            setIsAuthenticated(true);
-            setLoading(false);
-            return;
-          } else if (storedUser) {
-            // Even if token is missing, preserve user during OAuth
-            console.warn('[AuthContext] Token missing during OAuth callback, but preserving user');
-            setUser(storedUser);
-            setIsAuthenticated(true);
-            setLoading(false);
-            return;
-          } else {
-            console.warn('[AuthContext] No token or user found during OAuth callback - waiting for OAuth callback to store data');
-            // Don't clear anything during OAuth - wait a bit for OAuth callback to store data
-            setTimeout(() => {
-              const retryStoredUser = authService.getCurrentUser();
-              const retryToken = authService.getToken();
-              if (retryToken && retryStoredUser) {
-                console.log('[AuthContext] User data found after delay, setting user');
-                setUser(retryStoredUser);
-                setIsAuthenticated(true);
-              } else {
-                setUser(null);
-                setIsAuthenticated(false);
+        let coordinatorResp;
+        let coordinatorData = {};
+        try {
+          coordinatorResp = await fetch(`${coordinatorBaseUrl}${coordinatorEndpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              requester_service: 'Directory',
+              payload: {
+                action:
+                  'Route this request to nAuth service only for access token validation and session continuity decision.',
+                access_token: tokenForValidation
+              },
+              response: {
+                valid: false,
+                reason: '',
+                auth_state: '',
+                directory_user_id: '',
+                organization_id: '',
+                new_access_token: ''
               }
-              setLoading(false);
-            }, 500);
-            return;
+            })
+          });
+
+          if (!coordinatorResp.ok) {
+            throw new Error('Coordinator validation failed');
           }
+          coordinatorData = await coordinatorResp.json().catch(() => ({}));
+        } catch {
+          clearAccessToken();
+          setUser(null);
+          setIsAuthenticated(false);
+          setLoading(false);
+          if (nAuthFrontendUrl) {
+            window.location.href = `${nAuthFrontendUrl.replace(/\/$/, '')}/login`;
+          }
+          return;
         }
 
-        // Normal flow (not OAuth callback) - validate token
-        if (token && storedUser) {
-          // If recent OAuth, skip validation and use stored user
-          if (isRecentOAuth) {
-            console.log('[AuthContext] Recent OAuth detected, skipping validation and using stored user');
-            setUser(storedUser);
-            setIsAuthenticated(true);
-            // Clear the OAuth flag after using it
-            localStorage.removeItem('oauth_callback_timestamp');
-          } else {
-            // Validate token with server
-            const validation = await authService.validateToken();
-            if (validation.valid) {
-              setUser(validation.user || storedUser);
-              setIsAuthenticated(true);
-            } else {
-              // Token invalid, clear storage
-              console.log('[AuthContext] Token validation failed, clearing storage');
-              authService.logout();
-              setUser(null);
-              setIsAuthenticated(false);
-            }
-          }
-        } else {
+        const coordinatorResponse = coordinatorData?.response || {};
+        if (coordinatorResponse.valid !== true) {
+          clearAccessToken();
           setUser(null);
           setIsAuthenticated(false);
-        }
-      } catch (error) {
-        console.error('[AuthContext] Auth initialization error:', error);
-        // During OAuth callback, try to preserve stored user
-        const urlParams = new URLSearchParams(window.location.search);
-        const linkedinParam = urlParams.get('linkedin');
-        const githubParam = urlParams.get('github');
-        const errorParam = urlParams.get('error');
-        const enrichedParam = urlParams.get('enriched');
-        const tokenParam = urlParams.get('token');
-        
-        const isOAuthCallback = linkedinParam === 'connected' || 
-                                githubParam === 'connected' ||
-                                !!errorParam ||  // OAuth errors are still OAuth callbacks
-                                enrichedParam === 'true' ||
-                                !!tokenParam;    // Token in URL indicates OAuth callback
-        if (isOAuthCallback) {
-          const storedUser = authService.getCurrentUser();
-          const token = authService.getToken();
-          if (storedUser || token) {
-            console.warn('[AuthContext] Error during OAuth callback, but preserving stored user/token');
-            setUser(storedUser);
-            setIsAuthenticated(!!storedUser);
-          } else {
-            setUser(null);
-            setIsAuthenticated(false);
+          setLoading(false);
+          if (nAuthFrontendUrl) {
+            window.location.href = `${nAuthFrontendUrl.replace(/\/$/, '')}/login`;
           }
-        } else {
-          setUser(null);
-          setIsAuthenticated(false);
+          return;
         }
-      } finally {
+
+        if (coordinatorResponse.new_access_token) {
+          setAccessToken(coordinatorResponse.new_access_token);
+        }
+
+        const meUser = await fetchMeUser();
+        setUser(meUser);
+        setIsAuthenticated(!!meUser);
+        setLoading(false);
+        runPostLoginRouting(meUser);
+      } catch (e) {
+        console.error('[AuthContext] initAuth error:', e);
+        clearAccessToken();
+        setUser(null);
+        setIsAuthenticated(false);
         setLoading(false);
       }
     };
 
     initAuth();
-  }, []);
+  }, [runPostLoginRouting]);
 
-  /**
-   * Refresh user data from server
-   */
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     try {
-      // Check if we're in an OAuth callback - preserve token during OAuth flow
-      const urlParams = new URLSearchParams(window.location.search);
-      const linkedinParam = urlParams.get('linkedin');
-      const githubParam = urlParams.get('github');
-      const errorParam = urlParams.get('error');
-      const enrichedParam = urlParams.get('enriched');
-      const tokenParam = urlParams.get('token');
-      
-      // OAuth callback is detected by any of these indicators
-      const isOAuthCallback = linkedinParam === 'connected' || 
-                              githubParam === 'connected' || 
-                              !!errorParam ||  // OAuth errors are still OAuth callbacks
-                              enrichedParam === 'true' ||
-                              !!tokenParam;    // Token in URL indicates OAuth callback
-      
-      // Also check for recent OAuth callback flag
-      const oauthTimestamp = localStorage.getItem('oauth_callback_timestamp');
-      const isRecentOAuth = oauthTimestamp && (Date.now() - parseInt(oauthTimestamp, 10)) < 10000; // 10 seconds window
-      
-      // If recent OAuth, skip validation and use stored user
-      if (isRecentOAuth && !isOAuthCallback) {
-        const storedUser = authService.getCurrentUser();
-        const token = authService.getToken();
-        if (token && storedUser) {
-          console.log('[AuthContext] Recent OAuth in refreshUser, using stored user without validation');
-          setUser(storedUser);
-          setIsAuthenticated(true);
-          return storedUser;
-        }
-      }
-
-      const validation = await authService.validateToken();
-      if (validation.valid && validation.user) {
-        setUser(validation.user);
-        setIsAuthenticated(true);
-        return validation.user;
-      } else {
-        // Token invalid - but preserve during OAuth callbacks or recent OAuth
-        if (isOAuthCallback || isRecentOAuth) {
-          // During OAuth, try to restore from localStorage instead of clearing
-          const storedUser = authService.getCurrentUser();
-          const token = authService.getToken();
-          if (token && storedUser) {
-            console.warn('[AuthContext] Token validation failed during OAuth, but preserving stored user');
-            setUser(storedUser);
-            setIsAuthenticated(true);
-            return storedUser;
-          }
-        }
-        
-        // Only clear storage if not in OAuth callback or recent OAuth
-        if (!isOAuthCallback && !isRecentOAuth) {
-          authService.logout();
-          setUser(null);
-          setIsAuthenticated(false);
-        }
-        return null;
-      }
-    } catch (error) {
-      console.error('Error refreshing user:', error);
-      
-      // During OAuth callback, try to preserve stored user
-      const urlParams = new URLSearchParams(window.location.search);
-      const isOAuthCallback = urlParams.get('linkedin') === 'connected' || 
-                              urlParams.get('github') === 'connected';
-      const oauthTimestamp = localStorage.getItem('oauth_callback_timestamp');
-      const isRecentOAuth = oauthTimestamp && (Date.now() - parseInt(oauthTimestamp, 10)) < 10000;
-      
-      if (isOAuthCallback || isRecentOAuth) {
-        const storedUser = authService.getCurrentUser();
-        const token = authService.getToken();
-        if (token && storedUser) {
-          console.warn('[AuthContext] Error during refresh, but preserving stored user during OAuth');
-          setUser(storedUser);
-          setIsAuthenticated(true);
-          return storedUser;
-        }
-      }
-      
-      return null;
-    }
-  };
-
-  /**
-   * Login user (supports both employee and admin - auto-detected by backend)
-   */
-  const login = async (email, password) => {
-    try {
-      setLoading(true);
-      const authMode = process.env.REACT_APP_AUTH_MODE;
-      if (!authMode) {
-        console.error('[AuthContext] ❌ REACT_APP_AUTH_MODE is missing. Refusing to default to dummy mode.');
-      }
-      if (authMode === 'nauth') {
-        // Directory is not a login authority in nAuth mode.
-        return { success: false, error: 'Please sign in via nAuth.' };
-      }
-      
-      // CRITICAL: Clear old user state before login to prevent showing wrong user
-      console.log('[AuthContext] Clearing old user state before login');
-      setUser(null);
-      setIsAuthenticated(false);
-      
-      const result = await authService.login(email, password);
-
-      if (result.success) {
-        console.log('[AuthContext] Login successful, setting new user:', {
-          email: result.user.email,
-          fullName: result.user.fullName,
-          companyId: result.user.companyId
-        });
-        setUser(result.user);
-        setIsAuthenticated(true);
-
-        // Check if admin login
-        if (result.user.isAdmin || result.user.role === 'DIRECTORY_ADMIN') {
-          // Admin redirects to admin dashboard
-          navigate('/admin/dashboard');
-          return { success: true };
-        }
-
-        // Redirect based on user type and profile status
-        if (result.user.isHR) {
-          // HR sees Company Profile
-          navigate(`/company/${result.user.companyId}`);
-        } else {
-          // Regular employee
-          // CRITICAL: Enrichment is ONE-TIME only - if already enriched, never show enrich page
-          if (result.user.profileStatus === 'enriched' || result.user.profileStatus === 'approved') {
-            // Already completed enrichment - go directly to profile
-            if (result.user.profileStatus === 'enriched' && !result.user.isProfileApproved) {
-              // Enriched but not approved - show waiting message
-              navigate(`/employee/${result.user.id}?status=waiting-approval`);
-            } else {
-              // Approved or enriched - show profile
-              navigate(`/employee/${result.user.id}`);
-            }
-          } else if (result.user.bothOAuthConnected) {
-            // Both OAuth connected but enrichment not complete yet - go to profile
-            // (Enrichment might be in progress or failed)
-            navigate(`/employee/${result.user.id}`);
-          } else if (result.user.isFirstLogin || result.user.profileStatus === 'basic') {
-            // First login - redirect to enrichment page
-            navigate(`/enrich`);
-          } else {
-            // Default: show profile
-            navigate(`/employee/${result.user.id}`);
-          }
-        }
-
-        return { success: true };
-      } else {
-        return { success: false, error: result.error };
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, error: 'An error occurred during login' };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
-   * Logout user
-   */
-  const logout = async () => {
-    try {
-      const authMode = process.env.REACT_APP_AUTH_MODE;
-      if (!authMode) {
-        console.error('[AuthContext] ❌ REACT_APP_AUTH_MODE is missing. Refusing to default to dummy mode.');
-      }
-      if (authMode === 'nauth') {
-        clearAccessToken();
+      if (!getAccessToken()) {
         setUser(null);
         setIsAuthenticated(false);
-        navigate('/');
-        return;
+        return null;
       }
-
-      await authService.logout();
-      setUser(null);
-      setIsAuthenticated(false);
-      navigate('/');
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Even if API call fails, clear local state
-      setUser(null);
-      setIsAuthenticated(false);
-      navigate('/');
+      const meUser = await fetchMeUser();
+      setUser(meUser);
+      setIsAuthenticated(!!meUser);
+      return meUser;
+    } catch (e) {
+      console.error('[AuthContext] refreshUser error:', e);
+      return null;
     }
+  }, []);
+
+  const login = async () => {
+    redirectToNAuthLogin();
+    return { success: false, error: 'Use nAuth to sign in.' };
+  };
+
+  const logout = async () => {
+    clearAccessToken();
+    setUser(null);
+    setIsAuthenticated(false);
+    navigate('/');
   };
 
   const value = {
@@ -575,12 +244,7 @@ export const AuthProvider = ({ children }) => {
     refreshUser
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export default AuthContext;
-

@@ -1,6 +1,4 @@
-// Authentication Middleware
-// Validates authentication tokens on protected routes
-// Works with both dummy and real Auth Service modes
+// Authentication Middleware — nAuth JWT only (Bearer).
 
 const AuthFactory = require('../infrastructure/auth/AuthFactory');
 const {
@@ -9,13 +7,8 @@ const {
   buildUserFromCoordinatorResponse
 } = require('./nAuthCoordinatorRevalidate');
 
-// Create auth provider instance (singleton pattern)
 let authProvider = null;
 
-/**
- * Get or create auth provider instance
- * @returns {AuthProvider}
- */
 function getAuthProvider() {
   if (!authProvider) {
     authProvider = AuthFactory.create();
@@ -23,115 +16,27 @@ function getAuthProvider() {
   return authProvider;
 }
 
-/**
- * Reset auth provider (useful for testing or mode changes)
- */
 function resetAuthProvider() {
   authProvider = null;
 }
 
-/**
- * Skip Authentication in Dummy Mode Middleware
- * When AUTH_MODE=dummy, skip all authentication checks and treat caller as authenticated
- * This allows CSV uploads and other operations to work without tokens in dummy mode
- */
-const skipAuthInDummyMode = (req, res, next) => {
-  if (process.env.AUTH_MODE === 'dummy') {
-    console.log('[skipAuthInDummyMode] AUTH_MODE=dummy, skipping authentication for:', req.path);
-    req.user = { id: 'dummy-user', isHR: true, isAdmin: false };
-    req.token = 'dummy-token';
-    return next();
-  }
-  next();
-};
-
-/**
- * Authentication Middleware
- * Validates JWT token from request headers and attaches user to request
- * 
- * Usage:
- *   app.get('/protected-route', authMiddleware, (req, res) => {
- *     // req.user is available here
- *     res.json({ user: req.user });
- *   });
- */
 const authMiddleware = async (req, res, next) => {
-  // Skip authentication if AUTH_MODE=dummy
-  if (process.env.AUTH_MODE === 'dummy') {
-    console.log('[authMiddleware] AUTH_MODE=dummy, skipping authentication for:', req.path);
-    
-    // In dummy mode, we still need to extract the real employee ID from the token
-    // Token format: dummy-token-{employeeId}-{email}-{timestamp}
-    // We use DummyAuthProvider to parse the token and get the real user data
-    try {
-      const provider = getAuthProvider();
-      const token = provider.extractTokenFromHeaders(req.headers);
-      
-      if (token && token.startsWith('dummy-token-')) {
-        // Validate token to extract real user data
-        const validationResult = await provider.validateToken(token);
-        if (validationResult.valid && validationResult.user) {
-          // Use the real user data from token
-          req.user = validationResult.user;
-          req.token = token;
-          
-          // Extract companyId from request params or body if not in user object
-          const companyId = req.params?.companyId || req.params?.id || req.body?.companyId || req.parsedBody?.companyId || req.user.companyId;
-          if (companyId) {
-            req.user.companyId = companyId;
-            req.user.company_id = companyId;
-          }
-          
-          console.log('[authMiddleware] Dummy mode: Extracted real user from token:', {
-            id: req.user.id,
-            email: req.user.email,
-            companyId: req.user.companyId
-          });
-          return next();
-        }
+  const authMode = process.env.AUTH_MODE || 'nauth';
+  if (authMode !== 'nauth') {
+    console.error('[authMiddleware] AUTH_MODE must be nauth');
+    return res.status(503).json({
+      requester_service: 'directory_service',
+      response: {
+        error: 'Server misconfiguration: AUTH_MODE must be nauth'
       }
-      
-      // Fallback: If token parsing fails, use dummy user but try to extract companyId
-      const companyId = req.params?.companyId || req.params?.id || req.body?.companyId || req.parsedBody?.companyId;
-      
-      req.user = { 
-        id: 'dummy-user', 
-        isHR: true, 
-        isAdmin: false,
-        companyId: companyId,
-        company_id: companyId
-      };
-      req.token = token || 'dummy-token';
-      
-      console.warn('[authMiddleware] Dummy mode: Could not parse token, using fallback dummy user');
-      console.log('[authMiddleware] Dummy user created with companyId:', companyId);
-      return next();
-    } catch (error) {
-      console.error('[authMiddleware] Error parsing dummy token:', error);
-      // Fallback to basic dummy user
-      const companyId = req.params?.companyId || req.params?.id || req.body?.companyId || req.parsedBody?.companyId;
-      req.user = { 
-        id: 'dummy-user', 
-        isHR: true, 
-        isAdmin: false,
-        companyId: companyId,
-        company_id: companyId
-      };
-      req.token = 'dummy-token';
-      return next();
-    }
+    });
   }
 
   try {
     const provider = getAuthProvider();
     const token = provider.extractTokenFromHeaders(req.headers);
 
-    console.log('[authMiddleware] Request path:', req.path);
-    console.log('[authMiddleware] Authorization header:', req.headers.authorization ? 'present' : 'missing');
-    console.log('[authMiddleware] Extracted token:', token ? `${token.substring(0, 20)}...` : 'null');
-
     if (!token) {
-      console.log('[authMiddleware] No token found in request');
       return res.status(401).json({
         requester_service: 'directory_service',
         response: {
@@ -140,86 +45,16 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    // nAuth: local JWT first; Coordinator -> nAuth only when sensitive or token expired locally.
-    if (process.env.AUTH_MODE === 'nauth') {
-      console.log('[authMiddleware] nAuth mode: validating token (local first)...');
-      const validationResult = await provider.validateToken(token);
-      const sensitive = isSensitiveNAuthRequest(req);
+    const validationResult = await provider.validateToken(token);
+    const sensitive = isSensitiveNAuthRequest(req);
 
-      if (validationResult.valid && !sensitive) {
-        req.user = validationResult.user;
-        req.token = token;
-        console.log('[authMiddleware] nAuth local OK (non-sensitive):', req.user?.id);
-        return next();
-      }
-
-      if (!validationResult.valid && !validationResult.expired) {
-        console.log('[authMiddleware] nAuth local rejected (not expired):', validationResult.error || '');
-        return res.status(401).json({
-          requester_service: 'directory_service',
-          response: {
-            error: validationResult.error || 'Invalid or expired token'
-          }
-        });
-      }
-
-      try {
-        const cr = await revalidateNAuthAccessTokenViaCoordinator(token, req);
-        const coord = cr.coordinatorResponse || {};
-        if (!cr.httpOk || coord.valid !== true) {
-          console.log('[authMiddleware] nAuth Coordinator revalidation failed:', {
-            httpOk: cr.httpOk,
-            status: cr.status,
-            valid: coord.valid,
-            reason: coord.reason
-          });
-          return res.status(401).json({
-            requester_service: 'directory_service',
-            response: {
-              error: coord.reason || 'Invalid or expired token'
-            }
-          });
-        }
-
-        const user = buildUserFromCoordinatorResponse(coord, validationResult.user || null);
-        if (!user) {
-          return res.status(401).json({
-            requester_service: 'directory_service',
-            response: {
-              error: 'Invalid authentication response'
-            }
-          });
-        }
-
-        req.user = user;
-        req.token = coord.new_access_token || token;
-        if (coord.new_access_token) {
-          res.setHeader('X-New-Access-Token', coord.new_access_token);
-        }
-        console.log('[authMiddleware] nAuth Coordinator OK, user:', req.user.id);
-        return next();
-      } catch (coordErr) {
-        console.error('[authMiddleware] nAuth Coordinator error:', coordErr.message);
-        return res.status(401).json({
-          requester_service: 'directory_service',
-          response: {
-            error: 'Authentication validation failed'
-          }
-        });
-      }
+    if (validationResult.valid && !sensitive) {
+      req.user = validationResult.user;
+      req.token = token;
+      return next();
     }
 
-    // Validate token (non-nAuth modes)
-    console.log('[authMiddleware] Validating token...');
-    const validationResult = await provider.validateToken(token);
-    console.log('[authMiddleware] Validation result:', validationResult.valid ? 'valid' : 'invalid', validationResult.error || '');
-    console.log("[authMiddleware] RAW token from header:", token);
-    console.log("[authMiddleware] Decoded user payload:", validationResult.user);
-    console.log("[authMiddleware] typeof user:", typeof validationResult.user);
-    console.log("[authMiddleware] user.isHR:", validationResult.user?.isHR);
-    console.log("[authMiddleware] user.companyId:", validationResult.user?.companyId);
-
-    if (!validationResult.valid) {
+    if (!validationResult.valid && !validationResult.expired) {
       return res.status(401).json({
         requester_service: 'directory_service',
         response: {
@@ -228,13 +63,43 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    // Attach user to request
-    req.user = validationResult.user;
-    req.token = token;
-    console.log('[authMiddleware] User authenticated:', req.user.email, 'ID:', req.user.id);
-    console.log("[authMiddleware] AUTH OK → Passing request to next middleware");
+    try {
+      const cr = await revalidateNAuthAccessTokenViaCoordinator(token, req);
+      const coord = cr.coordinatorResponse || {};
+      if (!cr.httpOk || coord.valid !== true) {
+        return res.status(401).json({
+          requester_service: 'directory_service',
+          response: {
+            error: coord.reason || 'Invalid or expired token'
+          }
+        });
+      }
 
-    next();
+      const user = buildUserFromCoordinatorResponse(coord, validationResult.user || null);
+      if (!user) {
+        return res.status(401).json({
+          requester_service: 'directory_service',
+          response: {
+            error: 'Invalid authentication response'
+          }
+        });
+      }
+
+      req.user = user;
+      req.token = coord.new_access_token || token;
+      if (coord.new_access_token) {
+        res.setHeader('X-New-Access-Token', coord.new_access_token);
+      }
+      return next();
+    } catch (coordErr) {
+      console.error('[authMiddleware] nAuth Coordinator error:', coordErr.message);
+      return res.status(401).json({
+        requester_service: 'directory_service',
+        response: {
+          error: 'Authentication validation failed'
+        }
+      });
+    }
   } catch (error) {
     console.error('[authMiddleware] Error:', error);
     return res.status(500).json({
@@ -246,16 +111,14 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
-/**
- * Optional Authentication Middleware
- * Validates token if present, but doesn't fail if missing
- * Useful for routes that work with or without authentication
- */
 const optionalAuthMiddleware = async (req, res, next) => {
   try {
+    const authMode = process.env.AUTH_MODE || 'nauth';
+    if (authMode !== 'nauth') {
+      return next();
+    }
     const provider = getAuthProvider();
     const token = provider.extractTokenFromHeaders(req.headers);
-
     if (token) {
       const validationResult = await provider.validateToken(token);
       if (validationResult.valid) {
@@ -263,20 +126,13 @@ const optionalAuthMiddleware = async (req, res, next) => {
         req.token = token;
       }
     }
-
     next();
   } catch (error) {
-    // Don't fail on optional auth errors, just continue
     console.warn('[optionalAuthMiddleware] Warning:', error.message);
     next();
   }
 };
 
-/**
- * HR-only Middleware
- * Ensures user is HR before allowing access
- * Must be used after authMiddleware
- */
 const hrOnlyMiddleware = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
@@ -299,11 +155,6 @@ const hrOnlyMiddleware = (req, res, next) => {
   next();
 };
 
-/**
- * Admin-only Middleware
- * Ensures user is a platform-level admin before allowing access
- * Must be used after authMiddleware
- */
 const adminOnlyMiddleware = (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
@@ -314,7 +165,7 @@ const adminOnlyMiddleware = (req, res, next) => {
     });
   }
 
-  if (!req.user.isAdmin && req.user.role !== 'DIRECTORY_ADMIN') {
+  if (!req.user.isAdmin && req.user.role !== 'DIRECTORY_ADMIN' && !req.user.isSystemAdmin) {
     return res.status(403).json({
       requester_service: 'directory_service',
       response: {
@@ -331,7 +182,5 @@ module.exports = {
   optionalAuthMiddleware,
   hrOnlyMiddleware,
   adminOnlyMiddleware,
-  skipAuthInDummyMode,
   resetAuthProvider
 };
-

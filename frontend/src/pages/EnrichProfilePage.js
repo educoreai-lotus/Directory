@@ -1,7 +1,7 @@
 // Frontend Page - Enrich Profile Page
 // Shown on first login to connect LinkedIn and GitHub
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import LinkedInConnectButton from '../components/LinkedInConnectButton';
@@ -10,6 +10,8 @@ import GitHubConnectButton from '../components/GitHubConnectButton';
 import UploadCVSection from '../components/UploadCVSection';
 import ManualProfileForm from '../components/ManualProfileForm';
 import { triggerEnrichment, getEnrichmentStatus, saveManualData } from '../services/enrichmentService';
+import { getAccessToken } from '../auth/accessTokenStore';
+import { redirectToNAuthLogin } from '../utils/nauthRedirect';
 
 function EnrichProfilePage() {
   const { user, refreshUser, loading: authLoading } = useAuth();
@@ -29,6 +31,13 @@ function EnrichProfilePage() {
     work_experience: ''
   });
   const [enriching, setEnriching] = useState(false);
+  const sessionRecoverRef = useRef(false);
+
+  useEffect(() => {
+    if (user) {
+      sessionRecoverRef.current = false;
+    }
+  }, [user]);
 
   // Initialize connection status from user object (only on initial load, not after OAuth)
   // This ensures we show the correct state when the page first loads
@@ -48,160 +57,59 @@ function EnrichProfilePage() {
     }
   }, [user]); // Only depend on user, not on linkedinConnected/githubConnected to avoid loops
 
-  // Check URL params for OAuth callback results and refresh user data
+  // OAuth return: backend redirects with ?linkedin=connected or ?github=connected only (no token in URL).
   useEffect(() => {
-    const linkedinParam = searchParams.get('linkedin');
-    const githubParam = searchParams.get('github');
     const errorParam = searchParams.get('error');
-    const tokenParam = searchParams.get('token');
-    
-    // Determine if this is an OAuth callback (success indicators, not errors)
-    const isOAuthCallback = linkedinParam === 'connected' || githubParam === 'connected';
-
-    // CRITICAL: Extract and store token + user from OAuth callback if present
-    const userParam = searchParams.get('user');
-    if (tokenParam && userParam) {
-      console.log('[EnrichProfilePage] Token and user received from OAuth callback, storing in localStorage');
-      
-      // Decode user data from base64
-      try {
-        const userDataJson = atob(userParam);
-        const userData = JSON.parse(userDataJson);
-        
-        // Store both token and user in localStorage
-        localStorage.setItem('auth_token', tokenParam);
-        localStorage.setItem('user', JSON.stringify(userData));
-        // Set OAuth callback flag to prevent AuthContext from validating immediately
-        localStorage.setItem('oauth_callback_timestamp', Date.now().toString());
-        
-        console.log('[EnrichProfilePage] Token and user stored successfully:', {
-          token: tokenParam.substring(0, 30) + '...',
-          userId: userData.id,
-          email: userData.email
-        });
-      } catch (error) {
-        console.error('[EnrichProfilePage] Failed to decode user data from OAuth callback:', error);
-        // Still store token even if user decode fails
-        localStorage.setItem('auth_token', tokenParam);
-      }
-    } else if (tokenParam) {
-      // Only token, no user - store token but warn
-      console.warn('[EnrichProfilePage] Token received but no user data in OAuth callback');
-      localStorage.setItem('auth_token', tokenParam);
-      // Set OAuth callback flag
-      localStorage.setItem('oauth_callback_timestamp', Date.now().toString());
-    }
-
     if (errorParam) {
       const decodedError = decodeURIComponent(errorParam);
-      
-      // Handle specific LinkedIn OAuth errors with helpful messages
-      if (decodedError.includes('unauthorized_scope_error') || decodedError.includes('LinkedIn app does not have required permissions')) {
-        setError('LinkedIn connection failed: The LinkedIn app does not have the required permissions. Please check the LinkedIn Developer Portal settings. See the documentation for setup instructions.');
+      if (
+        decodedError.includes('unauthorized_scope_error') ||
+        decodedError.includes('LinkedIn app does not have required permissions')
+      ) {
+        setError(
+          'LinkedIn connection failed: The LinkedIn app does not have the required permissions. Please check the LinkedIn Developer Portal settings. See the documentation for setup instructions.'
+        );
       } else {
         setError(decodedError);
       }
-      
       setSuccessMessage(null);
+      const nu = new URL(window.location.href);
+      nu.searchParams.delete('error');
+      window.history.replaceState({}, document.title, nu.pathname + nu.search);
       return;
     }
 
-    // If OAuth callback detected, use stored user data (don't call /auth/me)
-    if (linkedinParam === 'connected' || githubParam === 'connected') {
-      setRefreshing(true);
-      
-      // Get user from localStorage (should be stored from OAuth callback)
-      const token = localStorage.getItem('auth_token');
-      const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
-      
-      if (token && storedUser) {
-        // Use stored user directly - don't call /auth/me during OAuth callback
-        console.log('[EnrichProfilePage] OAuth callback detected, using stored user from localStorage (skipping /auth/me)');
-        
-        // Update connection status from stored user
-        const newLinkedinStatus = storedUser.hasLinkedIn || false;
-        const newGithubStatus = storedUser.hasGitHub || false;
-        
-        setLinkedinConnected(newLinkedinStatus);
-        setGithubConnected(newGithubStatus);
-        
-        // No success messages needed - button state shows connection status
-        
-        setRefreshing(false);
-        // Clear URL params after processing (but keep token and user in localStorage)
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.delete('token'); // Remove token from URL for security
-        newUrl.searchParams.delete('user'); // Remove user from URL for security
-        newUrl.searchParams.delete('linkedin'); // Clear OAuth callback param
-        newUrl.searchParams.delete('github'); // Clear OAuth callback param
-        newUrl.searchParams.delete('enriched'); // Clear enrichment param
-        window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
-        
-        // Clear OAuth flag after a short delay to allow AuthContext to see it
-        setTimeout(() => {
-          localStorage.removeItem('oauth_callback_timestamp');
-        }, 5000); // 5 seconds should be enough for AuthContext to initialize
-        
-        return; // Don't call refreshUser - we already have the user
-      }
-      
-      // Fallback: if no stored user, try refreshUser (but this shouldn't happen)
-      console.warn('[EnrichProfilePage] OAuth callback but no stored user, attempting refreshUser as fallback');
-      refreshUser()
-        .then((refreshedUser) => {
-          // If refreshUser returns null but we have stored user, use stored user
-          const finalUser = refreshedUser || storedUser;
-          
-          if (finalUser) {
-            // Update connection status from refreshed user (from database, not URL params)
-            const newLinkedinStatus = finalUser.hasLinkedIn || false;
-            const newGithubStatus = finalUser.hasGitHub || false;
-            
-            setLinkedinConnected(newLinkedinStatus);
-            setGithubConnected(newGithubStatus);
-            
-            // No success messages needed - button state shows connection status
-          } else {
-            // No user from refresh or localStorage - fallback to URL params
-            console.warn('[EnrichProfilePage] No user available, using URL params as fallback');
-            if (linkedinParam === 'connected') {
-              setLinkedinConnected(true);
-            }
-            if (githubParam === 'connected') {
-              setGithubConnected(true);
-            }
-          }
-        })
-        .catch((err) => {
-          console.error('Error refreshing user after OAuth:', err);
-          // Fallback: use stored user or URL params
-          if (storedUser) {
-            const newLinkedinStatus = storedUser.hasLinkedIn || linkedinParam === 'connected';
-            const newGithubStatus = storedUser.hasGitHub || githubParam === 'connected';
-            setLinkedinConnected(newLinkedinStatus);
-            setGithubConnected(newGithubStatus);
-          } else {
-            // Fallback: set connection status based on URL param
-            if (linkedinParam === 'connected') {
-              setLinkedinConnected(true);
-            }
-            if (githubParam === 'connected') {
-              setGithubConnected(true);
-            }
-          }
-        })
-        .finally(() => {
-          setRefreshing(false);
-          // Clear URL params after processing (but keep token in localStorage)
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.delete('token'); // Remove token from URL for security
-          newUrl.searchParams.delete('user'); // Remove user from URL for security
-          newUrl.searchParams.delete('linkedin'); // Clear OAuth callback param
-          newUrl.searchParams.delete('github'); // Clear OAuth callback param
-          newUrl.searchParams.delete('enriched'); // Clear enrichment param
-          window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
-        });
+    const linkedinParam = searchParams.get('linkedin');
+    const githubParam = searchParams.get('github');
+    if (linkedinParam !== 'connected' && githubParam !== 'connected') {
+      return;
     }
+
+    let cancelled = false;
+    (async () => {
+      setRefreshing(true);
+      try {
+        const u = await refreshUser();
+        if (cancelled) return;
+        if (u) {
+          setLinkedinConnected(!!u.hasLinkedIn);
+          setGithubConnected(!!u.hasGitHub);
+        }
+      } finally {
+        if (!cancelled) {
+          setRefreshing(false);
+          const nu = new URL(window.location.href);
+          nu.searchParams.delete('linkedin');
+          nu.searchParams.delete('github');
+          nu.searchParams.delete('enriched');
+          window.history.replaceState({}, document.title, nu.pathname + nu.search);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [searchParams, refreshUser]);
 
   // Auto-redirect to profile when both are connected AND enrichment is complete
@@ -249,86 +157,30 @@ function EnrichProfilePage() {
     // The old logic was too aggressive and prevented users from continuing enrichment
   }, [user, navigate, linkedinConnected, githubConnected, searchParams]);
 
-  // If no user after loading, redirect to login
-  // BUT: Don't redirect if we just came from OAuth callback (check URL params first)
+  // Unauthenticated visitors → nAuth login (same-tab sessionStorage keeps JWT across OAuth redirects)
   useEffect(() => {
-    // Check if we're coming from OAuth callback - if so, NEVER redirect to login
-    // OAuth callbacks include: success indicators, errors, tokens, or enriched status
+    if (authLoading || refreshing) return;
+    if (user) return;
     const linkedinParam = searchParams.get('linkedin');
     const githubParam = searchParams.get('github');
-    const errorParam = searchParams.get('error');
-    const enrichedParam = searchParams.get('enriched');
-    const tokenParam = searchParams.get('token');
-    
-    // OAuth callback is detected by any of these indicators
-    // Use !! to ensure boolean, not string value
-    const isOAuthCallback = linkedinParam === 'connected' || 
-                            githubParam === 'connected' || 
-                            !!errorParam ||  // OAuth errors are still OAuth callbacks
-                            enrichedParam === 'true' ||
-                            !!tokenParam;     // Token in URL indicates OAuth callback
-
-    console.log('[EnrichProfilePage] Auth check - loading:', authLoading, 'user:', !!user, 'refreshing:', refreshing, 'isOAuthCallback:', isOAuthCallback);
-
-    // During OAuth callback, ALWAYS try to restore user from localStorage
-    if (isOAuthCallback && !user && !authLoading) {
-      const token = localStorage.getItem('auth_token');
-      const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
-      
-      console.log('[EnrichProfilePage] OAuth callback detected - token:', !!token, 'storedUser:', !!storedUser);
-      
-      if (token && storedUser) {
-        console.log('[EnrichProfilePage] Restoring user from localStorage during OAuth callback');
-        // Don't call refreshUser here - it might clear the token
-        // Instead, wait for AuthContext to restore it
-        // But if AuthContext doesn't, we'll show the page anyway
-        return; // Don't redirect, let the page render
-      } else if (storedUser) {
-        // Even if token is missing, preserve user during OAuth
-        console.warn('[EnrichProfilePage] Token missing but user exists during OAuth - preserving');
-        return; // Don't redirect
-      } else {
-        console.warn('[EnrichProfilePage] No token or user during OAuth callback - but not redirecting');
-        return; // Don't redirect during OAuth callback
-      }
+    if (linkedinParam === 'connected' || githubParam === 'connected') {
+      return;
     }
-
-    // Normal flow (not OAuth callback) - check auth and redirect if needed
-    if (!authLoading && !user && !refreshing && !isOAuthCallback) {
-      // Double-check token exists before redirecting
-      const token = localStorage.getItem('auth_token');
-      const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
-      
-      if (!token) {
-        console.log('[EnrichProfilePage] No user and no token, redirecting to login');
-        navigate('/login');
-      } else if (storedUser) {
-        // Token exists and we have stored user - restore from localStorage
-        console.log('[EnrichProfilePage] Token exists, restoring user from localStorage');
-        // Wait a bit for AuthContext to restore
-        setTimeout(() => {
-          if (!user) {
-            console.log('[EnrichProfilePage] User still null after timeout, redirecting to login');
-            navigate('/login');
-          }
-        }, 2000);
-      } else {
-        // Token exists but user is null - might be a validation issue
-        console.log('[EnrichProfilePage] Token exists but user is null, attempting to refresh...');
-        refreshUser()
-          .then((refreshedUser) => {
-            if (!refreshedUser) {
-              console.log('[EnrichProfilePage] Refresh failed, redirecting to login');
-              navigate('/login');
-            }
-          })
-          .catch(() => {
-            console.log('[EnrichProfilePage] Refresh error, redirecting to login');
-            navigate('/login');
-          });
-      }
+    if (!getAccessToken()) {
+      redirectToNAuthLogin();
+      return;
     }
-  }, [authLoading, user, navigate, refreshing, refreshUser, searchParams]);
+    if (sessionRecoverRef.current) {
+      redirectToNAuthLogin();
+      return;
+    }
+    sessionRecoverRef.current = true;
+    refreshUser().then((u) => {
+      if (!u) {
+        redirectToNAuthLogin();
+      }
+    });
+  }, [authLoading, user, refreshing, refreshUser, searchParams]);
 
   // Show loading state while checking auth or refreshing user data
   if (authLoading || refreshing) {
@@ -349,7 +201,7 @@ function EnrichProfilePage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p style={{ color: 'var(--text-secondary)' }}>Redirecting to login...</p>
+          <p style={{ color: 'var(--text-secondary)' }}>Redirecting to sign in...</p>
         </div>
       </div>
     );

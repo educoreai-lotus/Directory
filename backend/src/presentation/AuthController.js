@@ -1,94 +1,93 @@
 // Presentation Layer - Authentication Controller
-// Handles HTTP requests for authentication
+// GET /auth/me only; Directory does not perform password login (nAuth issues tokens).
 
-const AuthenticateUserUseCase = require('../application/AuthenticateUserUseCase');
-const AuthenticateAdminUseCase = require('../application/AuthenticateAdminUseCase');
+const EmployeeRepository = require('../infrastructure/EmployeeRepository');
+const CompanyRepository = require('../infrastructure/CompanyRepository');
+const AdminRepository = require('../infrastructure/AdminRepository');
+
+/**
+ * Expand JWT context into the same user shape the frontend expects (profile, OAuth flags, roles).
+ * @param {object} reqUser - req.user from authMiddleware (nAuth)
+ * @returns {Promise<object>}
+ */
+async function buildMeUserPayload(reqUser) {
+  const uid = reqUser.directoryUserId || reqUser.id;
+  if (!uid) {
+    return reqUser;
+  }
+
+  const employeeRepo = new EmployeeRepository();
+  const companyRepo = new CompanyRepository();
+  const adminRepo = new AdminRepository();
+
+  const employee = await employeeRepo.findById(uid);
+  if (employee) {
+    const company = await companyRepo.findById(employee.company_id);
+    const isHR =
+      company &&
+      company.hr_contact_email &&
+      company.hr_contact_email.toLowerCase() === String(employee.email || '').toLowerCase();
+
+    const rolesQuery = 'SELECT role_type FROM employee_roles WHERE employee_id = $1';
+    const rolesResult = await employeeRepo.pool.query(rolesQuery, [uid]);
+    const roles = rolesResult.rows.map((row) => row.role_type);
+    const isTrainer = roles.includes('TRAINER');
+    const isDecisionMaker = roles.includes('DECISION_MAKER');
+
+    const profileStatus = employee.profile_status || 'basic';
+    const hasLinkedIn = !!employee.linkedin_data;
+    const hasGitHub = !!employee.github_data;
+
+    return {
+      ...reqUser,
+      id: employee.id,
+      directoryUserId: employee.id,
+      email: employee.email,
+      employeeId: employee.employee_id,
+      companyId: employee.company_id,
+      organizationId: employee.company_id,
+      company_id: employee.company_id,
+      fullName: employee.full_name,
+      profilePhotoUrl: employee.profile_photo_url || null,
+      isHR,
+      profileStatus,
+      isFirstLogin: profileStatus === 'basic',
+      isProfileApproved: profileStatus === 'approved',
+      hasLinkedIn,
+      hasGitHub,
+      bothOAuthConnected: hasLinkedIn && hasGitHub,
+      isTrainer,
+      isDecisionMaker
+    };
+  }
+
+  if (reqUser.isSystemAdmin === true) {
+    const admin = await adminRepo.findById(uid);
+    if (admin) {
+      return {
+        ...reqUser,
+        id: admin.id,
+        directoryUserId: admin.id,
+        email: admin.email,
+        fullName: admin.full_name,
+        role: 'DIRECTORY_ADMIN',
+        isAdmin: true,
+        isSystemAdmin: true,
+        companyId: null
+      };
+    }
+  }
+
+  return reqUser;
+}
 
 class AuthController {
-  constructor() {
-    this.authenticateUserUseCase = new AuthenticateUserUseCase();
-    this.authenticateAdminUseCase = new AuthenticateAdminUseCase();
-  }
-
   /**
-   * Handle login request
-   * POST /api/v1/auth/login
-   * Auto-detects admin vs employee login by checking email in directory_admins table first
-   */
-  async login(req, res, next) {
-    try {
-      const { email, password } = req.body;
-
-      if (!email || !password) {
-        return res.status(400).json({
-          error: 'Email and password are required'
-        });
-      }
-
-      // Auto-detect admin: Try admin authentication first
-      const adminResult = await this.authenticateAdminUseCase.execute(email, password);
-      
-      if (adminResult.success) {
-        // Admin login successful
-        return res.status(200).json({
-          success: true,
-          token: adminResult.token,
-          user: adminResult.user
-        });
-      }
-
-      // If admin login failed (not an admin or wrong password), try employee login
-      // Regular employee login
-      const result = await this.authenticateUserUseCase.execute(email, password);
-
-      if (result.success) {
-        return res.status(200).json({
-          success: true,
-          token: result.token,
-          user: result.user
-        });
-      } else {
-        return res.status(401).json({
-          success: false,
-          error: result.error
-        });
-      }
-    } catch (error) {
-      console.error('[AuthController] Login error:', error);
-      return res.status(500).json({
-        error: 'An error occurred during login. Please try again.'
-      });
-    }
-  }
-
-  /**
-   * Handle logout request (optional - for future use)
-   * POST /api/v1/auth/logout
-   */
-  async logout(req, res, next) {
-    try {
-      // In dummy mode, logout is just clearing the token on client side
-      // In real auth mode, we might invalidate the token on server
-      return res.status(200).json({
-        success: true,
-        message: 'Logged out successfully'
-      });
-    } catch (error) {
-      console.error('[AuthController] Logout error:', error);
-      return res.status(500).json({
-        error: 'An error occurred during logout. Please try again.'
-      });
-    }
-  }
-
-  /**
-   * Get current user info (validate token)
+   * Get current user info (validate token + hydrate profile for employees/admins)
    * GET /api/v1/auth/me
    */
   async getCurrentUser(req, res, next) {
     try {
-      // This endpoint requires authentication middleware
-      // req.user should be set by authMiddleware
       if (!req.user) {
         return res.status(401).json({
           requester_service: 'directory_service',
@@ -98,11 +97,12 @@ class AuthController {
         });
       }
 
-      // Return user data in envelope format for consistency
+      const user = await buildMeUserPayload(req.user);
+
       return res.status(200).json({
         requester_service: 'directory_service',
         response: {
-          user: req.user
+          user
         }
       });
     } catch (error) {
@@ -118,4 +118,3 @@ class AuthController {
 }
 
 module.exports = AuthController;
-

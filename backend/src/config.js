@@ -78,51 +78,14 @@ const config = {
     serviceUrl: process.env.RAG_SERVICE_URL || 'https://rag-production-3a4c.up.railway.app'
   },
   
-  // Authentication Configuration
+  // Authentication: nAuth JWT verification only (AUTH_MODE must be nauth).
   auth: {
-    // Authentication mode: 'dummy' (for testing) or 'auth-service' (for production)
-    // Set via environment variable: AUTH_MODE=dummy or AUTH_MODE=auth-service
-    mode: process.env.AUTH_MODE || 'dummy',
-
-    // nAuth access-token verification (local JWT verification)
-    // When AUTH_MODE=nauth, Directory verifies nAuth-minted access tokens locally.
-    // Provide either NAUTH_JWT_PUBLIC_KEY (recommended for asymmetric signing) OR NAUTH_JWT_SECRET (symmetric).
+    mode: process.env.AUTH_MODE || 'nauth',
     nauth: {
       issuer: process.env.NAUTH_JWT_ISSUER || null,
       audience: process.env.NAUTH_JWT_AUDIENCE || null,
       publicKey: process.env.NAUTH_JWT_PUBLIC_KEY || null,
       algorithms: process.env.NAUTH_JWT_ALGORITHMS || 'RS256'
-    },
-    
-    // Auth Service Configuration (for future use when AUTH_MODE=auth-service)
-    authService: {
-      baseUrl: process.env.AUTH_SERVICE_URL || 'https://auth-service-production.up.railway.app',
-      loginEndpoint: '/api/auth/login',
-      validateEndpoint: '/api/auth/validate',
-      // JWT configuration
-      jwtSecret: process.env.JWT_SECRET, // Secret for validating JWTs from Auth Service
-      jwtHeaderName: process.env.JWT_HEADER_NAME || 'Authorization', // Header name for JWT (default: 'Authorization')
-      jwtTokenPrefix: process.env.JWT_TOKEN_PREFIX || 'Bearer', // Token prefix (default: 'Bearer ')
-    },
-    
-    // Dummy Auth Configuration (for testing only)
-    dummy: {
-      // Dummy users for testing (only used when AUTH_MODE=dummy)
-      // Format: { email: { employeeId, companyId, isHR } }
-      testUsers: {
-        'hr@testcompany.com': {
-          employeeId: 'dummy-hr-employee-id',
-          companyId: 'dummy-company-id',
-          isHR: true,
-          fullName: 'Test HR User'
-        },
-        'employee@testcompany.com': {
-          employeeId: 'dummy-employee-id',
-          companyId: 'dummy-company-id',
-          isHR: false,
-          fullName: 'Test Employee'
-        }
-      }
     }
   },
   
@@ -200,14 +163,12 @@ const config = {
   }
 };
 
-// Validate auth mode
-if (config.auth.mode !== 'dummy' && config.auth.mode !== 'auth-service' && config.auth.mode !== 'nauth') {
-  console.warn(`⚠️  Invalid AUTH_MODE: "${config.auth.mode}". Defaulting to "dummy". Valid values: "dummy", "auth-service", "nauth"`);
-  config.auth.mode = 'dummy';
+if (config.auth.mode !== 'nauth') {
+  console.warn(`⚠️  Invalid AUTH_MODE: "${config.auth.mode}". Directory requires nauth; coercing to nauth.`);
+  config.auth.mode = 'nauth';
 }
 
-// Log current auth mode
-console.log(`🔐 Authentication Mode: ${config.auth.mode === 'dummy' ? 'DUMMY (Testing Only - Not Secure)' : 'AUTH SERVICE (Production)'}`);
+console.log('🔐 Authentication Mode: nAuth (JWT verification only)');
 
 // TEMP DEBUG: nAuth env visibility at startup (never print key material).
 if (config.auth.mode === 'nauth') {

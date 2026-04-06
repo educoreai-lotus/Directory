@@ -2,6 +2,7 @@
 // Button to initiate LinkedIn OAuth flow
 
 import React, { useState } from 'react';
+import { getAccessToken } from '../auth/accessTokenStore';
 import { getLinkedInAuthUrl } from '../services/oauthService';
 
 function LinkedInConnectButton({ onConnected, disabled = false, alreadyConnected = false }) {
@@ -14,9 +15,9 @@ function LinkedInConnectButton({ onConnected, disabled = false, alreadyConnected
       setError(null);
 
       // Verify token exists before making request
-      const token = localStorage.getItem('auth_token');
+      const token = getAccessToken();
       if (!token) {
-        throw new Error('You must be logged in to connect LinkedIn. Please log in first.');
+        throw new Error('You must be signed in to connect LinkedIn.');
       }
 
       console.log('[LinkedInConnectButton] Token present, requesting authorization URL...');

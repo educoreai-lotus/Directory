@@ -35,27 +35,11 @@ api.interceptors.request.use(
     console.log('[api] api.defaults.baseURL =', api.defaults.baseURL);
     console.log('[api] config.url =', config.url);
     
-    const authMode = process.env.REACT_APP_AUTH_MODE;
-    if (!authMode) {
-      console.error('[api] ❌ REACT_APP_AUTH_MODE is missing. Refusing to default to dummy mode.');
+    if (process.env.REACT_APP_AUTH_MODE !== 'nauth') {
+      console.error('[api] REACT_APP_AUTH_MODE must be "nauth" for this build.');
     }
 
-    // Add Authorization header if token exists.
-    // In nAuth mode, token must be in-memory only (no localStorage/sessionStorage).
-    let token = null;
-    if (authMode === 'nauth') {
-      token = getAccessToken();
-    } else if (authMode) {
-      // Legacy modes (dummy / existing Directory auth): keep existing behavior
-      token = localStorage.getItem('auth_token');
-
-      const isDummyMode = authMode === 'dummy';
-      if (isDummyMode && !token) {
-        token = 'dummy-token';
-        localStorage.setItem('auth_token', token);
-        console.log('[api] Request interceptor - Dummy mode: Created and stored dummy token');
-      }
-    }
+    const token = getAccessToken();
     
     console.log('[api] Request interceptor - Token present:', token ? 'yes' : 'no');
     
@@ -81,9 +65,9 @@ api.interceptors.request.use(
       return config;
     }
     
-    // RULE 5: Skip envelope structure for auth endpoints (login, logout, me)
+    // RULE 5: Skip envelope structure for auth endpoints (e.g. /auth/me)
     // These endpoints don't use the microservice envelope format
-    const authEndpoints = ['/auth/login', '/auth/logout', '/auth/me'];
+    const authEndpoints = ['/auth/me'];
     const isAuthEndpoint = authEndpoints.some(endpoint => config.url?.includes(endpoint));
     
     if (isAuthEndpoint) {
@@ -211,9 +195,8 @@ api.interceptors.response.use(
     
     // Log 401 errors for debugging
     if (error.response?.status === 401) {
-      const token = localStorage.getItem('auth_token');
       console.error('[api] 401 Unauthorized error for URL:', error.config?.url);
-      console.error('[api] Token in localStorage:', token ? 'present' : 'missing');
+      console.error('[api] Access token present:', getAccessToken() ? 'yes' : 'no');
       console.error('[api] Error response:', error.response?.data);
     }
     

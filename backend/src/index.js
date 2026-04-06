@@ -277,20 +277,7 @@ const checkController = (controller, name) => {
   }
 };
 
-// Authentication
-apiRouter.post('/auth/login', (req, res, next) => {
-  try {
-    checkController(authController, 'AuthController');
-    authController.login(req, res, next);
-  } catch (error) {
-    next(error);
-  }
-});
-
-apiRouter.post('/auth/logout', (req, res, next) => {
-  authController.logout(req, res, next);
-});
-
+// Authentication (nAuth only — no Directory-issued login/logout)
 // Get current user (requires authentication)
 const { authMiddleware, optionalAuthMiddleware, hrOnlyMiddleware, adminOnlyMiddleware } = require('./shared/authMiddleware');
 apiRouter.get('/auth/me', authMiddleware, (req, res, next) => {
@@ -340,7 +327,7 @@ apiRouter.post('/companies/:id/upload', (req, res, next) => {
   console.log('[index.js] Content-Type:', req.headers['content-type']);
   console.log('[index.js] Content-Length:', req.headers['content-length']);
   console.log('[index.js] Authorization header:', req.headers['authorization'] ? 'present' : 'missing');
-  console.log('[index.js] AUTH_MODE:', process.env.AUTH_MODE || 'not set (defaults to dummy)');
+  console.log('[index.js] AUTH_MODE:', process.env.AUTH_MODE || 'not set (defaults to nauth in config)');
   console.log('[index.js] csvUploadController exists:', !!csvUploadController);
   
   try {

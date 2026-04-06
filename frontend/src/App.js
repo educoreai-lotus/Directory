@@ -7,7 +7,6 @@ import CompanyRegistrationForm from './pages/CompanyRegistrationForm';
 import CompanyVerificationPage from './pages/CompanyVerificationPage';
 import CompanyCSVUploadPage from './pages/CompanyCSVUploadPage';
 import CompanyProfilePage from './pages/CompanyProfilePage';
-import LoginPage from './pages/LoginPage';
 import EnrichProfilePage from './pages/EnrichProfilePage';
 import EmployeeProfilePage from './pages/EmployeeProfilePage';
 import AdminDashboard from './pages/AdminDashboard';
@@ -27,7 +26,7 @@ function BotInitializer() {
     }
 
     // Get token (nAuth mode uses in-memory only)
-    const token = getAccessToken() || localStorage.getItem('auth_token');
+    const token = getAccessToken();
     if (!token) return;
 
     // Wait for bot script to load and initialize
@@ -58,7 +57,6 @@ function AppContent() {
       <main className="app-content">
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
           <Route path="/enrich" element={<EnrichProfilePage />} />
           <Route path="/employee/:employeeId" element={<EmployeeProfilePage />} />
           <Route path="/register" element={<CompanyRegistrationForm />} />
