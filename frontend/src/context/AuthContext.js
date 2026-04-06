@@ -36,6 +36,25 @@ async function fetchMeUser() {
   return meResp?.data?.response?.user || meResp?.data?.user || null;
 }
 
+async function callNAuthLogout() {
+  const nAuthApiBase = process.env.REACT_APP_NAUTH_API_URL;
+  if (!nAuthApiBase) {
+    console.warn('[AuthContext] REACT_APP_NAUTH_API_URL is not set; skipping nAuth logout call.');
+    return;
+  }
+
+  const logoutUrl = `${String(nAuthApiBase).replace(/\/$/, '')}/auth/logout`;
+  const response = await fetch(logoutUrl, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!response.ok) {
+    throw new Error(`nAuth logout failed with status ${response.status}`);
+  }
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -229,11 +248,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async (options = {}) => {
+    try {
+      await callNAuthLogout();
+    } catch (e) {
+      console.error('[AuthContext] nAuth logout failed:', e);
+    }
+
     clearAccessToken();
     setUser(null);
     setIsAuthenticated(false);
     if (options?.redirect !== false) {
-      navigate('/');
+      redirectToNAuthLogin();
     }
   };
 
