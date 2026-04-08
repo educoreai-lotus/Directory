@@ -1,12 +1,9 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 
 function AccessDeniedPage({
   title = 'Access Denied',
   message = 'You do not have permission to access this page.'
 }) {
-  const navigate = useNavigate();
-
   return (
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--bg-primary)' }}>
       <div
@@ -24,7 +21,7 @@ function AccessDeniedPage({
           {message}
         </p>
         <button
-          onClick={() => navigate('/', { replace: true })}
+          onClick={() => window.location.assign('/')}
           className="px-4 py-2 rounded text-sm font-medium"
           style={{
             background: 'var(--bg-button-primary)',
