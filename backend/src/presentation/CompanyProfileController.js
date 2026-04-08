@@ -46,12 +46,11 @@ class CompanyProfileController {
   async getProfile(req, res, next) {
     try {
       const { id: companyId } = req.params;
-      const requesterCompanyId = this.getRequesterCompanyId(req);
       const admin = this.isSystemAdmin(req);
       const hrInCompany = await this.isHrForCompany(req, companyId);
 
-      // Allow: system admin OR same-company user OR HR of that company.
-      if (!admin && !hrInCompany && String(requesterCompanyId || '') !== String(companyId)) {
+      // Allow only: system admin OR HR of that company.
+      if (!admin && !hrInCompany) {
         return res.status(403).json({
           error: 'Access denied'
         });

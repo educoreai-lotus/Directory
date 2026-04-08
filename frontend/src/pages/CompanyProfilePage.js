@@ -9,7 +9,7 @@ import { getCompanyProfile } from '../services/companyProfileService';
 
 function CompanyProfilePage() {
   const { companyId } = useParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -17,14 +17,33 @@ function CompanyProfilePage() {
   const [profileData, setProfileData] = useState(null);
   
   // Check if this is an admin view (via query param or user role)
-  const isAdminView = searchParams.get('admin') === 'true' || 
-                     user?.isAdmin || 
-                     user?.role === 'DIRECTORY_ADMIN';
+  const isSystemAdmin =
+    user?.isSystemAdmin === true ||
+    user?.is_system_admin === true ||
+    user?.isAdmin === true ||
+    String(user?.role || '').toUpperCase() === 'DIRECTORY_ADMIN';
+  const isHrContext = user?.isHR === true;
+  const isAdminView = searchParams.get('admin') === 'true' || isSystemAdmin;
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
+
+        if (authLoading) {
+          return;
+        }
+
+        // UX guard only: backend remains source of truth.
+        if (!user) {
+          navigate('/access-denied', { replace: true });
+          return;
+        }
+
+        if (!isSystemAdmin && !isHrContext) {
+          navigate('/access-denied', { replace: true });
+          return;
+        }
         
         // CRITICAL: Verify logged-in user belongs to this company (unless admin)
         if (!isAdminView && user && user.companyId && user.companyId !== companyId) {
@@ -79,7 +98,7 @@ function CompanyProfilePage() {
     if (companyId) {
       fetchProfile();
     }
-  }, [companyId, user, isAdminView]);
+  }, [companyId, user, isAdminView, authLoading, isSystemAdmin, isHrContext, navigate]);
 
   const handleEmployeeClick = (employee) => {
     // Navigate to employee profile page
