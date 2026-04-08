@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getAllCompanies } from '../services/adminService';
+import { getAccessToken } from '../auth/accessTokenStore';
 import AccessDeniedPage from './AccessDeniedPage';
 
 function AdminDashboard() {
@@ -67,15 +68,22 @@ function AdminDashboard() {
     // Redirect to Management & Reporting frontend with admin ID
     const baseUrl = process.env.REACT_APP_MANAGEMENT_REPORTING_URL || 'https://management-reporting.vercel.app/dashboard';
     const adminId = user?.id; // Admin UUID from database
+    const accessToken = getAccessToken();
     
     if (!adminId) {
       console.error('[AdminDashboard] Cannot redirect: Admin ID is missing');
       alert('Error: Admin ID not found. Please log in again.');
       return;
     }
+    if (!accessToken || String(accessToken).trim() === '') {
+      console.error('[AdminDashboard] Cannot redirect: Access token is missing');
+      alert('Error: Access token is missing. Please log in again.');
+      return;
+    }
     
-    // Build URL with admin ID as query parameter
-    const mgmtUrl = `${baseUrl}?adminId=${encodeURIComponent(adminId)}`;
+    // Build URL with admin ID query param and nAuth-style access token hash handoff.
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    const mgmtUrl = `${baseUrl}${separator}adminId=${encodeURIComponent(adminId)}#access_token=${encodeURIComponent(accessToken)}`;
     
     console.log('[AdminDashboard] Redirecting to Management & Reporting:', mgmtUrl);
     console.log('[AdminDashboard] Admin ID (UUID):', adminId);
