@@ -128,7 +128,7 @@ function CompanyProfilePage() {
             <p className="text-red-800 font-medium mb-2">Error Loading Profile</p>
             <p className="text-red-600 text-sm">{error}</p>
             <button
-              onClick={() => navigate('/')}
+              onClick={() => window.location.assign('/')}
               className="mt-4 px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors"
             >
               Go to Home
