@@ -599,7 +599,48 @@ apiRouter.post(
 
 // Universal Endpoint for other microservices (admin-only)
 // This must be BEFORE /api/v1 to avoid conflicts
-app.post('/api/fill-content-metrics', authMiddleware, adminOnlyMiddleware, (req, res) => {
+const normalizeCoordinatorBodyTokenToAuthorization = (req, res, next) => {
+  const existingAuthHeader = req.headers.authorization || req.headers.Authorization || '';
+  const hasAuthorizationHeader =
+    typeof existingAuthHeader === 'string' && existingAuthHeader.trim() !== '';
+  const bodyToken = req.body?.payload?.access_token;
+  const hasPayloadAccessToken =
+    typeof bodyToken === 'string' && bodyToken.trim() !== '';
+
+  console.log(
+    '[normalizeCoordinatorBodyTokenToAuthorization] hasAuthorizationHeader:',
+    hasAuthorizationHeader
+  );
+  console.log(
+    '[normalizeCoordinatorBodyTokenToAuthorization] hasPayloadAccessToken:',
+    hasPayloadAccessToken
+  );
+
+  if (!hasAuthorizationHeader && hasPayloadAccessToken) {
+    const normalizedToken = bodyToken.trim();
+    req.headers.authorization = `Bearer ${normalizedToken}`;
+    console.log(
+      '[normalizeCoordinatorBodyTokenToAuthorization] mapped payload.access_token to authorization header'
+    );
+    console.log(
+      '[normalizeCoordinatorBodyTokenToAuthorization] token prefix:',
+      `${normalizedToken.slice(0, 15)}...`
+    );
+  } else {
+    console.log(
+      '[normalizeCoordinatorBodyTokenToAuthorization] no mapping applied'
+    );
+  }
+
+  next();
+};
+
+app.post(
+  '/api/fill-content-metrics',
+  normalizeCoordinatorBodyTokenToAuthorization,
+  authMiddleware,
+  adminOnlyMiddleware,
+  (req, res) => {
   try {
     checkController(universalEndpointController, 'UniversalEndpointController');
     universalEndpointController.handleRequest(req, res);
