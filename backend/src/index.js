@@ -635,9 +635,18 @@ const normalizeCoordinatorBodyTokenToAuthorization = (req, res, next) => {
   next();
 };
 
+const skipCoordinatorRevalidationForFillContentMetrics = (req, res, next) => {
+  req.skipCoordinatorRevalidation = true;
+  console.log(
+    '[fill-content-metrics] Coordinator revalidation skip enabled for route'
+  );
+  next();
+};
+
 app.post(
   '/api/fill-content-metrics',
   normalizeCoordinatorBodyTokenToAuthorization,
+  skipCoordinatorRevalidationForFillContentMetrics,
   authMiddleware,
   adminOnlyMiddleware,
   (req, res) => {

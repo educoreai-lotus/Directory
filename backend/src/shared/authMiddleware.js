@@ -35,6 +35,10 @@ const authMiddleware = async (req, res, next) => {
   try {
     const provider = getAuthProvider();
     const token = provider.extractTokenFromHeaders(req.headers);
+    const routePath = `${req.baseUrl || ''}${req.path || ''}` || req.originalUrl || req.url || 'unknown';
+    const skipCoordinatorRevalidation = req.skipCoordinatorRevalidation === true;
+
+    console.log('[authMiddleware] route:', routePath);
 
     if (!token) {
       return res.status(401).json({
@@ -47,8 +51,12 @@ const authMiddleware = async (req, res, next) => {
 
     const validationResult = await provider.validateToken(token);
     const sensitive = isSensitiveNAuthRequest(req);
+    console.log('[authMiddleware] local JWT valid:', validationResult.valid === true);
+    if (skipCoordinatorRevalidation) {
+      console.log('[authMiddleware] Coordinator revalidation skipped due to route flag');
+    }
 
-    if (validationResult.valid && !sensitive) {
+    if (validationResult.valid && (!sensitive || skipCoordinatorRevalidation)) {
       req.user = validationResult.user;
       req.token = token;
       return next();
