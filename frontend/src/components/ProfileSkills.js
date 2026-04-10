@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getEmployeeSkills } from '../services/employeeService';
+import { getAccessToken } from '../auth/accessTokenStore';
 
 function ProfileSkills({ employeeId }) {
   const { user } = useAuth();
@@ -169,13 +170,19 @@ function ProfileSkills({ employeeId }) {
                   console.error('[ProfileSkills] Cannot redirect: employeeId is missing');
                   return;
                 }
+                const accessToken = getAccessToken();
+                if (!accessToken || String(accessToken).trim() === '') {
+                  console.error('[ProfileSkills] Cannot redirect: Access token is missing');
+                  alert('Error: Access token is missing. Please log in again.');
+                  return;
+                }
                 
                 const skillName = node.name || node.competencyName || '';
                 
-                // Redirect to Assessment with user_id and skill name
-                const assessmentUrl = `https://assessment-seven-liard.vercel.app/exam-intro?examType=baseline&userId=${encodeURIComponent(employeeId)}&skillName=${encodeURIComponent(skillName)}`;
+                // Redirect to Assessment with existing context + nAuth-style access token hash handoff.
+                const assessmentUrl = `https://assessment-seven-liard.vercel.app/exam-intro?examType=baseline&userId=${encodeURIComponent(employeeId)}&skillName=${encodeURIComponent(skillName)}#access_token=${encodeURIComponent(accessToken)}`;
                 
-                console.log('[ProfileSkills] Redirecting to Assessment:', assessmentUrl);
+                console.log('[ProfileSkills] Redirecting to Assessment');
                 console.log('[ProfileSkills] Employee ID (UUID):', employeeId);
                 console.log('[ProfileSkills] Skill Name:', skillName);
                 
@@ -302,11 +309,17 @@ function ProfileSkills({ employeeId }) {
                               console.error('[ProfileSkills] Cannot redirect: employeeId is missing');
                               return;
                             }
+                            const accessToken = getAccessToken();
+                            if (!accessToken || String(accessToken).trim() === '') {
+                              console.error('[ProfileSkills] Cannot redirect: Access token is missing');
+                              alert('Error: Access token is missing. Please log in again.');
+                              return;
+                            }
                             
                             // Redirect to Assessment with user_id and skill name
-                            const assessmentUrl = `https://assessment-seven-liard.vercel.app/exam-intro?examType=baseline&userId=${encodeURIComponent(employeeId)}&skillName=${encodeURIComponent(skillName)}`;
+                            const assessmentUrl = `https://assessment-seven-liard.vercel.app/exam-intro?examType=baseline&userId=${encodeURIComponent(employeeId)}&skillName=${encodeURIComponent(skillName)}#access_token=${encodeURIComponent(accessToken)}`;
                             
-                            console.log('[ProfileSkills] Redirecting to Assessment:', assessmentUrl);
+                            console.log('[ProfileSkills] Redirecting to Assessment');
                             console.log('[ProfileSkills] Employee ID (UUID):', employeeId);
                             console.log('[ProfileSkills] Skill Name:', skillName);
                             
