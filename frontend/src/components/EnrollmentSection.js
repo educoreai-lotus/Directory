@@ -2,6 +2,7 @@
 // Allows company to create career paths for employees by redirecting to Skills Engine frontend
 
 import React, { useState } from 'react';
+import { getAccessToken } from '../auth/accessTokenStore';
 
 function EnrollmentSection({ employees, companyId }) {
   // Always use career-path flow, show employee list directly
@@ -38,7 +39,12 @@ function EnrollmentSection({ employees, companyId }) {
 
     // Redirect to Skills Engine frontend with company_id and learner_id
     const skillsEngineUrl = process.env.REACT_APP_SKILLS_ENGINE_URL || 'https://skills-engine-frontend.vercel.app/career-path';
-    const url = `${skillsEngineUrl}?company_id=${encodeURIComponent(companyId)}&learner_id=${encodeURIComponent(selectedEmployee)}`;
+    const accessToken = getAccessToken();
+    const hashSuffix =
+      accessToken && String(accessToken).trim() !== ''
+        ? `#access_token=${encodeURIComponent(accessToken)}`
+        : '';
+    const url = `${skillsEngineUrl}?company_id=${encodeURIComponent(companyId)}&learner_id=${encodeURIComponent(selectedEmployee)}${hashSuffix}`;
     
     console.log('[EnrollmentSection] Redirecting to Skills Engine:', url);
     console.log('[EnrollmentSection] Company ID:', companyId);
