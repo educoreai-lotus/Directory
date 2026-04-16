@@ -643,12 +643,69 @@ const skipCoordinatorRevalidationForFillContentMetrics = (req, res, next) => {
   next();
 };
 
+const isSkillsEngineCareerPathUpdateEnvelope = (body) => {
+  if (!body || typeof body !== 'object') return false;
+
+  const requesterService = String(body.requester_service || '').toLowerCase();
+  const payload = body.payload && typeof body.payload === 'object' ? body.payload : null;
+  if (!payload) return false;
+
+  const action = String(payload.action || '').toLowerCase();
+  const hasSkillsEngineRequester =
+    requesterService.includes('skills') && requesterService.includes('engine');
+  const isCareerPathAction =
+    action.includes('career') &&
+    action.includes('path') &&
+    (action.includes('competenc') || action.includes('update'));
+
+  const hasUserId =
+    typeof payload.user_id === 'string' ||
+    typeof payload.userId === 'string' ||
+    typeof payload.employee_id === 'string' ||
+    typeof payload.employeeId === 'string';
+
+  const competencies =
+    payload.career_path_competencies ??
+    payload.careerPathCompetencies ??
+    payload.competencies;
+  const hasCompetenciesArray = Array.isArray(competencies);
+
+  return hasSkillsEngineRequester && isCareerPathAction && hasUserId && hasCompetenciesArray;
+};
+
+const adminOrSkillsEngineCareerPathMiddleware = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      requester_service: 'directory_service',
+      response: {
+        error: 'Authentication required'
+      }
+    });
+  }
+
+  if (req.user.isSystemAdmin === true) {
+    return next();
+  }
+
+  if (isSkillsEngineCareerPathUpdateEnvelope(req.body)) {
+    console.log('[fill-content-metrics] non-admin Career Path update allowed');
+    return next();
+  }
+
+  return res.status(403).json({
+    requester_service: 'directory_service',
+    response: {
+      error: 'Access denied. Admin privileges required.'
+    }
+  });
+};
+
 app.post(
   '/api/fill-content-metrics',
   normalizeCoordinatorBodyTokenToAuthorization,
   skipCoordinatorRevalidationForFillContentMetrics,
   authMiddleware,
-  adminOnlyMiddleware,
+  adminOrSkillsEngineCareerPathMiddleware,
   (req, res) => {
   try {
     checkController(universalEndpointController, 'UniversalEndpointController');
