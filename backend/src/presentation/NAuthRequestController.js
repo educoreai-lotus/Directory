@@ -103,8 +103,10 @@ class NAuthRequestController {
       SELECT
         e.id,
         e.company_id,
+        e.email,
         e.full_name,
-        c.company_name AS organization_name
+        c.company_name AS organization_name,
+        c.hr_contact_email
       FROM employees e
       LEFT JOIN companies c ON c.id = e.company_id
       WHERE LOWER(TRIM(e.email)) = LOWER(TRIM($1))
@@ -120,8 +122,10 @@ class NAuthRequestController {
       SELECT
         e.id,
         e.company_id,
+        e.email,
         e.full_name,
-        c.company_name AS organization_name
+        c.company_name AS organization_name,
+        c.hr_contact_email
       FROM employees e
       LEFT JOIN companies c ON c.id = e.company_id
       WHERE LOWER(TRIM(e.github_url)) = LOWER(TRIM($1))
@@ -289,6 +293,8 @@ class NAuthRequestController {
       }
 
       if (employee) {
+        const normalize = (value) => String(value || '').trim().toLowerCase();
+        const isHr = normalize(employee.email) === normalize(employee.hr_contact_email);
         let roles = [];
         let primaryRole = 'REGULAR_EMPLOYEE';
         try {
@@ -297,10 +303,12 @@ class NAuthRequestController {
         } catch (roleErr) {
           console.error('[NAuthRequestController] Role lookup failed (non-fatal):', roleErr.message);
         }
+        const finalPrimaryRole = isHr ? 'HR' : primaryRole;
+        const finalRoles = isHr ? ['HR'] : roles;
         return res.status(200).json(
           this.buildFoundResponse(employee, {
-            roles,
-            primary_role: primaryRole,
+            roles: finalRoles,
+            primary_role: finalPrimaryRole,
             is_system_admin: false
           })
         );
