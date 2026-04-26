@@ -8,6 +8,7 @@ import ProfileCourses from './ProfileCourses';
 import LearningPath from './LearningPath';
 import ProfileAnalytics from './ProfileAnalytics';
 import ProfileDashboard from './ProfileDashboard';
+import { getAccessToken } from '../auth/accessTokenStore';
 
 function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false }) {
   const [activeTab, setActiveTab] = useState('skills');
@@ -54,7 +55,7 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
       console.log('[ApprovedProfileTabs] Employee ID (UUID):', employeeId);
       window.location.href = courseBuilderUrl;
     } else if (tabId === 'learning-path') {
-      // Redirect to Learner AI frontend with user ID
+      // Redirect to Learner AI frontend with user ID + access token
       const baseUrl = process.env.REACT_APP_LEARNER_AI_URL || 'https://learner-ai-omega.vercel.app';
       
       if (!employeeId) {
@@ -62,13 +63,20 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
         alert('Error: Employee ID not found. Please try again.');
         return;
       }
+
+      const accessToken = getAccessToken();
+      if (!accessToken || String(accessToken).trim() === '') {
+        console.warn('[ApprovedProfileTabs] Learner AI redirect blocked: missing access token');
+        alert('Your session token is missing. Please sign in again and retry.');
+        return;
+      }
       
-      // Build URL with user_id as query parameter
-      const learnerAIUrl = `${baseUrl}/?user_id=${encodeURIComponent(employeeId)}`;
+      const learnerAIUrl = new URL(baseUrl);
+      learnerAIUrl.searchParams.set('user_id', employeeId);
+      learnerAIUrl.searchParams.set('access_token', accessToken);
       
-      console.log('[ApprovedProfileTabs] Redirecting to Learner AI:', learnerAIUrl);
-      console.log('[ApprovedProfileTabs] Employee ID (UUID):', employeeId);
-      window.location.href = learnerAIUrl;
+      console.log('[ApprovedProfileTabs] Redirecting to Learner AI with user_id and token handoff');
+      window.location.href = learnerAIUrl.toString();
     } else {
       setActiveTab(tabId);
     }
