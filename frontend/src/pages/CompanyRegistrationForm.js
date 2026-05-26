@@ -15,6 +15,7 @@ function CompanyRegistrationForm() {
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -91,12 +92,16 @@ function CompanyRegistrationForm() {
       // So we access: response.data.response.company_id
       console.log('Registration response:', response);
       
-      const companyId = response?.response?.company_id || response?.data?.response?.company_id;
-      
+      const result = response?.response || response?.data?.response;
+      const companyId = result?.company_id;
+
       if (companyId) {
-        // Navigate to verification page with company ID
-        // Verification is automatically triggered on the backend
-        navigate(`/verify/${companyId}`);
+        setRegistrationSuccess({
+          company_id: companyId,
+          company_name: result?.company_name || formData.company_name,
+          domain: result?.domain || formData.domain,
+          verification_status: result?.verification_status
+        });
       } else {
         console.error('Unexpected response format:', response);
         setErrors({ submit: 'Registration failed. Please check the response format.' });
@@ -172,6 +177,42 @@ function CompanyRegistrationForm() {
           </p>
         </div>
 
+        {registrationSuccess ? (
+          <div
+            className="mb-4 p-4 rounded-lg"
+            style={{
+              background: 'rgba(16, 185, 129, 0.1)',
+              border: '1px solid var(--border-success, #10b981)',
+              color: 'var(--text-primary)'
+            }}
+          >
+            <p className="font-medium mb-2">Company registration submitted successfully.</p>
+            <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+              Your company registration was received. The onboarding process will continue after review/verification.
+            </p>
+            <ul className="text-sm space-y-1" style={{ color: 'var(--text-secondary)' }}>
+              <li>
+                <strong>Company ID:</strong> {registrationSuccess.company_id}
+              </li>
+              {registrationSuccess.company_name && (
+                <li>
+                  <strong>Company:</strong> {registrationSuccess.company_name}
+                </li>
+              )}
+              {registrationSuccess.domain && (
+                <li>
+                  <strong>Domain:</strong> {registrationSuccess.domain}
+                </li>
+              )}
+              {registrationSuccess.verification_status && (
+                <li>
+                  <strong>Verification status:</strong> {registrationSuccess.verification_status}
+                </li>
+              )}
+            </ul>
+          </div>
+        ) : (
+          <>
         {errors.submit && (
           <div
             className="mb-4 p-4 rounded-lg"
@@ -210,6 +251,8 @@ function CompanyRegistrationForm() {
             </button>
           </div>
         </form>
+          </>
+        )}
       </div>
     </div>
   );

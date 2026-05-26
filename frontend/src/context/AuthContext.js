@@ -6,6 +6,10 @@ import api from '../utils/api';
 import { setAccessToken, getAccessToken, clearAccessToken } from '../auth/accessTokenStore';
 import { redirectToNAuthLogin } from '../utils/nauthRedirect';
 
+function isPublicUnauthenticatedPath(pathname) {
+  return pathname === '/register';
+}
+
 function decodeJwtPayload(token) {
   if (!token || typeof token !== 'string') return null;
   const parts = token.split('.');
@@ -147,6 +151,9 @@ export const AuthProvider = ({ children }) => {
           setUser(null);
           setIsAuthenticated(false);
           setLoading(false);
+          if (isPublicUnauthenticatedPath(window.location.pathname)) {
+            return;
+          }
           if (nAuthFrontendUrl) {
             window.location.href = `${nAuthFrontendUrl.replace(/\/$/, '')}/login`;
           }
