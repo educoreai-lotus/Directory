@@ -10,8 +10,30 @@ import ProfileAnalytics from './ProfileAnalytics';
 import ProfileDashboard from './ProfileDashboard';
 import { getAccessToken } from '../auth/accessTokenStore';
 
+const CONTENT_STUDIO_DEFAULT_URL = 'https://content-studio-two.vercel.app';
+
+function decodeJwtPayload(token) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    let b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const pad = b64.length % 4;
+    if (pad) b64 += '='.repeat(4 - pad);
+    return JSON.parse(atob(b64));
+  } catch {
+    return null;
+  }
+}
+
 function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false }) {
   const [activeTab, setActiveTab] = useState('skills');
+
+  const claims = decodeJwtPayload(getAccessToken()) || {};
+  const isTrainer =
+    user?.isTrainer === true ||
+    claims.isTrainer === true ||
+    claims.is_trainer === true;
 
   const tabs = [
     { id: 'skills', label: 'Skills', component: ProfileSkills },
@@ -20,6 +42,19 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
     { id: 'learning-path', label: 'Learning Path', component: LearningPath },
     { id: 'analytics', label: 'Analytics', component: ProfileAnalytics }
   ];
+
+  const handleCreateContentClick = () => {
+    const baseUrl = (
+      process.env.REACT_APP_CONTENT_STUDIO_URL || CONTENT_STUDIO_DEFAULT_URL
+    ).replace(/\/$/, '');
+    const accessToken = getAccessToken();
+    const url =
+      accessToken && String(accessToken).trim() !== ''
+        ? `${baseUrl}/#access_token=${encodeURIComponent(accessToken)}`
+        : `${baseUrl}/`;
+    console.log('[ApprovedProfileTabs] Redirecting to Content Studio');
+    window.location.href = url;
+  };
 
   const handleTabClick = (tabId) => {
     if (tabId === 'analytics') {
@@ -84,6 +119,22 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
 
   const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component;
 
+  const inactiveTabStyle = {
+    borderBottom: '2px solid transparent',
+    color: 'var(--text-secondary, #475569)',
+    background: 'transparent',
+    cursor: 'pointer',
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: '500'
+  };
+
+  const activeTabStyle = {
+    ...inactiveTabStyle,
+    borderBottom: '2px solid #047857',
+    color: '#047857'
+  };
+
   return (
     <div>
       {/* Tab Navigation */}
@@ -93,17 +144,7 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
             key={tab.id}
             onClick={() => handleTabClick(tab.id)}
             className="px-4 py-2 text-sm font-medium transition-colors"
-            style={{
-              borderBottom: activeTab === tab.id ? '2px solid #047857' : '2px solid transparent',
-              color: activeTab === tab.id 
-                ? '#047857' 
-                : 'var(--text-secondary, #475569)',
-              background: 'transparent',
-              cursor: 'pointer',
-              padding: '8px 16px',
-              fontSize: '14px',
-              fontWeight: '500'
-            }}
+            style={activeTab === tab.id ? activeTabStyle : inactiveTabStyle}
             onMouseEnter={(e) => {
               if (activeTab !== tab.id) {
                 e.target.style.background = '#f1f5f9';
@@ -118,6 +159,22 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
             {tab.label}
           </button>
         ))}
+        {isTrainer && (
+          <button
+            type="button"
+            onClick={handleCreateContentClick}
+            className="px-4 py-2 text-sm font-medium transition-colors"
+            style={inactiveTabStyle}
+            onMouseEnter={(e) => {
+              e.target.style.background = '#f1f5f9';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'transparent';
+            }}
+          >
+            Create Content
+          </button>
+        )}
       </div>
 
       {/* Tab Content */}
