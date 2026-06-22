@@ -27,14 +27,15 @@ class NAuthRequestController {
         organization_name: '',
         roles: [],
         primary_role: '',
-        is_system_admin: false
+        is_system_admin: false,
+        is_trainer: false
       }
     };
   }
 
   /**
    * @param {object} employee - row from findByEmail / findByGithubUrl
-   * @param {{ roles?: string[], primary_role?: string, is_system_admin?: boolean }} [enrichment]
+   * @param {{ roles?: string[], primary_role?: string, is_system_admin?: boolean, is_trainer?: boolean }} [enrichment]
    */
   buildFoundResponse(employee, enrichment = {}) {
     const roles = Array.isArray(enrichment.roles) ? enrichment.roles : [];
@@ -43,6 +44,7 @@ class NAuthRequestController {
         ? enrichment.primary_role
         : 'REGULAR_EMPLOYEE';
     const isSystemAdmin = enrichment.is_system_admin === true;
+    const isTrainer = enrichment.is_trainer === true;
     return {
       requester_service: 'directory_service',
       response: {
@@ -53,7 +55,8 @@ class NAuthRequestController {
         organization_name: employee.organization_name || '',
         roles,
         primary_role: primaryRole,
-        is_system_admin: isSystemAdmin
+        is_system_admin: isSystemAdmin,
+        is_trainer: isTrainer
       }
     };
   }
@@ -69,7 +72,8 @@ class NAuthRequestController {
         organization_name: '',
         roles: ['DIRECTORY_ADMIN'],
         primary_role: 'DIRECTORY_ADMIN',
-        is_system_admin: true
+        is_system_admin: true,
+        is_trainer: false
       }
     };
   }
@@ -303,13 +307,15 @@ class NAuthRequestController {
         } catch (roleErr) {
           console.error('[NAuthRequestController] Role lookup failed (non-fatal):', roleErr.message);
         }
+        const isTrainer = roles.includes('TRAINER');
         const finalPrimaryRole = isHr ? 'HR' : primaryRole;
         const finalRoles = isHr ? ['HR'] : roles;
         return res.status(200).json(
           this.buildFoundResponse(employee, {
             roles: finalRoles,
             primary_role: finalPrimaryRole,
-            is_system_admin: false
+            is_system_admin: false,
+            is_trainer: isTrainer
           })
         );
       }
