@@ -11,6 +11,14 @@ import ProfileDashboard from './ProfileDashboard';
 import { getAccessToken } from '../auth/accessTokenStore';
 
 const CONTENT_STUDIO_DEFAULT_URL = 'https://content-studio-two.vercel.app';
+const COURSE_BUILDER_DEFAULT_URL =
+  'https://course-builder-alpha-nine.vercel.app/learner/dashboard';
+
+/** @param {string} baseUrl @param {string} accessToken */
+export function buildCourseBuilderRedirectUrl(baseUrl, accessToken) {
+  const normalized = (baseUrl || COURSE_BUILDER_DEFAULT_URL).replace(/\/$/, '');
+  return `${normalized}/#access_token=${encodeURIComponent(accessToken)}`;
+}
 
 function decodeJwtPayload(token) {
   if (!token || typeof token !== 'string') return null;
@@ -74,20 +82,19 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
       console.log('[ApprovedProfileTabs] Employee ID (UUID):', employeeId);
       window.location.href = analyticsUrl;
     } else if (tabId === 'courses') {
-      // Redirect to Course Builder frontend with user ID
-      const baseUrl = process.env.REACT_APP_COURSE_BUILDER_URL || 'https://course-builder-alpha-nine.vercel.app/learner/dashboard';
-      
-      if (!employeeId) {
-        console.error('[ApprovedProfileTabs] Cannot redirect: Employee ID is missing');
-        alert('Error: Employee ID not found. Please try again.');
+      const baseUrl = (
+        process.env.REACT_APP_COURSE_BUILDER_URL || COURSE_BUILDER_DEFAULT_URL
+      ).replace(/\/$/, '');
+
+      const accessToken = getAccessToken();
+      if (!accessToken || String(accessToken).trim() === '') {
+        console.warn('[ApprovedProfileTabs] Course Builder redirect blocked: missing access token');
+        alert('Your session token is missing. Please sign in again and retry.');
         return;
       }
-      
-      // Build URL with employee ID as query parameter
-      const courseBuilderUrl = `${baseUrl}?userId=${encodeURIComponent(employeeId)}`;
-      
-      console.log('[ApprovedProfileTabs] Redirecting to Course Builder:', courseBuilderUrl);
-      console.log('[ApprovedProfileTabs] Employee ID (UUID):', employeeId);
+
+      const courseBuilderUrl = buildCourseBuilderRedirectUrl(baseUrl, accessToken);
+      console.log('[ApprovedProfileTabs] Redirecting to Course Builder');
       window.location.href = courseBuilderUrl;
     } else if (tabId === 'learning-path') {
       // Redirect to Learner AI frontend with user ID + access token
