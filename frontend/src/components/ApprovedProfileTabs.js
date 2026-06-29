@@ -20,6 +20,23 @@ export function buildCourseBuilderRedirectUrl(baseUrl, accessToken) {
   return `${normalized}/#access_token=${encodeURIComponent(accessToken)}`;
 }
 
+/** @param {string} url */
+export function normalizeExternalUrl(url) {
+  return String(url || '').trim().replace(/\/+$/, '');
+}
+
+/**
+ * @param {string|undefined} configuredUrl - REACT_APP_DEVLAB_URL
+ * @returns {string|null} Redirect URL or null when not configured
+ */
+export function buildDevLabRedirectUrl(configuredUrl) {
+  const normalized = normalizeExternalUrl(configuredUrl);
+  if (!normalized) {
+    return null;
+  }
+  return `${normalized}/`;
+}
+
 function decodeJwtPayload(token) {
   if (!token || typeof token !== 'string') return null;
   const parts = token.split('.');
@@ -48,7 +65,8 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
     { id: 'career-path', label: 'Career Path', component: ProfileCareerPath },
     { id: 'courses', label: 'Courses', component: ProfileCourses },
     { id: 'learning-path', label: 'Learning Path', component: LearningPath },
-    { id: 'analytics', label: 'Analytics', component: ProfileAnalytics }
+    { id: 'analytics', label: 'Analytics', component: ProfileAnalytics },
+    { id: 'devlab', label: 'DevLab' }
   ];
 
   const handleCreateContentClick = () => {
@@ -119,6 +137,15 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
       
       console.log('[ApprovedProfileTabs] Redirecting to Learner AI with user_id and token handoff');
       window.location.href = learnerAIUrl.toString();
+    } else if (tabId === 'devlab') {
+      const devlabUrl = buildDevLabRedirectUrl(process.env.REACT_APP_DEVLAB_URL);
+      if (!devlabUrl) {
+        console.warn('[ApprovedProfileTabs] REACT_APP_DEVLAB_URL is not configured');
+        alert('DevLab is not configured yet.');
+        return;
+      }
+      console.log('[ApprovedProfileTabs] Redirecting to DevLab');
+      window.location.href = devlabUrl;
     } else {
       setActiveTab(tabId);
     }
