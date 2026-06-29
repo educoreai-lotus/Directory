@@ -40,31 +40,49 @@ describe('buildCourseBuilderRedirectUrl', () => {
 });
 
 describe('buildDevLabRedirectUrl', () => {
-  test('returns normalized URL with trailing slash', () => {
-    expect(buildDevLabRedirectUrl('https://devlab.example.com')).toBe(
-      'https://devlab.example.com/'
+  const baseUrl = 'https://devlab.example.com';
+
+  test('returns dashboard URL with hash access_token', () => {
+    expect(buildDevLabRedirectUrl(baseUrl, 'abc.123')).toBe(
+      'https://devlab.example.com/dashboard#access_token=abc.123'
     );
   });
 
-  test('strips trailing slashes from configured URL', () => {
-    expect(buildDevLabRedirectUrl('https://devlab.example.com///')).toBe(
-      'https://devlab.example.com/'
+  test('base URL with trailing slash still returns single /dashboard path', () => {
+    expect(buildDevLabRedirectUrl(`${baseUrl}/`, 'abc.123')).toBe(
+      'https://devlab.example.com/dashboard#access_token=abc.123'
+    );
+    expect(buildDevLabRedirectUrl(`${baseUrl}///`, 'abc.123')).toBe(
+      'https://devlab.example.com/dashboard#access_token=abc.123'
     );
   });
 
-  test('returns null when env URL is missing or empty', () => {
-    expect(buildDevLabRedirectUrl(undefined)).toBeNull();
-    expect(buildDevLabRedirectUrl('')).toBeNull();
-    expect(buildDevLabRedirectUrl('   ')).toBeNull();
+  test('encodes token with encodeURIComponent', () => {
+    const token = 'a+b/c=';
+    expect(buildDevLabRedirectUrl(baseUrl, token)).toBe(
+      `${baseUrl}/dashboard#access_token=${encodeURIComponent(token)}`
+    );
   });
 
-  test('does not include access_token or identity query params', () => {
-    const url = buildDevLabRedirectUrl('https://devlab.example.com');
-    expect(url).not.toContain('access_token');
+  test('does not include query params or identity fields', () => {
+    const url = buildDevLabRedirectUrl(baseUrl, 'jwt-token');
+    expect(url).not.toContain('?access_token=');
+    expect(url).not.toContain('?');
     expect(url).not.toContain('userId');
     expect(url).not.toContain('employeeId');
     expect(url).not.toContain('learner_id');
-    expect(url).not.toContain('?');
-    expect(url).not.toContain('#');
+    expect(url).toContain('#access_token=');
+  });
+
+  test('returns null when base URL is missing or empty', () => {
+    expect(buildDevLabRedirectUrl(undefined, 'token')).toBeNull();
+    expect(buildDevLabRedirectUrl('', 'token')).toBeNull();
+    expect(buildDevLabRedirectUrl('   ', 'token')).toBeNull();
+  });
+
+  test('returns null when token is missing or empty', () => {
+    expect(buildDevLabRedirectUrl(baseUrl, undefined)).toBeNull();
+    expect(buildDevLabRedirectUrl(baseUrl, '')).toBeNull();
+    expect(buildDevLabRedirectUrl(baseUrl, '   ')).toBeNull();
   });
 });

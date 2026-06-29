@@ -26,15 +26,17 @@ export function normalizeExternalUrl(url) {
 }
 
 /**
- * @param {string|undefined} configuredUrl - REACT_APP_DEVLAB_URL
- * @returns {string|null} Redirect URL or null when not configured
+ * @param {string|undefined} baseUrl - DevLab frontend origin (REACT_APP_DEVLAB_URL)
+ * @param {string|undefined} accessToken - nAuth JWT
+ * @returns {string|null} Redirect URL or null when base URL or token is missing
  */
-export function buildDevLabRedirectUrl(configuredUrl) {
-  const normalized = normalizeExternalUrl(configuredUrl);
-  if (!normalized) {
+export function buildDevLabRedirectUrl(baseUrl, accessToken) {
+  const normalized = normalizeExternalUrl(baseUrl);
+  const token = String(accessToken || '').trim();
+  if (!normalized || !token) {
     return null;
   }
-  return `${normalized}/`;
+  return `${normalized}/dashboard#access_token=${encodeURIComponent(token)}`;
 }
 
 function decodeJwtPayload(token) {
@@ -138,12 +140,21 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
       console.log('[ApprovedProfileTabs] Redirecting to Learner AI with user_id and token handoff');
       window.location.href = learnerAIUrl.toString();
     } else if (tabId === 'devlab') {
-      const devlabUrl = buildDevLabRedirectUrl(process.env.REACT_APP_DEVLAB_URL);
-      if (!devlabUrl) {
+      const devlabBaseUrl = normalizeExternalUrl(process.env.REACT_APP_DEVLAB_URL);
+      if (!devlabBaseUrl) {
         console.warn('[ApprovedProfileTabs] REACT_APP_DEVLAB_URL is not configured');
         alert('DevLab is not configured yet.');
         return;
       }
+
+      const accessToken = getAccessToken();
+      if (!accessToken || String(accessToken).trim() === '') {
+        console.warn('[ApprovedProfileTabs] DevLab redirect blocked: missing access token');
+        alert('Please sign in again through Directory before opening DevLab.');
+        return;
+      }
+
+      const devlabUrl = buildDevLabRedirectUrl(devlabBaseUrl, accessToken);
       console.log('[ApprovedProfileTabs] Redirecting to DevLab');
       window.location.href = devlabUrl;
     } else {
