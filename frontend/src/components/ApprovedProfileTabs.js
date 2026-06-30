@@ -13,6 +13,8 @@ import { getAccessToken } from '../auth/accessTokenStore';
 const CONTENT_STUDIO_DEFAULT_URL = 'https://content-studio-two.vercel.app';
 const COURSE_BUILDER_DEFAULT_URL =
   'https://course-builder-alpha-nine.vercel.app/learner/dashboard';
+const LEARNING_ANALYTICS_DEFAULT_URL =
+  'https://learning-analytics-frontend-psi.vercel.app';
 
 /** @param {string} baseUrl @param {string} accessToken */
 export function buildCourseBuilderRedirectUrl(baseUrl, accessToken) {
@@ -37,6 +39,34 @@ export function buildDevLabRedirectUrl(baseUrl, accessToken) {
     return null;
   }
   return `${normalized}/dashboard#access_token=${encodeURIComponent(token)}`;
+}
+
+/**
+ * @param {string|undefined} baseUrl - Learning Analytics frontend origin
+ * @param {{ userId?: string, company_id?: string }} identity - Phase 0 legacy query identity
+ * @param {string|undefined} accessToken - nAuth JWT
+ * @returns {string|null} Redirect URL or null when token or identity is missing
+ */
+export function buildLearningAnalyticsRedirectUrl(baseUrl, identity, accessToken) {
+  const token = String(accessToken || '').trim();
+  if (!token) {
+    return null;
+  }
+
+  const base = baseUrl || LEARNING_ANALYTICS_DEFAULT_URL;
+  const userId = identity?.userId;
+  const companyId = identity?.company_id;
+
+  let urlWithoutHash;
+  if (userId != null && String(userId).trim() !== '') {
+    urlWithoutHash = `${base}?userId=${encodeURIComponent(userId)}`;
+  } else if (companyId != null && String(companyId).trim() !== '') {
+    urlWithoutHash = `${base}/?company_id=${encodeURIComponent(companyId)}`;
+  } else {
+    return null;
+  }
+
+  return `${urlWithoutHash}#access_token=${encodeURIComponent(token)}`;
 }
 
 function decodeJwtPayload(token) {
@@ -86,20 +116,32 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
 
   const handleTabClick = (tabId) => {
     if (tabId === 'analytics') {
-      // Redirect to Learning Analytics frontend with user ID
-      const baseUrl = process.env.REACT_APP_LEARNING_ANALYTICS_URL || 'https://learning-analytics-frontend-psi.vercel.app';
-      
       if (!employeeId) {
         console.error('[ApprovedProfileTabs] Cannot redirect: Employee ID is missing');
         alert('Error: Employee ID not found. Please try again.');
         return;
       }
-      
-      // Build URL with employee ID as query parameter
-      const analyticsUrl = `${baseUrl}?userId=${encodeURIComponent(employeeId)}`;
-      
-      console.log('[ApprovedProfileTabs] Redirecting to Learning Analytics:', analyticsUrl);
-      console.log('[ApprovedProfileTabs] Employee ID (UUID):', employeeId);
+
+      const accessToken = getAccessToken();
+      if (!accessToken || String(accessToken).trim() === '') {
+        console.warn('[ApprovedProfileTabs] Learning Analytics redirect blocked: missing access token');
+        alert('Authentication token not found. Please sign in again.');
+        return;
+      }
+
+      const baseUrl = process.env.REACT_APP_LEARNING_ANALYTICS_URL || LEARNING_ANALYTICS_DEFAULT_URL;
+      const analyticsUrl = buildLearningAnalyticsRedirectUrl(
+        baseUrl,
+        { userId: employeeId },
+        accessToken
+      );
+      if (!analyticsUrl) {
+        console.warn('[ApprovedProfileTabs] Learning Analytics redirect blocked: invalid redirect URL');
+        alert('Authentication token not found. Please sign in again.');
+        return;
+      }
+
+      console.log('[ApprovedProfileTabs] Redirecting to Learning Analytics');
       window.location.href = analyticsUrl;
     } else if (tabId === 'courses') {
       const baseUrl = (

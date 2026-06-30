@@ -1,4 +1,8 @@
-import { buildCourseBuilderRedirectUrl, buildDevLabRedirectUrl } from './ApprovedProfileTabs';
+import {
+  buildCourseBuilderRedirectUrl,
+  buildDevLabRedirectUrl,
+  buildLearningAnalyticsRedirectUrl
+} from './ApprovedProfileTabs';
 
 describe('buildCourseBuilderRedirectUrl', () => {
   const baseUrl = 'https://course-builder-alpha-nine.vercel.app/learner/dashboard';
@@ -84,5 +88,67 @@ describe('buildDevLabRedirectUrl', () => {
     expect(buildDevLabRedirectUrl(baseUrl, undefined)).toBeNull();
     expect(buildDevLabRedirectUrl(baseUrl, '')).toBeNull();
     expect(buildDevLabRedirectUrl(baseUrl, '   ')).toBeNull();
+  });
+});
+
+describe('buildLearningAnalyticsRedirectUrl', () => {
+  const baseUrl = 'https://learning-analytics-frontend-psi.vercel.app';
+  const token = 'header.payload.signature';
+  const employeeId = 'emp-uuid-123';
+  const companyId = 'company-uuid-456';
+
+  test('employee redirect keeps userId query param and appends hash access_token', () => {
+    const url = buildLearningAnalyticsRedirectUrl(baseUrl, { userId: employeeId }, token);
+    expect(url).toBe(
+      `${baseUrl}?userId=${encodeURIComponent(employeeId)}#access_token=${encodeURIComponent(token)}`
+    );
+    expect(url).toContain('?userId=');
+    expect(url).toContain('#access_token=');
+  });
+
+  test('company redirect keeps company_id query param and appends hash access_token', () => {
+    const url = buildLearningAnalyticsRedirectUrl(
+      baseUrl,
+      { company_id: companyId },
+      token
+    );
+    expect(url).toBe(
+      `${baseUrl}/?company_id=${encodeURIComponent(companyId)}#access_token=${encodeURIComponent(token)}`
+    );
+    expect(url).toContain('?company_id=');
+    expect(url).toContain('#access_token=');
+  });
+
+  test('does not place JWT in query string', () => {
+    const url = buildLearningAnalyticsRedirectUrl(baseUrl, { userId: employeeId }, token);
+    const queryPart = url.split('#')[0];
+    expect(queryPart).not.toContain('access_token');
+    expect(queryPart).not.toContain(token);
+  });
+
+  test('encodes special characters in token', () => {
+    const specialToken = 'a+b/c=';
+    const url = buildLearningAnalyticsRedirectUrl(baseUrl, { userId: employeeId }, specialToken);
+    expect(url).toBe(
+      `${baseUrl}?userId=${encodeURIComponent(employeeId)}#access_token=${encodeURIComponent(specialToken)}`
+    );
+  });
+
+  test('returns null when token is missing or empty', () => {
+    expect(buildLearningAnalyticsRedirectUrl(baseUrl, { userId: employeeId }, undefined)).toBeNull();
+    expect(buildLearningAnalyticsRedirectUrl(baseUrl, { userId: employeeId }, '')).toBeNull();
+    expect(buildLearningAnalyticsRedirectUrl(baseUrl, { userId: employeeId }, '   ')).toBeNull();
+  });
+
+  test('returns null when identity is missing', () => {
+    expect(buildLearningAnalyticsRedirectUrl(baseUrl, {}, token)).toBeNull();
+    expect(buildLearningAnalyticsRedirectUrl(baseUrl, { userId: '' }, token)).toBeNull();
+    expect(buildLearningAnalyticsRedirectUrl(baseUrl, { company_id: '' }, token)).toBeNull();
+  });
+
+  test('uses default base URL when baseUrl is omitted', () => {
+    const url = buildLearningAnalyticsRedirectUrl(undefined, { userId: employeeId }, token);
+    expect(url).toContain('learning-analytics-frontend-psi.vercel.app?userId=');
+    expect(url).toContain('#access_token=');
   });
 });

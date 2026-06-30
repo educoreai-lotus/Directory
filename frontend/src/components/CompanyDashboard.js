@@ -2,6 +2,8 @@
 // Main dashboard component combining metrics, hierarchy, and employee list
 
 import React, { useState } from 'react';
+import { getAccessToken } from '../auth/accessTokenStore';
+import { buildLearningAnalyticsRedirectUrl } from './ApprovedProfileTabs';
 import CompanyMetrics from './CompanyMetrics';
 import CompanyHierarchy from './CompanyHierarchy';
 import EmployeeList from './EmployeeList';
@@ -47,10 +49,28 @@ function CompanyDashboard({ company, departments, teams, employees, hierarchy, m
         </button>
         <button
           onClick={() => {
-            // Redirect to Learning Analytics frontend with company_id
-            const analyticsUrl = process.env.REACT_APP_LEARNING_ANALYTICS_URL || 'https://learning-analytics-frontend-psi.vercel.app';
-            const url = `${analyticsUrl}/?company_id=${encodeURIComponent(companyId)}`;
-            console.log('[CompanyDashboard] Redirecting to Learning Analytics:', url);
+            const accessToken = getAccessToken();
+            if (!accessToken || String(accessToken).trim() === '') {
+              console.warn('[CompanyDashboard] Learning Analytics redirect blocked: missing access token');
+              alert('Authentication token not found. Please sign in again.');
+              return;
+            }
+
+            const baseUrl =
+              process.env.REACT_APP_LEARNING_ANALYTICS_URL ||
+              'https://learning-analytics-frontend-psi.vercel.app';
+            const url = buildLearningAnalyticsRedirectUrl(
+              baseUrl,
+              { company_id: companyId },
+              accessToken
+            );
+            if (!url) {
+              console.warn('[CompanyDashboard] Learning Analytics redirect blocked: invalid redirect URL');
+              alert('Authentication token not found. Please sign in again.');
+              return;
+            }
+
+            console.log('[CompanyDashboard] Redirecting to Learning Analytics');
             window.location.href = url;
           }}
           className={`px-4 py-2 font-medium transition-colors ${
