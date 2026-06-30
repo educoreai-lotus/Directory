@@ -2,8 +2,9 @@
 // Main dashboard component combining metrics, hierarchy, and employee list
 
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { getAccessToken } from '../auth/accessTokenStore';
-import { buildLearningAnalyticsRedirectUrl } from './ApprovedProfileTabs';
+import { buildCompanyLearningAnalyticsRedirectUrl } from './ApprovedProfileTabs';
 import CompanyMetrics from './CompanyMetrics';
 import CompanyHierarchy from './CompanyHierarchy';
 import EmployeeList from './EmployeeList';
@@ -14,6 +15,7 @@ import PendingProfileApprovals from './PendingProfileApprovals';
 function CompanyDashboard({ company, departments, teams, employees, hierarchy, metrics, pendingApprovals = [], onEmployeeClick, companyId, isAdminView = false }) {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'dashboard', 'hierarchy', 'employees', 'enrollment', 'requests', 'approvals'
   const [refreshKey, setRefreshKey] = useState(0);
+  const { user } = useAuth();
 
   return (
     <div className="w-full space-y-6">
@@ -59,10 +61,11 @@ function CompanyDashboard({ company, departments, teams, employees, hierarchy, m
             const baseUrl =
               process.env.REACT_APP_LEARNING_ANALYTICS_URL ||
               'https://learning-analytics-frontend-psi.vercel.app';
-            const url = buildLearningAnalyticsRedirectUrl(
+            const url = buildCompanyLearningAnalyticsRedirectUrl(
               baseUrl,
-              { company_id: companyId },
-              accessToken
+              accessToken,
+              user,
+              companyId
             );
             if (!url) {
               console.warn('[CompanyDashboard] Learning Analytics redirect blocked: invalid redirect URL');

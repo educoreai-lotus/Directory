@@ -16,6 +16,96 @@ const COURSE_BUILDER_DEFAULT_URL =
 const LEARNING_ANALYTICS_DEFAULT_URL =
   'https://learning-analytics-frontend-psi.vercel.app';
 
+export const LEARNING_ANALYTICS_MANAGER_ROLES = new Set([
+  'HR',
+  'DEPARTMENT_MANAGER',
+  'TEAM_MANAGER'
+]);
+
+/** @param {string|undefined|null} value */
+export function normalizeRole(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+/**
+ * @param {object|null|undefined} user - authenticated user from AuthContext /auth/me
+ * @param {object|null|undefined} claims - decoded JWT payload
+ */
+export function collectAuthRoleSignals(user, claims = {}) {
+  const safeUser = user || {};
+  const safeClaims = claims || {};
+  const primaryRole = normalizeRole(
+    safeClaims.primaryRole ??
+      safeClaims.primary_role ??
+      safeUser.primaryRole ??
+      safeUser.primary_role ??
+      ''
+  );
+  const rolesRaw = safeClaims.roles ?? safeUser.roles ?? [];
+  const roles = Array.isArray(rolesRaw)
+    ? rolesRaw.map(normalizeRole).filter(Boolean)
+    : [];
+
+  return {
+    primaryRole,
+    roles,
+    isSystemAdmin:
+      safeUser.isSystemAdmin === true ||
+      safeUser.is_system_admin === true ||
+      safeUser.isAdmin === true ||
+      safeClaims.isSystemAdmin === true ||
+      safeClaims.is_system_admin === true ||
+      primaryRole === 'DIRECTORY_ADMIN' ||
+      normalizeRole(safeUser.role) === 'DIRECTORY_ADMIN',
+    isTrainer:
+      safeUser.isTrainer === true ||
+      safeClaims.isTrainer === true ||
+      safeClaims.is_trainer === true,
+    isHR:
+      safeUser.isHR === true ||
+      safeClaims.isHR === true ||
+      safeClaims.is_hr === true ||
+      primaryRole === 'HR',
+    isDecisionMaker:
+      safeUser.isDecisionMaker === true ||
+      safeClaims.isDecisionMaker === true ||
+      primaryRole === 'DECISION_MAKER' ||
+      roles.includes('DECISION_MAKER'),
+    organizationId:
+      safeUser.organizationId ??
+      safeUser.companyId ??
+      safeUser.company_id ??
+      safeClaims.organizationId ??
+      safeClaims.organization_id ??
+      ''
+  };
+}
+
+/** @param {{ organizationId?: string }} signals */
+export function hasValidOrganizationId(signals) {
+  const org = signals?.organizationId;
+  return org != null && String(org).trim() !== '' && String(org) !== 'undefined';
+}
+
+/** @param {ReturnType<typeof collectAuthRoleSignals>} signals */
+export function resolveLearningAnalyticsDestination(signals) {
+  if (signals.isSystemAdmin || signals.primaryRole === 'DIRECTORY_ADMIN') {
+    return 'manager';
+  }
+  if (signals.isHR || signals.primaryRole === 'HR') {
+    return 'manager';
+  }
+  if (LEARNING_ANALYTICS_MANAGER_ROLES.has(signals.primaryRole)) {
+    return 'manager';
+  }
+  for (let i = 0; i < signals.roles.length; i += 1) {
+    if (LEARNING_ANALYTICS_MANAGER_ROLES.has(signals.roles[i])) {
+      return 'manager';
+    }
+  }
+  return 'learner';
+}
+
 /** @param {string} baseUrl @param {string} accessToken */
 export function buildCourseBuilderRedirectUrl(baseUrl, accessToken) {
   const normalized = (baseUrl || COURSE_BUILDER_DEFAULT_URL).replace(/\/$/, '');
@@ -43,30 +133,60 @@ export function buildDevLabRedirectUrl(baseUrl, accessToken) {
 
 /**
  * @param {string|undefined} baseUrl - Learning Analytics frontend origin
- * @param {{ userId?: string, company_id?: string }} identity - Phase 0 legacy query identity
  * @param {string|undefined} accessToken - nAuth JWT
- * @returns {string|null} Redirect URL or null when token or identity is missing
+ * @param {{ destination?: 'learner'|'manager', selectedCompanyId?: string, includeSelectedCompanyForSystemAdmin?: boolean }} [options]
+ * @returns {string|null} Redirect URL or null when token is missing
  */
-export function buildLearningAnalyticsRedirectUrl(baseUrl, identity, accessToken) {
+export function buildLearningAnalyticsRedirectUrl(baseUrl, accessToken, options = {}) {
   const token = String(accessToken || '').trim();
   if (!token) {
     return null;
   }
 
-  const base = baseUrl || LEARNING_ANALYTICS_DEFAULT_URL;
-  const userId = identity?.userId;
-  const companyId = identity?.company_id;
+  const destination = options.destination === 'manager' ? 'manager' : 'learner';
+  const normalizedBase = normalizeExternalUrl(baseUrl || LEARNING_ANALYTICS_DEFAULT_URL);
+  const path = destination === 'manager' ? '/manager/overview' : '/learner/overview';
+  let urlWithoutHash = `${normalizedBase}${path}`;
 
-  let urlWithoutHash;
-  if (userId != null && String(userId).trim() !== '') {
-    urlWithoutHash = `${base}?userId=${encodeURIComponent(userId)}`;
-  } else if (companyId != null && String(companyId).trim() !== '') {
-    urlWithoutHash = `${base}/?company_id=${encodeURIComponent(companyId)}`;
-  } else {
-    return null;
+  if (
+    destination === 'manager' &&
+    options.includeSelectedCompanyForSystemAdmin === true
+  ) {
+    const selectedCompanyId = options.selectedCompanyId;
+    if (selectedCompanyId != null && String(selectedCompanyId).trim() !== '') {
+      urlWithoutHash = `${urlWithoutHash}?company_id=${encodeURIComponent(selectedCompanyId)}`;
+    }
   }
 
   return `${urlWithoutHash}#access_token=${encodeURIComponent(token)}`;
+}
+
+/**
+ * @param {string|undefined} baseUrl
+ * @param {string|undefined} accessToken
+ * @param {object|null|undefined} user
+ * @param {string|undefined} selectedCompanyId
+ */
+export function buildCompanyLearningAnalyticsRedirectUrl(
+  baseUrl,
+  accessToken,
+  user,
+  selectedCompanyId
+) {
+  const token = String(accessToken || '').trim();
+  if (!token) {
+    return null;
+  }
+  const claims = decodeJwtPayload(token) || {};
+  const signals = collectAuthRoleSignals(user, claims);
+  const includeSelectedCompanyForSystemAdmin =
+    signals.isSystemAdmin && !hasValidOrganizationId(signals);
+
+  return buildLearningAnalyticsRedirectUrl(baseUrl, token, {
+    destination: 'manager',
+    selectedCompanyId,
+    includeSelectedCompanyForSystemAdmin
+  });
 }
 
 function decodeJwtPayload(token) {
@@ -116,12 +236,6 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
 
   const handleTabClick = (tabId) => {
     if (tabId === 'analytics') {
-      if (!employeeId) {
-        console.error('[ApprovedProfileTabs] Cannot redirect: Employee ID is missing');
-        alert('Error: Employee ID not found. Please try again.');
-        return;
-      }
-
       const accessToken = getAccessToken();
       if (!accessToken || String(accessToken).trim() === '') {
         console.warn('[ApprovedProfileTabs] Learning Analytics redirect blocked: missing access token');
@@ -129,12 +243,13 @@ function ApprovedProfileTabs({ employeeId, user, employee, isViewOnly = false })
         return;
       }
 
+      const claims = decodeJwtPayload(accessToken) || {};
+      const signals = collectAuthRoleSignals(user, claims);
+      const destination = resolveLearningAnalyticsDestination(signals);
       const baseUrl = process.env.REACT_APP_LEARNING_ANALYTICS_URL || LEARNING_ANALYTICS_DEFAULT_URL;
-      const analyticsUrl = buildLearningAnalyticsRedirectUrl(
-        baseUrl,
-        { userId: employeeId },
-        accessToken
-      );
+      const analyticsUrl = buildLearningAnalyticsRedirectUrl(baseUrl, accessToken, {
+        destination
+      });
       if (!analyticsUrl) {
         console.warn('[ApprovedProfileTabs] Learning Analytics redirect blocked: invalid redirect URL');
         alert('Authentication token not found. Please sign in again.');
