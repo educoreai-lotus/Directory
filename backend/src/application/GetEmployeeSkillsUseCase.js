@@ -6,6 +6,77 @@ const MicroserviceClient = require('../infrastructure/MicroserviceClient');
 const CompanyRepository = require('../infrastructure/CompanyRepository');
 const EmployeeSkillsRepository = require('../infrastructure/EmployeeSkillsRepository');
 
+/**
+ * Skills Engine completed competencies are a non-empty array.
+ * Empty [], null, undefined, {}, strings, and other truthy non-arrays are not usable.
+ * @param {*} competencies
+ * @returns {boolean}
+ */
+function hasUsableCompetencies(competencies) {
+  return Array.isArray(competencies) && competencies.length > 0;
+}
+
+/**
+ * Build Skills Engine raw_data from employee enrichment columns.
+ * Matches approval-path convention: only include sources that have non-empty objects.
+ * @param {Object} employee
+ * @returns {Object}
+ */
+function buildSkillsEngineRawData(employee) {
+  const rawData = {};
+
+  if (employee.linkedin_data) {
+    const linkedinData = typeof employee.linkedin_data === 'string'
+      ? JSON.parse(employee.linkedin_data)
+      : employee.linkedin_data;
+    if (linkedinData && Object.keys(linkedinData).length > 0) {
+      rawData.linkedin = linkedinData;
+    }
+  }
+
+  if (employee.github_data) {
+    const githubData = typeof employee.github_data === 'string'
+      ? JSON.parse(employee.github_data)
+      : employee.github_data;
+    if (githubData && Object.keys(githubData).length > 0) {
+      rawData.github = githubData;
+    }
+  }
+
+  if (employee.pdf_data) {
+    const pdfData = typeof employee.pdf_data === 'string'
+      ? JSON.parse(employee.pdf_data)
+      : employee.pdf_data;
+    if (pdfData && Object.keys(pdfData).length > 0) {
+      rawData.pdf = pdfData;
+    }
+  }
+
+  if (employee.manual_data) {
+    const manualData = typeof employee.manual_data === 'string'
+      ? JSON.parse(employee.manual_data)
+      : employee.manual_data;
+    if (manualData && Object.keys(manualData).length > 0) {
+      rawData.manual = manualData;
+    }
+  }
+
+  return rawData;
+}
+
+/**
+ * Persist only completed Skills Engine results with usable competencies.
+ * Processing / empty / malformed responses must not be saved.
+ * @param {Object|null|undefined} skillsData
+ * @returns {boolean}
+ */
+function shouldPersistSkillsData(skillsData) {
+  if (!skillsData || skillsData.status === 'processing') {
+    return false;
+  }
+  return hasUsableCompetencies(skillsData.competencies);
+}
+
 class GetEmployeeSkillsUseCase {
   constructor() {
     this.employeeRepository = new EmployeeRepository();
@@ -91,10 +162,10 @@ class GetEmployeeSkillsUseCase {
         return skillsData;
       };
 
-      // FIRST: Try to get skills from database (stored when profile was approved)
+      // FIRST: Try to get skills from database (only non-empty usable competencies are a cache hit)
       const storedSkills = await this.skillsRepository.findByEmployeeId(employeeId);
       
-      if (storedSkills && storedSkills.competencies) {
+      if (storedSkills && hasUsableCompetencies(storedSkills.competencies)) {
         console.log('[GetEmployeeSkillsUseCase] ✅ Found stored skills in database, returning cached data');
         console.log('[GetEmployeeSkillsUseCase] Stored skills summary:', JSON.stringify({
           employee_id: storedSkills.employee_id,
@@ -137,8 +208,8 @@ class GetEmployeeSkillsUseCase {
         };
       }
 
-      // FALLBACK: If no stored skills found, call Skills Engine (shouldn't happen normally)
-      console.warn('[GetEmployeeSkillsUseCase] ⚠️ No stored skills found, calling Skills Engine as fallback');
+      // FALLBACK: No usable stored skills (missing row, empty [], or malformed) → call Skills Engine
+      console.warn('[GetEmployeeSkillsUseCase] ⚠️ No usable stored skills found, calling Skills Engine as fallback');
       console.warn('[GetEmployeeSkillsUseCase] This should only happen if skills were not stored during approval');
 
       // Determine employee type from roles
@@ -154,20 +225,8 @@ class GetEmployeeSkillsUseCase {
         throw new Error('Company not found');
       }
 
-      // Get raw data (LinkedIn and GitHub)
-      const linkedinData = employee.linkedin_data 
-        ? (typeof employee.linkedin_data === 'string' ? JSON.parse(employee.linkedin_data) : employee.linkedin_data)
-        : {};
-      
-      const githubData = employee.github_data
-        ? (typeof employee.github_data === 'string' ? JSON.parse(employee.github_data) : employee.github_data)
-        : {};
-
-      // Prepare raw_data for Skills Engine
-      const rawData = {
-        github: githubData,
-        linkedin: linkedinData
-      };
+      // Same enrichment sources as post-approval path (omit empty sources)
+      const rawData = buildSkillsEngineRawData(employee);
 
       // Call Skills Engine to get normalized skills with updated payload fields
       const skillsData = await this.microserviceClient.getEmployeeSkills({
@@ -184,28 +243,50 @@ class GetEmployeeSkillsUseCase {
       console.log('[GetEmployeeSkillsUseCase] ✅ Skills Engine response received (fallback):');
       console.log('[GetEmployeeSkillsUseCase] Response:', JSON.stringify({
         user_id: skillsData?.user_id,
+        status: skillsData?.status,
         competencies_count: skillsData?.competencies?.length || 0,
         relevance_score: skillsData?.relevance_score,
         has_gap: !!skillsData?.gap,
+        message: skillsData?.message,
         full_response: skillsData
       }, null, 2));
 
-      // Transform response to component format
-      const transformed = transformSkillsResponse(skillsData);
-
-      // Store the response in database for future requests
-      if (skillsData && (skillsData.competencies || skillsData.relevance_score !== undefined)) {
+      // Persist only completed non-empty competencies (never processing/empty/malformed)
+      if (shouldPersistSkillsData(skillsData)) {
         try {
           await this.skillsRepository.saveOrUpdate(employeeId, skillsData);
           console.log('[GetEmployeeSkillsUseCase] ✅ Skills data stored in database for future requests');
         } catch (storageError) {
           console.warn('[GetEmployeeSkillsUseCase] ⚠️ Failed to store skills data (non-blocking):', storageError.message);
         }
+
+        const transformed = transformSkillsResponse(skillsData);
+        return {
+          success: true,
+          skills: transformed || skillsData
+        };
       }
 
+      if (skillsData?.status === 'processing') {
+        console.log('[GetEmployeeSkillsUseCase] Skills Engine still processing; not persisting; returning empty skills');
+      } else {
+        console.warn('[GetEmployeeSkillsUseCase] ⚠️ Skills Engine returned no usable competencies; not persisting');
+      }
+
+      // Frontend-compatible empty result; later GET can retry (empty cache is a miss)
       return {
         success: true,
-        skills: transformed || skillsData
+        skills: transformSkillsResponse({
+          user_id: employee.id,
+          competencies: [],
+          relevance_score: skillsData?.relevance_score || 0,
+          gap: null
+        }) || {
+          user_id: employee.id,
+          competencies: [],
+          relevance_score: 0,
+          gap: null
+        }
       };
     } catch (error) {
       console.error('[GetEmployeeSkillsUseCase] Error:', error);
@@ -215,4 +296,6 @@ class GetEmployeeSkillsUseCase {
 }
 
 module.exports = GetEmployeeSkillsUseCase;
-
+module.exports.hasUsableCompetencies = hasUsableCompetencies;
+module.exports.buildSkillsEngineRawData = buildSkillsEngineRawData;
+module.exports.shouldPersistSkillsData = shouldPersistSkillsData;

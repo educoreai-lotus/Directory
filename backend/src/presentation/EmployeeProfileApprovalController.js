@@ -256,14 +256,25 @@ class EmployeeProfileApprovalController {
           console.log('[EmployeeProfileApprovalController] ✅ Skills Engine response received:');
           console.log('[EmployeeProfileApprovalController] Response:', JSON.stringify({
             user_id: skillsData?.user_id,
+            status: skillsData?.status,
             competencies_count: skillsData?.competencies?.length || 0,
             relevance_score: skillsData?.relevance_score,
             has_gap: !!skillsData?.gap,
+            message: skillsData?.message,
             full_response: skillsData
           }, null, 2));
           
-          // Store skills data in database to avoid duplicate calls
-          if (skillsData && (skillsData.competencies || skillsData.relevance_score !== undefined)) {
+          // Persist only completed non-empty competencies.
+          // Processing / empty / malformed must not overwrite or create empty cache rows.
+          const hasUsableCompetencies =
+            Array.isArray(skillsData?.competencies) &&
+            skillsData.competencies.length > 0;
+          const shouldPersist =
+            !!skillsData &&
+            skillsData.status !== 'processing' &&
+            hasUsableCompetencies;
+
+          if (shouldPersist) {
             try {
               const EmployeeSkillsRepository = require('../infrastructure/EmployeeSkillsRepository');
               const skillsRepository = new EmployeeSkillsRepository();
@@ -278,6 +289,8 @@ class EmployeeProfileApprovalController {
                 console.warn('[EmployeeProfileApprovalController] ⚠️ Failed to store skills data (non-blocking):', storageError.message);
               }
             }
+          } else {
+            console.warn('[EmployeeProfileApprovalController] ⚠️ Skipping skills persistence (processing, empty, or malformed response)');
           }
         } else {
           console.warn('[EmployeeProfileApprovalController] Skipping Skills Engine call: employee or company not found', {
