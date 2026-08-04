@@ -139,7 +139,8 @@ class EmployeeController {
   async addEmployee(req, res, next) {
     try {
       const { id: companyId } = req.params;
-      const employeeData = req.body;
+      // Support wrapped microservice envelope and direct body (same as updateEmployee)
+      const employeeData = req.body.payload || req.body;
 
       const admin = this.isSystemAdmin(req);
       const hr = await this.isHrForCompany(req, companyId);
@@ -164,7 +165,8 @@ class EmployeeController {
       let statusCode = 500;
       if (error.message.includes('already registered') || 
           error.message.includes('already exists') ||
-          error.message.includes('Email')) {
+          error.message.includes('Email') ||
+          error.message.includes('Department is required')) {
         statusCode = 400;
       }
 

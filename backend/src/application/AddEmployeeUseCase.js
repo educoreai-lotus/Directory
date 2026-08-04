@@ -48,11 +48,21 @@ class AddEmployeeUseCase {
       throw new Error(`An employee with ID "${validatedData.employee_id}" already exists in your company.`);
     }
 
+    const departmentId =
+      validatedData.department_id == null ? '' : String(validatedData.department_id).trim();
+    const departmentName =
+      validatedData.department_name == null ? '' : String(validatedData.department_name).trim();
+    if (!departmentId || !departmentName) {
+      throw new Error(
+        'Department is required. Please provide both department_id and department_name.'
+      );
+    }
+
     // Get or create department
     const department = await this.departmentRepository.createOrGet(
       companyId,
-      validatedData.department_id,
-      validatedData.department_name
+      departmentId,
+      departmentName
     );
 
     // Get or create team
